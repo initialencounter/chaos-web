@@ -1,4 +1,119 @@
 <template>
+  <div v-if="showResultDialog">
+    <el-dialog
+      v-model="showResultDialog"
+      width="420px"
+      :show-close="false"
+      center
+    >
+      <div style="text-align: center; padding: 0 0 10px 0">
+        <div v-if="resultList.length > 0" style="margin-bottom: 18px">
+          <div
+            style="display: flex; flex-direction: column; align-items: center"
+          >
+            <div style="position: relative">
+              <img
+                :src="resultList[0].user.avatar"
+                style="
+                  width: 90px;
+                  height: 90px;
+                  border-radius: 50%;
+                  border: 4px solid gold;
+                  object-fit: cover;
+                "
+              />
+              <span
+                style="
+                  position: absolute;
+                  right: -10px;
+                  top: -10px;
+                  font-size: 2.2rem;
+                "
+                >⚡</span
+              >
+            </div>
+            <div style="font-size: 1.3rem; font-weight: bold; margin-top: 8px">
+              {{ resultList[0].user.nickName }}
+            </div>
+            <div style="color: #888; font-size: 1rem; margin: 2px 0 6px 0">
+              正確 {{ resultList[0].countCorrect }} 错误
+              {{
+                resultList[0].countIncorrect ?? resultList[0].countError
+              }}
+              分数 {{ resultList[0].score }}
+            </div>
+          </div>
+        </div>
+        <el-divider style="margin: 10px 0" />
+        <div>
+          <div
+            v-for="(item, idx) in resultList"
+            :key="item.user.uid"
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin: 8px 0;
+            "
+          >
+            <div style="display: flex; align-items: center">
+              <span
+                v-if="idx < 3"
+                style="font-size: 1.3rem; width: 2.2em; text-align: center"
+                >{{ getRankIcon(idx + 1) }}</span
+              >
+              <img
+                :src="item.user.avatar"
+                :style="{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50%',
+                  border: getRankBorder(idx + 1),
+                  objectFit: 'cover',
+                  marginRight: '8px',
+                }"
+              />
+              <span style="font-weight: 600">{{ item.user.nickName }}</span>
+              <span
+                v-if="lastHitUid && item.user.uid === lastHitUid"
+                style="color: #e44; font-size: 0.95em; margin-left: 6px"
+                >最后一击</span
+              >
+            </div>
+            <div style="font-size: 0.98em">
+              <span style="color: #0a0">{{ item.countCorrect }}</span> /
+              <span style="color: #e44">{{
+                item.countIncorrect ?? item.countError
+              }}</span>
+              / <span style="color: #09c">{{ item.score }}</span>
+            </div>
+          </div>
+        </div>
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            margin-top: 18px;
+          "
+        >
+          <el-button type="default" @click="showResultDialog = false"
+            >返回</el-button
+          >
+          <el-button
+            type="primary"
+            @click="
+              () => {
+                showResultDialog = false;
+                reset();
+              }
+            "
+            >再来一局</el-button
+          >
+        </div>
+      </div>
+    </el-dialog>
+  </div>
+
   <div class="topPositionFixed">
     <div class="header-content">
       <el-button class="logout-button" style="width: 5rem" @click="exitRoom"
@@ -58,6 +173,7 @@
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { computed } from 'vue';
 import type { Cell, Minefield, ScoreBoard as ScoreBoardType } from '@/types';
 import ScoreBoard from '@/components/ScoreBoard.vue';
 import ScoreTip from '@/components/ScoreTip.vue';
@@ -85,6 +201,12 @@ const timeWatcher = ref('00:000');
 const scoreBoard = ref<ScoreBoardType>({});
 const isBlocked = ref(false);
 const blockTimeout = ref<number | null>(null);
+
+// 结算弹窗相关
+const showResultDialog = ref(false);
+const resultList = ref<any[]>([]);
+const lastHitUid = ref<string | null>(null);
+const myUid = ref<string | null>(null); // 可根据实际登录信息赋值
 
 const openSound = new Howl({
   src: ['/src/assets/audio/open.mp3'],
@@ -175,7 +297,7 @@ const onEnter = (data: any) => {
 
     startTimer();
   }
-  wsClient.send({ channel: "App", version: 30610, url: "join" });
+  wsClient.send({ channel: 'App', version: 30610, url: 'join' });
 };
 
 const updateScoreboard = (users: any[]) => {
@@ -221,15 +343,30 @@ const onAction = (data: any) => {
 };
 
 const onFinish = (data: any) => {
-  ElMessageBox.confirm('游戏已结束，是否刷新？', '游戏结束', {
-    confirmButtonText: '刷新',
-    cancelButtonText: '取消',
-    type: 'success',
-  })
-    .then(() => {
-      reset();
-    })
-    .catch(() => {});
+  // 排序，找出最后一击
+  if (data && data.users) {
+    // 找到最后一击
+    let last = data.users.find((u: any) => u.lastOpen);
+    lastHitUid.value = last ? last.user.uid : null;
+    // 排序，分数高在前
+    let sorted = [...data.users].sort((a, b) => b.score - a.score);
+    resultList.value = sorted;
+    showResultDialog.value = true;
+  }
+};
+// 头像边框颜色
+const getRankBorder = (rank: number) => {
+  if (rank === 1) return '3px solid gold';
+  if (rank === 2) return '3px solid #aaa';
+  if (rank === 3) return '3px solid #c96';
+  return '2px solid #eee';
+};
+
+const getRankIcon = (rank: number) => {
+  if (rank === 1) return '🥇';
+  if (rank === 2) return '🥈';
+  if (rank === 3) return '🥉';
+  return '';
 };
 
 const startTimer = () => {
@@ -319,7 +456,9 @@ const doExpand = (index: number) => {
 
   const nearby = getNearbyCells(index);
   const flagCount = nearby.filter(
-    (n) => minefield.value.Cell[n].IsFlagged || ( minefield.value.Cell[n].IsOpen && minefield.value.Cell[n].IsMine),
+    (n) =>
+      minefield.value.Cell[n].IsFlagged ||
+      (minefield.value.Cell[n].IsOpen && minefield.value.Cell[n].IsMine),
   ).length;
 
   if (flagCount === cell.Mines) {
