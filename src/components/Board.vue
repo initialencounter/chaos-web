@@ -4,6 +4,9 @@
       <el-button class="logout-button" style="width: 5rem" @click="exitRoom"
         >退出桌面</el-button
       >
+      <el-button class="logout-button" style="width: 5rem" @click="doHint"
+        >提示</el-button
+      >
       <el-button
         :style="{ background: flagMode ? '#5282b8' : '#5c8f4b', width: '5rem' }"
         class="flag-switch-button"
@@ -257,14 +260,14 @@ const handleClick = (event: MouseEvent, index: number) => {
       // Only flag un-opened ones
       if (!cell.IsMine) {
         boomSound.play();
-        isBlocked.value = true;
+        // isBlocked.value = true;
         ElMessage.error('标记错了！1秒后恢复');
-        if (blockTimeout.value) {
-          clearTimeout(blockTimeout.value);
-        }
-        blockTimeout.value = window.setTimeout(() => {
-          isBlocked.value = false;
-        }, 3000);
+        // if (blockTimeout.value) {
+        //   clearTimeout(blockTimeout.value);
+        // }
+        // blockTimeout.value = window.setTimeout(() => {
+        //   isBlocked.value = false;
+        // }, 3000);
       }
       doFlag({ a: 1, c, r });
     } else {
@@ -278,15 +281,16 @@ const handleClick = (event: MouseEvent, index: number) => {
       if (cell.IsMine) {
         boomSound.play();
         cell.IsFlagged = true;
-        isBlocked.value = true;
+        // isBlocked.value = true;
         ElMessage.error('踩到雷了！1秒后恢复');
-        if (blockTimeout.value) {
-          clearTimeout(blockTimeout.value);
-        }
-        blockTimeout.value = window.setTimeout(() => {
-          isBlocked.value = false;
-        }, 3000);
+        // if (blockTimeout.value) {
+        //   clearTimeout(blockTimeout.value);
+        // }
+        // blockTimeout.value = window.setTimeout(() => {
+        //   isBlocked.value = false;
+        // }, 3000);
       }
+      console.log('Opening cell:', r, c, cell);
       doOpen({ a: 0, c, r });
     } else if (cell.IsOpen) {
       doExpand(index);
@@ -300,9 +304,8 @@ function doOpen(action: Action) {
     minefield.value.Cell[action.r * minefield.value.Width + action.c];
   if (cell.Mines === 0) {
     actions.push(...reveal(action.a, action.c, action.r));
-  } else {
-    actions.push(action);
   }
+  actions.push(action);
   sendActions(actions);
 }
 
@@ -449,6 +452,19 @@ function msToTime(duration: number): string {
   const seconds = Math.floor(duration / 1000);
   const secondsStr = seconds < 10 ? '0' + seconds : seconds;
   return `${secondsStr}:${milliseconds}`;
+}
+
+function doHint() {
+  // 简单提示：找一个未打开的格子，挖开它，如果是空格则继续挖开周围
+  for (let i = 0; i < minefield.value.Cell.length; i++) {
+    const cell = minefield.value.Cell[i];
+    if (!cell.IsOpen && !cell.IsFlagged && !cell.IsMine) {
+      const r = Math.floor(i / minefield.value.Width);
+      const c = i % minefield.value.Width;
+      doOpen({ a: 0, c, r });
+      break;
+    }
+  }
 }
 
 function exitRoom() {
