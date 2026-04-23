@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "files": [],
   "references": [
@@ -11,5 +13,9 @@
       "path": "./tsconfig.app.json"
     }
   ],
-  "include": ["shims-vue.d.ts"],
+  "include": [
+    "proxy.ts",
+    "encrypt.ts",
+    "shims-vue.d.ts"
+  ],
 }
