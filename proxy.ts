@@ -37,40 +37,48 @@ const server = http.createServer((req, res) => {
     res.end('WebSocket Proxy is running\n');
 });
 
+const targetUrl = `ws://${TARGET_HOST}/Minesweeper/socket/chaos/${CONFIG.uid}`;
+
+let targetWs: WebSocket | null = null;
+
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (clientWs, req) => {
     // 构建真实请求到服务端的 URL
-    const targetUrl = `ws://${TARGET_HOST}/Minesweeper/socket/chaos/${CONFIG.uid}`;
 
     // nodejs 的 ws 库允许直接注入 header (原生浏览器不行)
     const headers = makeHeaders(); // 你可以根据需要动态生成 headers
 
-    const targetWs = new WebSocket(targetUrl, { headers });
+    targetWs = new WebSocket(targetUrl, { headers });
 
     // 建立双向数据流 Relay: Target -> Client
     targetWs.on('message', (data) => {
         if (clientWs.readyState === WebSocket.OPEN) {
-            clientWs.send(decryptAESECB(data.toString()));
+            const decrypted = decryptAESECB(data.toString());
+            if (!decrypted.includes('chaos/action')) {
+                console.log('[Recv]:', decrypted);
+            }
+            clientWs.send(decrypted);
         }
     });
 
     targetWs.on('open', () => {
         clientWs.send(JSON.stringify({ url: 'ready' }));
-        targetWs.send(encryptAESECB(JSON.stringify({ url: 'enter' })));
     });
 
     // 建立双向数据流 Relay: Client -> Target
-    clientWs.on('message', (data) => {
-        if (targetWs.readyState === WebSocket.OPEN) {
-            targetWs.send(encryptAESECB(JSON.stringify(data)));
+    clientWs.on('message', (data: string) => {
+        if (targetWs?.readyState === WebSocket.OPEN) {
+            const parsed = JSON.parse(data.toString());
+            console.log('[Send]:', parsed);
+            targetWs.send(encryptAESECB(data));
         }
     });
 
     // 连接关闭处理
     clientWs.on('close', () => {
         console.log('[Proxy] Client disconnected');
-        if (targetWs.readyState === WebSocket.OPEN) {
+        if (targetWs?.readyState === WebSocket.OPEN) {
             targetWs.close();
         }
     });

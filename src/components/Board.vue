@@ -1,24 +1,32 @@
 <template>
   <div class="topPositionFixed">
     <div class="header-content">
-      <el-button class="logout-button" style="width: 5rem" @click="logout">退出桌面</el-button>
+      <el-button class="logout-button" style="width: 5rem" @click="exitRoom"
+        >退出桌面</el-button
+      >
       <el-button
-        :style="{ background: flagMode ? '#5282b8' : '#5c8f4b', width: '5rem'}"
+        :style="{ background: flagMode ? '#5282b8' : '#5c8f4b', width: '5rem' }"
         class="flag-switch-button"
         @click="flagMode = !flagMode"
-      >{{ flagMode ? "标记" : "挖开" }}模式
+        >{{ flagMode ? '标记' : '挖开' }}模式
       </el-button>
-      <el-button class="logout-button" style="width: 5rem" @click="reset">刷新</el-button>
+      <el-button class="logout-button" style="width: 5rem" @click="reset"
+        >刷新</el-button
+      >
       <div class="timeWatcher">{{ timeWatcher }}</div>
     </div>
     <ScoreTip ref="scoreTip" class="scoreTipParent"></ScoreTip>
   </div>
-  
+
   <div class="main-layout">
     <div class="left-panel">
-      <ScoreBoard :scoreBoard="scoreBoard" class="scoreBoard" v-if="Object.keys(scoreBoard).length > 0"></ScoreBoard>
+      <ScoreBoard
+        :scoreBoard="scoreBoard"
+        class="scoreBoard"
+        v-if="Object.keys(scoreBoard).length > 0"
+      ></ScoreBoard>
     </div>
-    
+
     <div class="center-panel">
       <el-scrollbar>
         <div
@@ -45,13 +53,19 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
-import type { Cell, Minefield, RequestType, Response, ScoreBoard as ScoreBoardType } from "@/types";
-import ScoreBoard from "@/components/ScoreBoard.vue";
-import ScoreTip from "@/components/ScoreTip.vue";
-import { Howl } from "howler";
-import { wsClient } from "@/api/websocket";
+import { ref, onMounted, onUnmounted } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import type { Cell, Minefield, ScoreBoard as ScoreBoardType } from '@/types';
+import ScoreBoard from '@/components/ScoreBoard.vue';
+import ScoreTip from '@/components/ScoreTip.vue';
+import { Howl } from 'howler';
+import { wsClient } from '@/api/websocket';
+
+interface Action {
+  a: number; // action type: 0 for open, 1 for flag
+  r: number; // row
+  c: number; // column
+}
 
 const cellSize = 24;
 const minefield = ref<Minefield>({
@@ -64,20 +78,27 @@ const minefield = ref<Minefield>({
   StartTimeStamp: 0,
 });
 
-const timeWatcher = ref("00:000");
+const timeWatcher = ref('00:000');
 const scoreBoard = ref<ScoreBoardType>({});
-const scoreTip = ref<InstanceType<typeof ScoreTip>>();
 const isBlocked = ref(false);
 const blockTimeout = ref<number | null>(null);
 
-const openSound = new Howl({ src: ["/src/assets/audio/open.mp3"], volume: 0.5 });
-const flagSound = new Howl({ src: ["/src/assets/audio/flag.mp3"], volume: 0.5 });
-const boomSound = new Howl({ src: ["/src/assets/audio/boom.mp3"], volume: 0.5 });
+const openSound = new Howl({
+  src: ['/src/assets/audio/open.mp3'],
+  volume: 0.5,
+});
+const flagSound = new Howl({
+  src: ['/src/assets/audio/flag.mp3'],
+  volume: 0.5,
+});
+const boomSound = new Howl({
+  src: ['/src/assets/audio/boom.mp3'],
+  volume: 0.5,
+});
 const flagMode = ref(false);
 let startTimeStamp = 0;
 let timer = false;
 let intervalFlag: number;
-const userName = ref("");
 
 document.oncontextmenu = () => false;
 
@@ -98,54 +119,53 @@ onUnmounted(() => {
 const initGame = async () => {
   // 路由到独立的 Node.js 代理 (proxy.js) 来强行注入 header 解决跨域限制
   const url = `ws://localhost:8080/ws`;
-  
-  // Register handlers
-  wsClient.on("chaos/enter", onEnter);
-  wsClient.on("chaos/action", onAction);
-  wsClient.on("chaos/refresh/users", onRefreshUsers);
-  wsClient.on("chaos/finish", onFinish);
-  wsClient.on("message", (data: any) => {
-    console.log("Received message:", data);
-    const parsed = typeof data === "string" ? JSON.parse(data) : data;
-    if (parsed["url"] == "ready") {
-      wsClient.send({ url: "enter" });
-    }
-  });
 
+  // Register handlers
+  wsClient.on('chaos/enter', onEnter);
+  wsClient.on('chaos/action', onAction);
+  wsClient.on('chaos/refresh/users', onRefreshUsers);
+  wsClient.on('chaos/finish', onFinish);
+  wsClient.on('ready', onReady);
   wsClient.connect(url);
 };
 
+const onReady = () => {
+  console.log('WebSocket connection established, entering room...');
+  wsClient.send({ url: 'enter' });
+};
+
 const onEnter = (data: any) => {
+  console.log('Entered room, initializing game state...');
   // Parse map
   if (data.map) {
     const mapData = data.map.map as string; // like "19932...-129..."
     const mapStatus = data.map.mapStatus as string; // like "10010..."
 
-    const rows = mapData.split("-").filter(row => row.length > 0);
-    const statuses = mapStatus.split("-").filter(row => row.length > 0);
+    const rows = mapData.split('-').filter((row) => row.length > 0);
+    const statuses = mapStatus.split('-').filter((row) => row.length > 0);
 
     minefield.value.Height = rows.length;
     minefield.value.Width = rows[0]?.length || 0;
-    
+
     const cells: Cell[] = [];
     for (let r = 0; r < rows.length; r++) {
       for (let c = 0; c < rows[r].length; c++) {
         const val = rows[r][c];
         const status = statuses[r][c];
-        
+
         cells.push({
           Id: r * minefield.value.Width + c,
           Mines: val === '9' ? 9 : parseInt(val),
           IsMine: val === '9',
           IsOpen: status === '1',
-          IsFlagged: status === '8'
+          IsFlagged: status === '8',
         });
       }
     }
     minefield.value.Cell = cells;
     minefield.value.StartTimeStamp = data.map.createTime || Date.now();
     startTimeStamp = minefield.value.StartTimeStamp;
-    
+
     if (data.users) {
       updateScoreboard(data.users);
     }
@@ -157,7 +177,7 @@ const onEnter = (data: any) => {
 
 const updateScoreboard = (users: any[]) => {
   const newScores: Record<string, number> = {};
-  users.forEach(u => {
+  users.forEach((u) => {
     newScores[u.user.nickName || u.user.uid] = u.score;
   });
   scoreBoard.value = newScores;
@@ -190,21 +210,23 @@ const onAction = (data: any) => {
     // For now we rely on refresh users or just update this exact user
     const name = data.user.user.nickName || data.user.user.uid;
     if (scoreBoard.value[name] !== undefined || data.user.score > 0) {
-        scoreBoard.value[name] = data.user.score;
+      scoreBoard.value[name] = data.user.score;
     }
-    
+
     // Earn Score logic could be extrapolated from before/after diff or we can rely on existing code structure
   }
 };
 
 const onFinish = (data: any) => {
-   ElMessageBox.confirm("游戏已结束，是否刷新？", "游戏结束", {
-        confirmButtonText: "刷新",
-        cancelButtonText: "取消",
-        type: "success",
-   }).then(() => {
-     reset();
-   }).catch(() => {});
+  ElMessageBox.confirm('游戏已结束，是否刷新？', '游戏结束', {
+    confirmButtonText: '刷新',
+    cancelButtonText: '取消',
+    type: 'success',
+  })
+    .then(() => {
+      reset();
+    })
+    .catch(() => {});
 };
 
 const startTimer = () => {
@@ -220,84 +242,146 @@ const startTimer = () => {
 const handleClick = (event: MouseEvent, index: number) => {
   if (isBlocked.value) return; // 踩雷惩罚判断
 
-  if (event.button === 1) { // Middle click reset
-    reset();
-    return;
-  }
-  
   flagSound.stop();
   openSound.stop();
 
   const isRightClick = event.button === 2;
   const shouldFlag = isRightClick !== flagMode.value;
-  
+
   const cell = minefield.value.Cell[index];
   const r = Math.floor(index / minefield.value.Width);
   const c = index % minefield.value.Width;
 
   if (shouldFlag) {
-    if (!cell.IsOpen) { // Only flag un-opened ones
-      const isAlreadyObj = cell.IsFlagged; 
-      // If we supported unflag it'd be here, but spec said only 0/1, no unflag
-      sendAction(1, c, r);
-      flagSound.play();
+    flagSound.play();
+    if (!cell.IsOpen) {
+      // Only flag un-opened ones
+      if (cell.IsMine) {
+        doFlag({ a: 1, c, r });
+      } else {
+        doOpen({ a: 0, c, r });
+      }
     } else {
       // 展开周围 (双击/点击已开)
       doExpand(index);
     }
-  } else { // 挖开
+  } else {
+    // 挖开
+    openSound.play();
     if (!cell.IsOpen && !cell.IsFlagged) {
       if (cell.IsMine) {
-        // 踩雷惩罚
-        isBlocked.value = true;
-        boomSound.play();
-        ElMessage.error("踩雷啦！操作被锁定5秒...");
-        blockTimeout.value = window.setTimeout(() => {
-          isBlocked.value = false;
-          ElMessage.success("锁定解除，可继续操作！");
-        }, 5000);
+        doFlag({ a: 1, c, r });
       } else {
-        openSound.play();
+        doOpen({ a: 0, c, r });
       }
-      sendAction(0, c, r);
     } else if (cell.IsOpen) {
       doExpand(index);
     }
   }
 };
 
+function doOpen(action: Action) {
+  let actions: Action[] = [];
+  const cell =
+    minefield.value.Cell[action.r * minefield.value.Width + action.c];
+  if (cell.Mines === 0) {
+    actions.push(...reveal(action.a, action.c, action.r));
+  } else {
+    actions.push(action);
+  }
+  sendActions(actions);
+}
+
+function doFlag(action: Action) {
+  sendActions([action]);
+}
+
 const doExpand = (index: number) => {
   const cell = minefield.value.Cell[index];
   if (!cell.IsOpen) return;
-  
+
   const nearby = getNearbyCells(index);
-  const flagCount = nearby.filter(n => minefield.value.Cell[n].IsFlagged).length;
-  
+  const flagCount = nearby.filter(
+    (n) => minefield.value.Cell[n].IsFlagged,
+  ).length;
+
   if (flagCount === cell.Mines) {
     openSound.play();
-    nearby.forEach(i => {
+    let actions: Action[] = [];
+    nearby.forEach((i) => {
       const nCell = minefield.value.Cell[i];
       if (!nCell.IsOpen && !nCell.IsFlagged) {
-        if (nCell.IsMine) {
-          isBlocked.value = true;
-          boomSound.play();
-          ElMessage.error("周围排错踩雷啦！操作被锁定5秒...");
-          if (blockTimeout.value) clearTimeout(blockTimeout.value);
-          blockTimeout.value = window.setTimeout(() => {
-            isBlocked.value = false;
-            ElMessage.success("锁定解除，可继续操作！");
-          }, 5000);
+        actions.push({
+          a: 0,
+          c: i % minefield.value.Width,
+          r: Math.floor(i / minefield.value.Width),
+        });
+        if (nCell.Mines === 0) {
+          actions.push(
+            ...reveal(
+              0,
+              i % minefield.value.Width,
+              Math.floor(i / minefield.value.Width),
+            ),
+          );
         }
-        sendAction(0, i % minefield.value.Width, Math.floor(i / minefield.value.Width));
       }
     });
+    sendActions(actions);
   }
 };
 
-const sendAction = (a: number, c: number, r: number) => {
+const reveal = (a: number, c: number, r: number) => {
+  if (a !== 0) return [];
+  let actions: Action[] = [];
+  console.log(r * minefield.value.Width + c, 'reveal called');
+  const cell = minefield.value.Cell[r * minefield.value.Width + c];
+  if (cell.Mines === 0) {
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        // 去除自己
+        if (dr === 0 && dc === 0) continue;
+        // 边界检测
+        if (
+          r + dr < 0 ||
+          r + dr >= minefield.value.Height ||
+          c + dc < 0 ||
+          c + dc >= minefield.value.Width
+        )
+          continue;
+        const nCell =
+          minefield.value.Cell[(r + dr) * minefield.value.Width + (c + dc)];
+        if (nCell.IsOpen || nCell.IsFlagged) continue; // 已经打开或标记的格子不处理
+        nCell.IsOpen = true; // 本地先标记为打开，避免重复递归
+        actions.push({ a: 0, r: r + dr, c: c + dc });
+        // 递归展开
+        if (nCell.Mines === 0) {
+          actions.push(...reveal(0, c + dc, r + dr));
+        }
+      }
+    }
+  }
+  return actions;
+};
+
+const sendActions = (actions: Action[]) => {
+  if (actions.length === 0) return;
+  // 本地立即更新地图
+  actions.forEach((act) => {
+    const idx = act.r * minefield.value.Width + act.c;
+    const cell = minefield.value.Cell[idx];
+    if (cell) {
+      if (act.a === 0) {
+        cell.IsOpen = true;
+        cell.IsFlagged = false;
+      } else if (act.a === 1) {
+        cell.IsFlagged = true;
+      }
+    }
+  });
   wsClient.send({
-    url: "action",
-    actions: [{ a, c, r }]
+    url: 'action',
+    actions,
   });
 };
 
@@ -349,19 +433,38 @@ const getImageSrc = (cell: Cell) => {
 function msToTime(duration: number): string {
   const milliseconds = duration % 1000;
   const seconds = Math.floor(duration / 1000);
-  const secondsStr = seconds < 10 ? "0" + seconds : seconds;
+  const secondsStr = seconds < 10 ? '0' + seconds : seconds;
   return `${secondsStr}:${milliseconds}`;
 }
 
-function logout() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("uid");
+function exitRoom() {
+  wsClient.send({ url: 'leave' });
+  ElMessageBox.confirm('确定要退出桌面吗？', '退出确认', {
+    confirmButtonText: '退出',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(() => {
+      // Optionally we can also clear local state here
+      minefield.value = {
+        Width: 0,
+        Height: 0,
+        Cells: 0,
+        Mines: 0,
+        Cell: [],
+        First: false,
+        StartTimeStamp: 0,
+      };
+      scoreBoard.value = {};
+      timeWatcher.value = '00:000';
+      wsClient.close();
+    })
+    .catch(() => {});
 }
 
 function reset() {
-  wsClient.send({ url: "enter" });
+  wsClient.send({ url: 'enter' });
 }
-
 </script>
 
 <style scoped>
