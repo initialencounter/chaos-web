@@ -32,3 +32,4 @@ coverage
 
 tmp*
 encrypt.ts
+test.ts

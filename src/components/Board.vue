@@ -251,16 +251,22 @@ const handleClick = (event: MouseEvent, index: number) => {
   const cell = minefield.value.Cell[index];
   const r = Math.floor(index / minefield.value.Width);
   const c = index % minefield.value.Width;
-
   if (shouldFlag) {
     flagSound.play();
     if (!cell.IsOpen) {
       // Only flag un-opened ones
-      if (cell.IsMine) {
-        doFlag({ a: 1, c, r });
-      } else {
-        doOpen({ a: 0, c, r });
+      if (!cell.IsMine) {
+        boomSound.play();
+        isBlocked.value = true;
+        ElMessage.error('标记错了！1秒后恢复');
+        if (blockTimeout.value) {
+          clearTimeout(blockTimeout.value);
+        }
+        blockTimeout.value = window.setTimeout(() => {
+          isBlocked.value = false;
+        }, 3000);
       }
+      doFlag({ a: 1, c, r });
     } else {
       // 展开周围 (双击/点击已开)
       doExpand(index);
@@ -270,10 +276,18 @@ const handleClick = (event: MouseEvent, index: number) => {
     openSound.play();
     if (!cell.IsOpen && !cell.IsFlagged) {
       if (cell.IsMine) {
-        doFlag({ a: 1, c, r });
-      } else {
-        doOpen({ a: 0, c, r });
+        boomSound.play();
+        cell.IsFlagged = true;
+        isBlocked.value = true;
+        ElMessage.error('踩到雷了！1秒后恢复');
+        if (blockTimeout.value) {
+          clearTimeout(blockTimeout.value);
+        }
+        blockTimeout.value = window.setTimeout(() => {
+          isBlocked.value = false;
+        }, 3000);
       }
+      doOpen({ a: 0, c, r });
     } else if (cell.IsOpen) {
       doExpand(index);
     }
@@ -302,7 +316,7 @@ const doExpand = (index: number) => {
 
   const nearby = getNearbyCells(index);
   const flagCount = nearby.filter(
-    (n) => minefield.value.Cell[n].IsFlagged,
+    (n) => minefield.value.Cell[n].IsFlagged || ( minefield.value.Cell[n].IsOpen && minefield.value.Cell[n].IsMine),
   ).length;
 
   if (flagCount === cell.Mines) {
