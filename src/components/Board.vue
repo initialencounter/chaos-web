@@ -497,7 +497,7 @@ function reset() {
 }
 
 .left-panel {
-  width: 200px;
+  width: 150px;
   flex-shrink: 0;
   overflow-y: auto;
 }
