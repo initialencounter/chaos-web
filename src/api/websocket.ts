@@ -1,53 +1,69 @@
 type EventCallback = (data: any) => void;
 
+const API_BASE_URL = 'http://localhost:8080/api/ws';
+
 class WsClient {
   private ws: WebSocket | null = null;
   private listeners: Map<string, EventCallback[]> = new Map();
   private connectPromise: Promise<void> | null = null;
 
+  private isManualClose: boolean = false;
+
   constructor() {
   }
 
-  public connect(url: string): Promise<void> {
+  public async connect(url: string): Promise<void> {
     if (this.connectPromise) {
       return this.connectPromise;
     }
 
-    this.connectPromise = new Promise((resolve, reject) => {
-      this.ws = new WebSocket(url);
+    try {
+      // Create server-side websocket via HTTP
+      await fetch(`${API_BASE_URL}/create`, { method: 'POST' });
 
-      this.ws.onopen = () => {
-        console.log('WebSocket connected');
-        resolve();
-      };
+      this.isManualClose = false;
+      this.connectPromise = new Promise((resolve, reject) => {
+        this.ws = new WebSocket(url);
 
-      this.ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('WS Receive:', data);
+        this.ws.onopen = () => {
+          console.log('WebSocket connected');
+          resolve();
+        };
 
-          if (data.url) {
-            this.emit(data.url, data);
+        this.ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log('WS Receive:', data);
+
+            if (data.url) {
+              this.emit(data.url, data);
+            }
+          } catch (e) {
+            console.error('Failed to parse WS message:', e);
           }
-        } catch (e) {
-          console.error('Failed to decrypt or parse WS message:', e);
-        }
-      };
+        };
 
-      this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        this.connectPromise = null;
-      };
+        this.ws.onclose = () => {
+          console.log('WebSocket disconnected');
+          this.connectPromise = null;
+          if (!this.isManualClose) {
+            this.emit('disconnect', {});
+          }
+        };
 
-      this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        if (this.ws?.readyState !== WebSocket.OPEN) {
-          reject(error);
-        }
-      };
-    });
+        this.ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          if (this.ws?.readyState !== WebSocket.OPEN) {
+            reject(error);
+          }
+        };
+      });
 
-    return this.connectPromise;
+      return this.connectPromise;
+    } catch (e) {
+      console.error('Failed to initialize connection via HTTP', e);
+      throw e;
+    }
   }
 
   public send(data: any) {
@@ -82,11 +98,17 @@ class WsClient {
     }
   }
 
-  public close() {
+  public async close() {
+    this.isManualClose = true;
     if (this.ws) {
       this.ws.close();
       this.ws = null;
       this.connectPromise = null;
+    }
+    try {
+      await fetch(`${API_BASE_URL}/close`, { method: 'POST' });
+    } catch (e) {
+      console.error('Failed to close server websocket', e);
     }
   }
 }

@@ -117,7 +117,7 @@
   <div class="topPositionFixed">
     <div class="header-content">
       <el-button class="logout-button" style="width: 5rem" @click="exitRoom"
-        >退出桌面</el-button
+        >退出房间</el-button
       >
       <el-button class="logout-button" style="width: 5rem" @click="doHint"
         >提示</el-button
@@ -129,7 +129,7 @@
         >{{ flagMode ? '标记' : '挖开' }}模式
       </el-button>
       <el-button class="logout-button" style="width: 5rem" @click="reset"
-        >刷新</el-button
+        >重新进入房间</el-button
       >
       <div class="timeWatcher">{{ timeWatcher }}</div>
     </div>
@@ -232,6 +232,12 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  wsClient.off('chaos/enter', onEnter);
+  wsClient.off('chaos/action', onAction);
+  wsClient.off('chaos/refresh/users', onRefreshUsers);
+  wsClient.off('chaos/finish', onFinish);
+  wsClient.off('ready', onReady);
+  wsClient.off('disconnect', onDisconnect);
   wsClient.close();
   if (timer) {
     clearInterval(intervalFlag);
@@ -251,7 +257,20 @@ const initGame = async () => {
   wsClient.on('chaos/refresh/users', onRefreshUsers);
   wsClient.on('chaos/finish', onFinish);
   wsClient.on('ready', onReady);
+  wsClient.on('disconnect', onDisconnect);
   wsClient.connect(url);
+};
+
+const onDisconnect = () => {
+  ElMessageBox.confirm('与服务器断开连接，是否重新入房间？', '连接断开', {
+    confirmButtonText: '重连',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(() => {
+      reset();
+    })
+    .catch(() => {});
 };
 
 const onReady = () => {
@@ -587,7 +606,7 @@ const getImageSrc = (cell: Cell) => {
 };
 
 function msToTime(duration: number): string {
-  const milliseconds = duration % 1000;
+  const milliseconds = duration % 10;
   const seconds = Math.floor(duration / 1000);
   const secondsStr = seconds < 10 ? '0' + seconds : seconds;
   return `${secondsStr}:${milliseconds}`;
@@ -608,7 +627,7 @@ function doHint() {
 
 function exitRoom() {
   wsClient.send({ url: 'leave' });
-  ElMessageBox.confirm('确定要退出桌面吗？', '退出确认', {
+  ElMessageBox.confirm('确定要退出房间吗？', '退出确认', {
     confirmButtonText: '退出',
     cancelButtonText: '取消',
     type: 'warning',
@@ -626,13 +645,26 @@ function exitRoom() {
       };
       scoreBoard.value = {};
       timeWatcher.value = '00:000';
+      wsClient.off('chaos/enter', onEnter);
+      wsClient.off('chaos/action', onAction);
+      wsClient.off('chaos/refresh/users', onRefreshUsers);
+      wsClient.off('chaos/finish', onFinish);
+      wsClient.off('ready', onReady);
+      wsClient.off('disconnect', onDisconnect);
       wsClient.close();
     })
     .catch(() => {});
 }
 
 function reset() {
-  wsClient.send({ url: 'enter' });
+  wsClient.off('chaos/enter', onEnter);
+  wsClient.off('chaos/action', onAction);
+  wsClient.off('chaos/refresh/users', onRefreshUsers);
+  wsClient.off('chaos/finish', onFinish);
+  wsClient.off('ready', onReady);
+  wsClient.off('disconnect', onDisconnect);
+  wsClient.close();
+  initGame();
 }
 </script>
 
