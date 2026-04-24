@@ -4,6 +4,8 @@
       v-model="showResultDialog"
       width="420px"
       :show-close="false"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
       center
     >
       <div style="text-align: center; padding: 0 0 10px 0">
