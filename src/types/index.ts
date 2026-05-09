@@ -1,4 +1,21 @@
-import type {Cell, Minefield} from './Mines';
-import type {Response, Result, ScoreBoard, RequestType} from './Request';
+import type {
+  Cell,
+  Minefield,
+  ZoneRect,
+  Prop,
+  ActivePropEffect,
+  ChaosUser,
+  ScoreEntry,
+  ScoreBoard,
+} from './Mines'
 
-export type {Minefield, Cell, Response, Result, ScoreBoard, RequestType};
+export type {
+  Cell,
+  Minefield,
+  ZoneRect,
+  Prop,
+  ActivePropEffect,
+  ChaosUser,
+  ScoreEntry,
+  ScoreBoard,
+}

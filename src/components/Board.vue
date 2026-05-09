@@ -1,48 +1,33 @@
 <template>
+  <!-- =================== 结算弹窗 =================== -->
   <div v-if="showResultDialog">
     <el-dialog
       v-model="showResultDialog"
-      width="420px"
+      width="480px"
       :show-close="false"
       :close-on-click-modal="false"
       :close-on-press-escape="false"
       center
     >
       <div style="text-align: center; padding: 0 0 10px 0">
+        <!-- 第一名 -->
         <div v-if="resultList.length > 0" style="margin-bottom: 18px">
-          <div
-            style="display: flex; flex-direction: column; align-items: center"
-          >
+          <div style="display: flex; flex-direction: column; align-items: center">
             <div style="position: relative">
               <img
                 :src="resultList[0].user.avatar"
-                style="
-                  width: 90px;
-                  height: 90px;
-                  border-radius: 50%;
-                  border: 4px solid gold;
-                  object-fit: cover;
-                "
+                style="width: 90px; height: 90px; border-radius: 50%; border: 4px solid gold; object-fit: cover"
               />
-              <span
-                style="
-                  position: absolute;
-                  right: -10px;
-                  top: -10px;
-                  font-size: 2.2rem;
-                "
-                >⚡</span
-              >
+              <span style="position: absolute; right: -10px; top: -10px; font-size: 2.2rem">⚡</span>
             </div>
             <div style="font-size: 1.3rem; font-weight: bold; margin-top: 8px">
               {{ resultList[0].user.nickName }}
             </div>
             <div style="color: #888; font-size: 1rem; margin: 2px 0 6px 0">
-              正確 {{ resultList[0].countCorrect }} 错误
-              {{
-                resultList[0].countIncorrect ?? resultList[0].countError
-              }}
+              正确 {{ resultList[0].countCorrect }}
+              错误 {{ resultList[0].countIncorrect ?? resultList[0].countError }}
               分数 {{ resultList[0].score }}
+              道具 {{ resultList[0].usePropCount }}
             </div>
           </div>
         </div>
@@ -51,100 +36,93 @@
           <div
             v-for="(item, idx) in resultList"
             :key="item.user.uid"
-            style="
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              margin: 8px 0;
-            "
+            style="display: flex; align-items: center; justify-content: space-between; margin: 8px 0"
           >
             <div style="display: flex; align-items: center">
-              <span
-                v-if="idx < 3"
-                style="font-size: 1.3rem; width: 2.2em; text-align: center"
-                >{{ getRankIcon(idx + 1) }}</span
-              >
+              <span v-if="idx < 3" style="font-size: 1.3rem; width: 2.2em; text-align: center">
+                {{ getRankIcon(idx + 1) }}
+              </span>
               <img
                 :src="item.user.avatar"
                 :style="{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  border: getRankBorder(idx + 1),
-                  objectFit: 'cover',
-                  marginRight: '8px',
+                  width: '38px', height: '38px', borderRadius: '50%',
+                  border: getRankBorder(idx + 1), objectFit: 'cover', marginRight: '8px',
                 }"
               />
               <span style="font-weight: 600">{{ item.user.nickName }}</span>
-              <span
-                v-if="lastHitUid && item.user.uid === lastHitUid"
-                style="color: #e44; font-size: 0.95em; margin-left: 6px"
-                >最后一击</span
-              >
+              <span v-if="item.lastOpen" style="color: #e44; font-size: 0.95em; margin-left: 6px">最后一击</span>
             </div>
             <div style="font-size: 0.98em">
               <span style="color: #0a0">{{ item.countCorrect }}</span> /
-              <span style="color: #e44">{{
-                item.countIncorrect ?? item.countError
-              }}</span>
-              / <span style="color: #09c">{{ item.score }}</span>
+              <span style="color: #e44">{{ item.countIncorrect ?? item.countError }}</span> /
+              <span style="color: #09c">{{ item.score }}</span>
             </div>
           </div>
         </div>
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            margin-top: 18px;
-          "
-        >
-          <el-button type="default" @click="showResultDialog = false"
-            >返回</el-button
-          >
-          <el-button
-            type="primary"
-            @click="
-              () => {
-                showResultDialog = false;
-                reset();
-              }
-            "
-            >再来一局</el-button
-          >
+        <div style="display: flex; justify-content: space-between; margin-top: 18px">
+          <el-button type="default" @click="showResultDialog = false">返回</el-button>
+          <el-button type="primary" @click="showResultDialog = false; reset()">再来一局</el-button>
         </div>
       </div>
     </el-dialog>
   </div>
 
+  <!-- =================== 顶部栏 =================== -->
   <div class="topPositionFixed">
     <div class="header-content">
-      <el-button class="logout-button" style="width: 5rem" @click="exitRoom"
-        >退出房间</el-button
-      >
-      <el-button class="logout-button" style="width: 5rem" @click="doHint"
-        >提示</el-button
-      >
+      <el-button class="logout-button" style="width: 5rem" @click="exitRoom">退出房间</el-button>
+      <el-button class="logout-button" style="width: 5rem" @click="doHint">提示</el-button>
       <el-button
-        :style="{ background: flagMode ? '#5282b8' : '#5c8f4b', width: '5rem' }"
+        :style="{ background: flagMode ? '#5282b8' : '#5c8f4b', width: 'auto' }"
         class="flag-switch-button"
         @click="flagMode = !flagMode"
-        >{{ flagMode ? '标记' : '挖开' }}模式
-      </el-button>
-      <el-button class="logout-button" style="width: 5rem" @click="reset"
-        >重新进入房间</el-button
       >
+        {{ flagMode ? '标记' : '挖开' }}模式 <kbd class="key-hint">{{ keybinds.flagMode }}</kbd>
+      </el-button>
+
+      <!-- 道具快捷键按钮 -->
+      <el-button
+        v-if="hasProp(101)"
+        :style="{ width: 'auto', background: usingPropId === 101 ? '#faad14' : '' }"
+        @click="startUseProp(101)"
+      >
+        探测仪 <kbd class="key-hint">{{ keybinds.detector }}</kbd>
+      </el-button>
+      <el-button
+        v-if="hasProp(102)"
+        :style="{ width: 'auto', background: usingPropId === 102 ? '#faad14' : '' }"
+        @click="startUseProp(102)"
+      >
+        雷之奥义 <kbd class="key-hint">{{ keybinds.xjbd }}</kbd>
+      </el-button>
+
+      <!-- 冷却计时 -->
+      <div v-if="cdRemaining > 0" class="cd-indicator">
+        ⏳ CD {{ cdRemaining.toFixed(1) }}s
+      </div>
+
+      <!-- 双倍/护盾激活指示器 -->
+      <div style="display: flex; gap: 8px; align-items: center">
+        <span v-if="shieldActive" class="buff-indicator buff-shield">
+          🛡 护盾 {{ shieldRemaining.toFixed(1) }}s
+        </span>
+        <span v-if="doubleScoreActive" class="buff-indicator buff-double">
+          ⚡ 双倍 {{ doubleRemaining.toFixed(1) }}s
+        </span>
+      </div>
+
       <div class="timeWatcher">{{ timeWatcher }}</div>
     </div>
-    <ScoreTip ref="scoreTip" class="scoreTipParent"></ScoreTip>
+    <ScoreTip ref="scoreTip" class="scoreTipParent" />
   </div>
 
+  <!-- =================== 主体 =================== -->
   <div class="main-layout">
     <div class="left-panel">
       <ScoreBoard
         :scoreBoard="scoreBoard"
-        class="scoreBoard"
         v-if="Object.keys(scoreBoard).length > 0"
-      ></ScoreBoard>
+      />
     </div>
 
     <div class="center-panel">
@@ -160,579 +138,1162 @@
           <div
             v-for="(cell, index) in minefield.Cell"
             :key="index"
-            :style="{ backgroundImage: `url(${getImageSrc(cell)})` }"
-            class="cell"
-            @mousedown="(event) => handleClick(event, index)"
+            class="cell-wrapper"
+            :style="{
+              width: cellSize + 'px',
+              height: cellSize + 'px',
+            }"
           >
-            <div v-if="isBlocked" class="blocked-overlay"></div>
+            <!-- 格子图片 -->
+            <div
+              :style="{ backgroundImage: `url(${getImageSrc(cell)})`, width: '100%', height: '100%', backgroundSize: 'cover' }"
+              class="cell"
+              @mousedown="(event) => handleClick(event, index)"
+            />
+
+            <!-- CD 遮罩 -->
+            <div v-if="isBlocked" class="cd-overlay" />
+
+            <!-- 红区遮罩 (只能打开不能插旗) -->
+            <div
+              v-if="isInNoFlagZone(index)"
+              class="no-flag-zone-overlay"
+            />
+
+            <!-- 黄区遮罩 (高分区域) -->
+            <div
+              v-if="isInHighScoreZone(index)"
+              class="high-score-zone-overlay"
+            />
+
+            <!-- 探测仪 5x5 高亮 -->
+            <div
+              v-if="isInDetectorRange(index)"
+              class="detector-highlight"
+              :class="{ 'detector-highlight-mine': cell.IsMine && !cell.IsOpen }"
+            />
+
+            <!-- 雷之奥义 7x7 区域闪烁 -->
+            <div
+              v-if="isInXjbdRange(index)"
+              class="xjbd-highlight"
+            />
           </div>
         </div>
       </el-scrollbar>
     </div>
   </div>
+
+  <!-- =================== 道具栏 (左下角固定) =================== -->
+  <div class="prop-bar-fixed">
+    <PropBar
+      :props="myProps"
+      :using-prop-id="usingPropId"
+      :cd-remaining="cdRemaining"
+      @use-prop="startUseProp"
+    />
+  </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import { computed } from 'vue';
-import type { Cell, Minefield, ScoreBoard as ScoreBoardType } from '@/types';
-import ScoreBoard from '@/components/ScoreBoard.vue';
-import ScoreTip from '@/components/ScoreTip.vue';
-import { Howl } from 'howler';
-import { wsClient } from '@/api/websocket';
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import type { Cell, Minefield, ZoneRect, Prop, ActivePropEffect, ChaosUser, ScoreEntry, ScoreBoard as ScoreBoardType } from '@/types'
+import ScoreBoard from '@/components/ScoreBoard.vue'
+import ScoreTip from '@/components/ScoreTip.vue'
+import PropBar from '@/components/PropBar.vue'
+import { Howl } from 'howler'
+import { wsClient } from '@/api/websocket'
 
+// ========== 动作接口 ==========
 interface Action {
-  a: number; // action type: 0 for open, 1 for flag
-  r: number; // row
-  c: number; // column
+  a: number  // 0=打开, 1=标记
+  r: number  // row
+  c: number  // column
 }
 
-const cellSize = 24;
+// ========== 常量 ==========
+const cellSize = 24
+const COOLDOWN_PER_ERROR = 0.5
+
+// ========== 快捷键 (localStorage 持久化) ==========
+const KEYBINDS_STORAGE_KEY = 'mines-keybinds'
+const defaultKeybinds = { flagMode: 'F', detector: 'D', xjbd: 'X' }
+
+function loadKeybinds() {
+  try {
+    const saved = localStorage.getItem(KEYBINDS_STORAGE_KEY)
+    return saved ? { ...defaultKeybinds, ...JSON.parse(saved) } : { ...defaultKeybinds }
+  } catch { return { ...defaultKeybinds } }
+}
+function saveKeybinds(binds: typeof defaultKeybinds) {
+  localStorage.setItem(KEYBINDS_STORAGE_KEY, JSON.stringify(binds))
+}
+const keybinds = ref(loadKeybinds())
+
+/** 更新单个快捷键 (来自外部设置) */
+function setKeybind(action: keyof typeof defaultKeybinds, key: string) {
+  const updated = { ...keybinds.value, [action]: key.toUpperCase() }
+  keybinds.value = updated
+  saveKeybinds(updated)
+}
+
+// ========== 音效 ==========
+const openSound = new Howl({ src: ['/src/assets/audio/open.mp3'], volume: 0.5 })
+const flagSound = new Howl({ src: ['/src/assets/audio/flag.mp3'], volume: 0.5 })
+const boomSound = new Howl({ src: ['/src/assets/audio/boom.mp3'], volume: 0.5 })
+
+// ========== 响应式状态 ==========
 const minefield = ref<Minefield>({
-  Width: 0,
-  Height: 0,
-  Cells: 0,
-  Mines: 0,
-  Cell: [],
-  First: false,
-  StartTimeStamp: 0,
-});
+  Width: 0, Height: 0, Cells: 0, Mines: 0, Cell: [], First: false,
+  StartTimeStamp: 0, highScoreZone: null, noFlagZone: null, maxTime: 3600000,
+})
 
-const timeWatcher = ref('00:000');
-const scoreBoard = ref<ScoreBoardType>({});
-const isBlocked = ref(false);
-const blockTimeout = ref<number | null>(null);
+const timeWatcher = ref('00:000')
+const scoreBoard = ref<ScoreBoardType>({})
+const flagMode = ref(false)
 
-// 结算弹窗相关
-const showResultDialog = ref(false);
-const resultList = ref<any[]>([]);
-const lastHitUid = ref<string | null>(null);
-const myUid = ref<string | null>(null); // 可根据实际登录信息赋值
+// CD 系统
+const cdEndTime = ref(0)       // 冷却结束时间戳
+const cdRemaining = ref(0)    // 剩余冷却秒数
+const isBlocked = computed(() => cdRemaining.value > 0)
+const cdTimer = ref<number | null>(null)
 
-const openSound = new Howl({
-  src: ['/src/assets/audio/open.mp3'],
-  volume: 0.5,
-});
-const flagSound = new Howl({
-  src: ['/src/assets/audio/flag.mp3'],
-  volume: 0.5,
-});
-const boomSound = new Howl({
-  src: ['/src/assets/audio/boom.mp3'],
-  volume: 0.5,
-});
-const flagMode = ref(false);
-let startTimeStamp = 0;
-let timer = false;
-let intervalFlag: number;
+// 道具系统
+const myProps = ref<Prop[]>([])         // 我的道具库存
+const usingPropId = ref<number | null>(null)  // 正在使用的主动道具 ID
+const activeEffects = ref<ActivePropEffect[]>([])  // 当前激活的道具效果
 
-document.oncontextmenu = () => false;
+// 护盾/双倍 激活标志(计算属性)
+const shieldActive = computed(() => activeEffects.value.some(e => e.propId === 1002))
+const doubleScoreActive = computed(() => activeEffects.value.some(e => e.propId === 1001))
+const shieldRemaining = computed(() => {
+  const e = activeEffects.value.find(e => e.propId === 1002)
+  return e ? Math.max(0, (e.startTime + e.remainingMs - Date.now()) / 1000) : 0
+})
+const doubleRemaining = computed(() => {
+  const e = activeEffects.value.find(e => e.propId === 1001)
+  return e ? Math.max(0, (e.startTime + e.remainingMs - Date.now()) / 1000) : 0
+})
 
+// 结算
+const showResultDialog = ref(false)
+const resultList = ref<any[]>([])
+
+// 计时器
+let startTimeStamp = 0
+let timerRunning = false
+let intervalFlag: number
+let effectUpdateTimer: number | null = null
+
+// ScoreTip 引用
+const scoreTip = ref<InstanceType<typeof ScoreTip> | null>(null)
+let lastKnownScore = 0  // 追踪自己的分数变化
+
+document.oncontextmenu = () => false
+
+// ========== 快捷键处理 ==========
+function onKeydown(e: KeyboardEvent) {
+  // 不在输入框内响应
+  const tag = (e.target as HTMLElement)?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+  // 忽略修饰键组合 (避免劫持浏览器快捷键)
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+
+  const key = e.key.toUpperCase()
+
+  if (key === keybinds.value.flagMode.toUpperCase()) {
+    e.preventDefault()
+    flagMode.value = !flagMode.value
+    return
+  }
+  if (key === keybinds.value.detector.toUpperCase() && hasProp(101)) {
+    e.preventDefault()
+    startUseProp(101)
+    return
+  }
+  if (key === keybinds.value.xjbd.toUpperCase() && hasProp(102)) {
+    e.preventDefault()
+    startUseProp(102)
+    return
+  }
+}
+
+function hasProp(propId: number): boolean {
+  const p = myProps.value.find(p => p.id === propId)
+  return !!(p && p.num > 0)
+}
+
+// ========== 生命周期 ==========
 onMounted(() => {
-  initGame();
-});
+  initGame()
+  startEffectUpdateLoop()
+  window.addEventListener('keydown', onKeydown)
+})
 
 onUnmounted(() => {
-  wsClient.off('chaos/enter', onEnter);
-  wsClient.off('chaos/action', onAction);
-  wsClient.off('chaos/refresh/users', onRefreshUsers);
-  wsClient.off('chaos/finish', onFinish);
-  wsClient.off('ready', onReady);
-  wsClient.off('disconnect', onDisconnect);
-  wsClient.close();
-  if (timer) {
-    clearInterval(intervalFlag);
-  }
-  if (blockTimeout.value) {
-    clearTimeout(blockTimeout.value);
-  }
-});
+  window.removeEventListener('keydown', onKeydown)
+  cleanup()
+})
 
-const initGame = async () => {
-  // 路由到独立的 Node.js 代理 (proxy.js) 来强行注入 header 解决跨域限制
-  const url = `ws://localhost:8080/ws`;
+function cleanup() {
+  wsClient.off('chaos/enter', onEnter)
+  wsClient.off('chaos/action', onAction)
+  wsClient.off('chaos/refresh/users', onRefreshUsers)
+  wsClient.off('chaos/finish', onFinish)
+  wsClient.off('chaos/prop/gain', onPropGain)
+  wsClient.off('chaos/prop/use', onPropUse)
+  wsClient.off('chaos/join/event', onJoinEvent)
+  wsClient.off('ready', onReady)
+  wsClient.off('disconnect', onDisconnect)
+  wsClient.close()
+  if (timerRunning) clearInterval(intervalFlag)
+  if (cdTimer.value) clearInterval(cdTimer.value)
+  if (effectUpdateTimer) clearInterval(effectUpdateTimer)
+}
 
-  // Register handlers
-  wsClient.on('chaos/enter', onEnter);
-  wsClient.on('chaos/action', onAction);
-  wsClient.on('chaos/refresh/users', onRefreshUsers);
-  wsClient.on('chaos/finish', onFinish);
-  wsClient.on('ready', onReady);
-  wsClient.on('disconnect', onDisconnect);
-  wsClient.connect(url);
-};
+// ========== WebSocket 初始化 ==========
+function initGame() {
+  const url = `ws://localhost:8080/ws`
+  wsClient.on('chaos/enter', onEnter)
+  wsClient.on('chaos/action', onAction)
+  wsClient.on('chaos/refresh/users', onRefreshUsers)
+  wsClient.on('chaos/finish', onFinish)
+  wsClient.on('chaos/prop/gain', onPropGain)
+  wsClient.on('chaos/prop/use', onPropUse)
+  wsClient.on('chaos/join/event', onJoinEvent)
+  wsClient.on('ready', onReady)
+  wsClient.on('disconnect', onDisconnect)
+  wsClient.connect(url)
+}
 
-const onDisconnect = () => {
+function onReady() {
+  console.log('WebSocket connected, entering room...')
+  wsClient.send({ url: 'enter' })
+}
+
+function onDisconnect() {
   ElMessageBox.confirm('与服务器断开连接，是否重新入房间？', '连接断开', {
-    confirmButtonText: '重连',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      reset();
-    })
-    .catch(() => {});
-};
+    confirmButtonText: '重连', cancelButtonText: '取消', type: 'warning',
+  }).then(() => reset()).catch(() => {})
+}
 
-const onReady = () => {
-  console.log('WebSocket connection established, entering room...');
-  wsClient.send({ url: 'enter' });
-};
+// ========== chaos/enter — 进入房间 ==========
+function onEnter(data: any) {
+  console.log('Entered room:', data)
+  if (!data.map) return
 
-const onEnter = (data: any) => {
-  console.log('Entered room, initializing game state...');
-  // Parse map
-  if (data.map) {
-    const mapData = data.map.map as string; // like "19932...-129..."
-    const mapStatus = data.map.mapStatus as string; // like "10010..."
+  const mapData = data.map.map as string
+  const mapStatus = data.map.mapStatus as string
 
-    const rows = mapData.split('-').filter((row) => row.length > 0);
-    const statuses = mapStatus.split('-').filter((row) => row.length > 0);
+  const rows = mapData.split('-').filter((row: string) => row.length > 0)
+  const statuses = mapStatus.split('-').filter((row: string) => row.length > 0)
 
-    minefield.value.Height = rows.length;
-    minefield.value.Width = rows[0]?.length || 0;
+  minefield.value.Height = rows.length
+  minefield.value.Width = rows[0]?.length || 0
+  minefield.value.Mines = data.map.mine || 600
+  minefield.value.maxTime = data.map.maxTime || 3600000
 
-    const cells: Cell[] = [];
-    for (let r = 0; r < rows.length; r++) {
-      for (let c = 0; c < rows[r].length; c++) {
-        const val = rows[r][c];
-        const status = statuses[r][c];
+  // 解析特殊区域
+  minefield.value.highScoreZone = parseZone(data.map, 'highScore')
+  minefield.value.noFlagZone = parseZone(data.map, 'nf')
 
-        cells.push({
-          Id: r * minefield.value.Width + c,
-          Mines: val === '9' ? 9 : parseInt(val),
-          IsMine: val === '9',
-          IsOpen: status === '1',
-          IsFlagged: status === '8',
-        });
-      }
+  // 解析格子
+  const cells: Cell[] = []
+  for (let r = 0; r < rows.length; r++) {
+    for (let c = 0; c < rows[r].length; c++) {
+      const val = rows[r][c]
+      const status = statuses[r]?.[c] ?? '0'
+      cells.push({
+        Id: r * minefield.value.Width + c,
+        Mines: val === '9' ? 9 : parseInt(val),
+        IsMine: val === '9',
+        IsOpen: status === '1',
+        IsFlagged: status === '8',
+      })
     }
-    minefield.value.Cell = cells;
-    minefield.value.StartTimeStamp = data.map.createTime || Date.now();
-    startTimeStamp = minefield.value.StartTimeStamp;
-
-    if (data.users) {
-      updateScoreboard(data.users);
-    }
-
-    startTimer();
   }
-  wsClient.send({ channel: 'App', version: 30610, url: 'join' });
-};
+  minefield.value.Cell = cells
+  minefield.value.StartTimeStamp = data.map.createTime || Date.now()
+  startTimeStamp = minefield.value.StartTimeStamp
 
-const updateScoreboard = (users: any[]) => {
-  const newScores: Record<string, number> = {};
-  users.forEach((u) => {
-    newScores[u.user.nickName || u.user.uid] = u.score;
-  });
-  scoreBoard.value = newScores;
-};
-
-const onRefreshUsers = (data: any) => {
   if (data.users) {
-    updateScoreboard(data.users);
+    updateScoreboard(data.users)
   }
-};
 
-const onAction = (data: any) => {
+  startTimer()
+
+  // 加入乱斗
+  wsClient.send({ channel: 'App', version: 30610, url: 'join' })
+}
+
+function parseZone(mapObj: any, prefix: string): ZoneRect | null {
+  const sr = mapObj[`${prefix}StartRow`]
+  const sc = mapObj[`${prefix}StartColumn`]
+  const er = mapObj[`${prefix}EndRow`]
+  const ec = mapObj[`${prefix}EndColumn`]
+  if (sr === undefined || sc === undefined || er === undefined || ec === undefined) return null
+  return { startRow: sr, startColumn: sc, endRow: er, endColumn: ec }
+}
+
+// ========== chaos/join/event — 玩家加入通知 ==========
+function onJoinEvent(data: any) {
+  if (data.user) {
+    ElMessage.info(`${data.user.user?.nickName || data.user.user?.uid} 加入了游戏`)
+  }
+}
+
+// ========== chaos/action — 玩家操作广播 ==========
+function onAction(data: any) {
   if (data.actions) {
     for (const action of data.actions) {
-      const idx = action.r * minefield.value.Width + action.c;
-      const cell = minefield.value.Cell[idx];
-      if (cell) {
-        if (action.a === 0) {
-          cell.IsOpen = true;
-          cell.IsFlagged = false;
-        } else if (action.a === 1) {
-          cell.IsFlagged = true;
+      const idx = action.r * minefield.value.Width + action.c
+      const cell = minefield.value.Cell[idx]
+      if (!cell) continue
+      if (action.a === 0) {
+        cell.IsOpen = true
+        cell.IsFlagged = false
+        // 如果显示的是已经标记的雷（就是踩雷了），保持 IsMine=true 但标记 IsFlagged
+        if (cell.IsMine) {
+          cell.IsFlagged = true
         }
+      } else if (action.a === 1) {
+        cell.IsFlagged = true
       }
     }
   }
-
   if (data.user) {
-    // Optionally update user score if we knew their name accurately
-    // For now we rely on refresh users or just update this exact user
-    const name = data.user.user.nickName || data.user.user.uid;
-    if (scoreBoard.value[name] !== undefined || data.user.score > 0) {
-      scoreBoard.value[name] = data.user.score;
+    updateSinglePlayer(data.user)
+  }
+}
+
+// ========== chaos/refresh/users — 刷新玩家 ==========
+function onRefreshUsers(data: any) {
+  if (data.users) {
+    updateScoreboard(data.users)
+  }
+}
+
+// ========== chaos/finish — 结算 ==========
+function onFinish(data: any) {
+  if (data?.users) {
+    const sorted = [...data.users].sort((a: any, b: any) => b.score - a.score)
+    resultList.value = sorted
+    showResultDialog.value = true
+  }
+}
+
+// ========== chaos/prop/gain — 获得道具 ==========
+function onPropGain(data: any) {
+  if (!data.prop) return
+  const p = data.prop
+  ElMessage.success(`获得道具: ${getPropDisplayName(p.name)} (+${p.num})`)
+
+  // 自动道具 (护盾/双倍): 获得即激活效果, 不等待服务端 chaos/prop/use
+  if (!p.active && (p.id === 1001 || p.id === 1002)) {
+    registerAutoPropEffect(p.id, p.duration, p.name, data.column, data.row)
+  }
+
+  addOrUpdateProp({
+    id: p.id, name: p.name, icon: p.icon, num: p.num,
+    active: p.active, duration: p.duration, type: p.type, consumeCount: p.consumeCount,
+  })
+}
+
+/** 立即注册自动道具的激活效果 (护盾/双倍在获得瞬间开始计时) */
+function registerAutoPropEffect(propId: number, duration: number, name: string, col?: number, row?: number) {
+  const effect: ActivePropEffect = {
+    propId,
+    propName: name,
+    remainingMs: duration,
+    startTime: Date.now(),
+    centerCol: col,
+    centerRow: row,
+  }
+  const existingIdx = activeEffects.value.findIndex(e => e.propId === propId)
+  if (existingIdx >= 0) {
+    activeEffects.value[existingIdx] = effect  // 刷新时间
+  } else {
+    activeEffects.value.push(effect)
+  }
+}
+
+// ========== chaos/prop/use — 道具使用广播 (自动道具: 护盾/双倍) ==========
+function onPropUse(data: any) {
+  const propId = data.propId
+  if (!propId) return
+
+  // 自动道具 (护盾 1002, 双倍 1001): onPropGain 已激活效果, 这里只扣减库存
+  // 主动道具 (101, 102): handlePropUse 已处理全部, 此处跳过
+  const isAutoProp = propId === 1001 || propId === 1002
+  if (!isAutoProp) return
+
+  const inventoryProp = myProps.value.find(p => p.id === propId)
+  if (inventoryProp) {
+    inventoryProp.num -= 1
+    if (inventoryProp.num <= 0) {
+      myProps.value = myProps.value.filter(p => p.id !== propId)
     }
-
-    // Earn Score logic could be extrapolated from before/after diff or we can rely on existing code structure
   }
-};
+}
 
-const onFinish = (data: any) => {
-  // 排序，找出最后一击
-  if (data && data.users) {
-    // 找到最后一击
-    let last = data.users.find((u: any) => u.lastOpen);
-    lastHitUid.value = last ? last.user.uid : null;
-    // 排序，分数高在前
-    let sorted = [...data.users].sort((a, b) => b.score - a.score);
-    resultList.value = sorted;
-    showResultDialog.value = true;
+// ========== prop/gain 时的本地道具更新 ==========
+function addOrUpdateProp(prop: Prop) {
+  const existing = myProps.value.find(p => p.id === prop.id)
+  if (existing) {
+    existing.num += prop.num
+  } else {
+    myProps.value.push({ ...prop })
   }
-};
-// 头像边框颜色
-const getRankBorder = (rank: number) => {
-  if (rank === 1) return '3px solid gold';
-  if (rank === 2) return '3px solid #aaa';
-  if (rank === 3) return '3px solid #c96';
-  return '2px solid #eee';
-};
+}
 
-const getRankIcon = (rank: number) => {
-  if (rank === 1) return '🥇';
-  if (rank === 2) return '🥈';
-  if (rank === 3) return '🥉';
-  return '';
-};
-
-const startTimer = () => {
-  if (!timer) {
-    timer = true;
-    intervalFlag = window.setInterval(() => {
-      let now = new Date().getTime();
-      timeWatcher.value = msToTime(now - startTimeStamp);
-    }, 1);
+// ========== 道具使用流程 ==========
+function startUseProp(propId: number) {
+  if (isBlocked.value) {
+    ElMessage.warning('冷却中，请等待')
+    return
   }
-};
+  if (usingPropId.value === propId) {
+    usingPropId.value = null  // 取消
+    return
+  }
+  usingPropId.value = propId
+}
 
-const handleClick = (event: MouseEvent, index: number) => {
-  if (isBlocked.value) return; // 踩雷惩罚判断
+function propNameById(id: number): string {
+  const map: Record<number, string> = {
+    101: '探测仪', 102: '雷之奥义', 1001: '双倍积分', 1002: '护盾',
+  }
+  return map[id] || `道具#${id}`
+}
 
-  flagSound.stop();
-  openSound.stop();
+function getPropDisplayName(name: string): string {
+  const map: Record<string, string> = {
+    chaos_detector: '探测仪',
+    chaos_xjbd: '雷之奥义',
+    chaos_double_score: '双倍积分',
+    chaos_shield: '护盾',
+  }
+  return map[name] || name
+}
 
-  const isRightClick = event.button === 2;
-  const shouldFlag = isRightClick !== flagMode.value;
+// ========== 点击处理 ==========
+function handleClick(event: MouseEvent, index: number) {
+  if (isBlocked.value) {
+    ElMessage.warning(`冷却中，${cdRemaining.value.toFixed(1)}s 后恢复`)
+    return
+  }
 
-  const cell = minefield.value.Cell[index];
-  const r = Math.floor(index / minefield.value.Width);
-  const c = index % minefield.value.Width;
+  const cell = minefield.value.Cell[index]
+  const r = Math.floor(index / minefield.value.Width)
+  const c = index % minefield.value.Width
+
+  // 如果在使用道具模式
+  if (usingPropId.value !== null) {
+    handlePropUse(usingPropId.value, r, c)
+    return
+  }
+
+  flagSound.stop()
+  openSound.stop()
+
+  const isRightClick = event.button === 2
+  const shouldFlag = isRightClick !== flagMode.value
+
+  // 红区检查 — 只能打开,不能标记
+  if (shouldFlag && isInNoFlagZone(index)) {
+    ElMessage.warning('该区域禁止标记，只能打开')
+    return
+  }
+
   if (shouldFlag) {
-    flagSound.play();
+    flagSound.play()
     if (!cell.IsOpen) {
-      // Only flag un-opened ones
+      // 标记非雷会进入冷却
       if (!cell.IsMine) {
-        boomSound.play();
-        // isBlocked.value = true;
-        ElMessage.error('标记错了！1秒后恢复');
-        // if (blockTimeout.value) {
-        //   clearTimeout(blockTimeout.value);
-        // }
-        // blockTimeout.value = window.setTimeout(() => {
-        //   isBlocked.value = false;
-        // }, 3000);
+        applyCooldown()
+        ElMessage({ message: '标记错误', type: 'info', duration: 800 })
       }
-      doFlag({ a: 1, c, r });
+      doFlag({ a: 1, c, r })
     } else {
-      // 展开周围 (双击/点击已开)
-      doExpand(index);
+      doExpand(index)
     }
   } else {
     // 挖开
-    openSound.play();
+    openSound.play()
     if (!cell.IsOpen && !cell.IsFlagged) {
       if (cell.IsMine) {
-        boomSound.play();
-        cell.IsFlagged = true;
-        // isBlocked.value = true;
-        ElMessage.error('踩到雷了！1秒后恢复');
-        // if (blockTimeout.value) {
-        //   clearTimeout(blockTimeout.value);
-        // }
-        // blockTimeout.value = window.setTimeout(() => {
-        //   isBlocked.value = false;
-        // }, 3000);
+        // 护盾: 踩雷不进入冷却但减少护盾时间
+        if (shieldActive.value) {
+          const shield = activeEffects.value.find(e => e.propId === 1002)
+          if (shield) {
+            shield.remainingMs -= 1000
+            if (shield.remainingMs <= 0) {
+              activeEffects.value = activeEffects.value.filter(e => e.propId !== 1002)
+            }
+          }
+          ElMessage.warning('踩雷！护盾保护')
+        } else {
+          applyCooldown()
+          ElMessage({ message: '踩雷', type: 'info', duration: 800 })
+        }
       }
-      console.log('Opening cell:', r, c, cell);
-      doOpen({ a: 0, c, r });
+      doOpen({ a: 0, c, r })
     } else if (cell.IsOpen) {
-      doExpand(index);
+      doExpand(index)
     }
   }
-};
+}
 
-function doOpen(action: Action) {
-  let actions: Action[] = [];
-  const cell =
-    minefield.value.Cell[action.r * minefield.value.Width + action.c];
-  if (cell.Mines === 0) {
-    actions.push(...reveal(action.a, action.c, action.r));
+// ========== 道具使用 ==========
+function handlePropUse(propId: number, row: number, col: number) {
+  const prop = myProps.value.find(p => p.id === propId)
+  if (!prop || prop.num <= 0) {
+    ElMessage.error('没有该道具')
+    usingPropId.value = null
+    return
   }
-  actions.push(action);
-  sendActions(actions);
+  if (!prop.active) {
+    ElMessage.warning('该道具是自动使用的')
+    usingPropId.value = null
+    return
+  }
+
+  // 发送道具使用请求 + 本地立即扣减
+  wsClient.send({ propId, column: col, row, url: 'prop/use' })
+  prop.num -= 1
+  if (prop.num <= 0) {
+    myProps.value = myProps.value.filter(p => p.id !== propId)
+  }
+  usingPropId.value = null
+
+  // ==== 雷之奥义(id=102): 客户端计算 7x7 区域，标记所有雷、打开所有安全格 ====
+  //  服务端不负责计算，客户端需要自己算出所有 action 并批量发送
+  if (propId === 102) {
+    doXjbd(row, col)
+  }
+
+  // ==== 探测仪(id=101): 只需激活视觉效果，服务端处理道具消耗 ====
+  //  客户端根据已有地图数据高亮 5x5 范围内的雷（见 isInDetectorRange）
+
+  // 注册激活效果（服务端可能不广播 prop/use, 客户端主动登记）
+  const knownDurations: Record<number, number> = { 101: 10000, 102: 1500 }
+  const knownNames: Record<number, string> = { 101: 'chaos_detector', 102: 'chaos_xjbd' }
+  const dur = knownDurations[propId]
+  if (dur) {
+    const effect: ActivePropEffect = {
+      propId,
+      propName: knownNames[propId] || `prop_${propId}`,
+      remainingMs: dur,
+      startTime: Date.now(),
+      centerCol: col,
+      centerRow: row,
+    }
+    const existingIdx = activeEffects.value.findIndex(e => e.propId === propId)
+    if (existingIdx >= 0) {
+      activeEffects.value[existingIdx] = effect
+    } else {
+      activeEffects.value.push(effect)
+    }
+  }
+
+  ElMessage.success(`使用 ${getPropDisplayName(prop.name)}`)
+}
+
+/** 雷之奥义: 自动完成 7x7 区域 — 标记雷 + 打开安全格(含递归展开) */
+function doXjbd(centerRow: number, centerCol: number) {
+  const w = minefield.value.Width
+  const h = minefield.value.Height
+  const visited = new Set<number>()
+  const actions: Action[] = []
+
+  // 7x7 区域边界 (中心 ±3)
+  const r0 = Math.max(0, centerRow - 3)
+  const r1 = Math.min(h - 1, centerRow + 3)
+  const c0 = Math.max(0, centerCol - 3)
+  const c1 = Math.min(w - 1, centerCol + 3)
+
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      const idx = r * w + c
+      if (visited.has(idx)) continue
+      const cell = minefield.value.Cell[idx]
+      if (cell.IsOpen || cell.IsFlagged) continue
+
+      visited.add(idx)
+      if (cell.IsMine) {
+        // 雷 → 标记
+        actions.push({ a: 1, r, c })
+      } else {
+        // 安全格 → 打开
+        actions.push({ a: 0, r, c })
+        // 0 值格子触发连锁展开
+        if (cell.Mines === 0) {
+          actions.push(...collectChainOpen(r, c, w, h, visited))
+        }
+      }
+    }
+  }
+
+  if (actions.length > 0) {
+    sendActions(actions)
+  }
+}
+
+/** BFS 收集从 (r,c) 出发的连锁打开动作（0 值展开，遇非 0 安全格止步） */
+function collectChainOpen(sr: number, sc: number, w: number, h: number, visited: Set<number>): Action[] {
+  const result: Action[] = []
+  const queue: [number, number][] = [[sr, sc]]
+
+  while (queue.length > 0) {
+    const [r, c] = queue.shift()!
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue
+        const nr = r + dr, nc = c + dc
+        if (nr < 0 || nr >= h || nc < 0 || nc >= w) continue
+        const idx = nr * w + nc
+        if (visited.has(idx)) continue
+        const cell = minefield.value.Cell[idx]
+        if (cell.IsOpen || cell.IsFlagged) continue
+        visited.add(idx)
+        if (cell.IsMine) continue  // 连锁展开不标记雷
+        result.push({ a: 0, r: nr, c: nc })
+        if (cell.Mines === 0) {
+          queue.push([nr, nc])
+        }
+      }
+    }
+  }
+  return result
+}
+
+// ========== 冷却系统 ==========
+function applyCooldown() {
+  const now = Date.now()
+  cdEndTime.value = Math.max(cdEndTime.value, now) + COOLDOWN_PER_ERROR * 1000
+  cdRemaining.value = (cdEndTime.value - now) / 1000
+  startCdTimer()
+}
+
+function startCdTimer() {
+  if (cdTimer.value) return
+  cdTimer.value = window.setInterval(() => {
+    const remaining = Math.max(0, (cdEndTime.value - Date.now()) / 1000)
+    cdRemaining.value = remaining
+    if (remaining <= 0) {
+      cdRemaining.value = 0
+      if (cdTimer.value) {
+        clearInterval(cdTimer.value)
+        cdTimer.value = null
+      }
+    }
+  }, 100)
+}
+
+// ========== 主动效果更新循环(护盾/双倍计时) ==========
+function startEffectUpdateLoop() {
+  effectUpdateTimer = window.setInterval(() => {
+    const now = Date.now()
+    activeEffects.value = activeEffects.value.filter(e => {
+      const elapsed = now - e.startTime
+      return elapsed < e.remainingMs
+    })
+  }, 500)
+}
+
+// ========== 操作 ==========
+function doOpen(action: Action) {
+  let actions: Action[] = []
+  const cell = minefield.value.Cell[action.r * minefield.value.Width + action.c]
+  if (cell.Mines === 0) {
+    actions.push(...reveal(action.a, action.c, action.r))
+  }
+  actions.push(action)
+  sendActions(actions)
 }
 
 function doFlag(action: Action) {
-  sendActions([action]);
+  sendActions([action])
 }
 
-const doExpand = (index: number) => {
-  const cell = minefield.value.Cell[index];
-  if (!cell.IsOpen) return;
+function doExpand(index: number) {
+  const cell = minefield.value.Cell[index]
+  if (!cell.IsOpen) return
 
-  const nearby = getNearbyCells(index);
+  const nearby = getNearbyCells(index)
   const flagCount = nearby.filter(
-    (n) =>
-      minefield.value.Cell[n].IsFlagged ||
-      (minefield.value.Cell[n].IsOpen && minefield.value.Cell[n].IsMine),
-  ).length;
+    n => minefield.value.Cell[n].IsFlagged || (minefield.value.Cell[n].IsOpen && minefield.value.Cell[n].IsMine)
+  ).length
 
   if (flagCount === cell.Mines) {
-    openSound.play();
-    let actions: Action[] = [];
-    nearby.forEach((i) => {
-      const nCell = minefield.value.Cell[i];
+    openSound.play()
+    let actions: Action[] = []
+    nearby.forEach(i => {
+      const nCell = minefield.value.Cell[i]
       if (!nCell.IsOpen && !nCell.IsFlagged) {
-        actions.push({
-          a: 0,
-          c: i % minefield.value.Width,
-          r: Math.floor(i / minefield.value.Width),
-        });
+        actions.push({ a: 0, c: i % minefield.value.Width, r: Math.floor(i / minefield.value.Width) })
         if (nCell.Mines === 0) {
-          actions.push(
-            ...reveal(
-              0,
-              i % minefield.value.Width,
-              Math.floor(i / minefield.value.Width),
-            ),
-          );
+          actions.push(...reveal(0, i % minefield.value.Width, Math.floor(i / minefield.value.Width)))
         }
       }
-    });
-    sendActions(actions);
+    })
+    sendActions(actions)
   }
-};
+}
 
-const reveal = (a: number, c: number, r: number) => {
-  if (a !== 0) return [];
-  let actions: Action[] = [];
-  console.log(r * minefield.value.Width + c, 'reveal called');
-  const cell = minefield.value.Cell[r * minefield.value.Width + c];
+function reveal(a: number, c: number, r: number): Action[] {
+  if (a !== 0) return []
+  let actions: Action[] = []
+  const cell = minefield.value.Cell[r * minefield.value.Width + c]
   if (cell.Mines === 0) {
     for (let dr = -1; dr <= 1; dr++) {
       for (let dc = -1; dc <= 1; dc++) {
-        // 去除自己
-        if (dr === 0 && dc === 0) continue;
-        // 边界检测
-        if (
-          r + dr < 0 ||
-          r + dr >= minefield.value.Height ||
-          c + dc < 0 ||
-          c + dc >= minefield.value.Width
-        )
-          continue;
-        const nCell =
-          minefield.value.Cell[(r + dr) * minefield.value.Width + (c + dc)];
-        if (nCell.IsOpen || nCell.IsFlagged) continue; // 已经打开或标记的格子不处理
-        nCell.IsOpen = true; // 本地先标记为打开，避免重复递归
-        actions.push({ a: 0, r: r + dr, c: c + dc });
-        // 递归展开
+        if (dr === 0 && dc === 0) continue
+        const nr = r + dr; const nc = c + dc
+        if (nr < 0 || nr >= minefield.value.Height || nc < 0 || nc >= minefield.value.Width) continue
+        const nCell = minefield.value.Cell[nr * minefield.value.Width + nc]
+        if (nCell.IsOpen || nCell.IsFlagged) continue
+        nCell.IsOpen = true
+        actions.push({ a: 0, r: nr, c: nc })
         if (nCell.Mines === 0) {
-          actions.push(...reveal(0, c + dc, r + dr));
+          actions.push(...reveal(0, nc, nr))
         }
       }
     }
   }
-  return actions;
-};
+  return actions
+}
 
-const sendActions = (actions: Action[]) => {
-  if (actions.length === 0) return;
-  // 本地立即更新地图
-  actions.forEach((act) => {
-    const idx = act.r * minefield.value.Width + act.c;
-    const cell = minefield.value.Cell[idx];
+function sendActions(actions: Action[]) {
+  if (actions.length === 0) return
+  actions.forEach(act => {
+    const idx = act.r * minefield.value.Width + act.c
+    const cell = minefield.value.Cell[idx]
     if (cell) {
-      if (act.a === 0) {
-        cell.IsOpen = true;
-        cell.IsFlagged = false;
-      } else if (act.a === 1) {
-        cell.IsFlagged = true;
+      if (act.a === 0) { cell.IsOpen = true; cell.IsFlagged = false }
+      else if (act.a === 1) { cell.IsFlagged = true }
+    }
+  })
+  wsClient.send({ url: 'action', actions })
+}
+
+function getNearbyCells(cell: number): number[] {
+  let nearby: number[] = []
+  let w = minefield.value.Width, h = minefield.value.Height
+  let x = cell % w, y = Math.floor(cell / w)
+  if (y > 0) nearby.push(cell - w)
+  if (y < h - 1) nearby.push(cell + w)
+  if (x > 0) {
+    nearby.push(cell - 1)
+    if (y > 0) nearby.push(cell - w - 1)
+    if (y < h - 1) nearby.push(cell + w - 1)
+  }
+  if (x < w - 1) {
+    nearby.push(cell + 1)
+    if (y > 0) nearby.push(cell - w + 1)
+    if (y < h - 1) nearby.push(cell + w + 1)
+  }
+  return nearby
+}
+
+// ========== 记分板 ==========
+function updateScoreboard(users: ChaosUser[]) {
+  const newScores: ScoreBoardType = {}
+  const prevSelfScore = scoreBoard.value[getMyUid()]?.score ?? 0
+  users.forEach(u => {
+    const uid = u.user.uid || String(u.user.id)
+    newScores[uid] = {
+      uid,
+      name: u.user.nickName || uid,
+      avatar: u.user.avatar || '',
+      score: u.score,
+      correct: u.countCorrect,
+      incorrect: u.countIncorrect ?? u.countError,
+      usePropCount: u.usePropCount,
+      lastOpen: u.lastOpen,
+    }
+    // 检测分数变化以播放动画
+    if (uid === getMyUid() && u.score !== prevSelfScore) {
+      const delta = u.score - prevSelfScore
+      if (delta !== 0 && scoreTip.value) {
+        scoreTip.value.tips(delta)
       }
     }
-  });
-  wsClient.send({
-    url: 'action',
-    actions,
-  });
-};
+  })
+  scoreBoard.value = newScores
+}
 
-const getNearbyCells = (cell: number) => {
-  let nearbyCells = [];
-  let width = minefield.value.Width;
-  let height = minefield.value.Height;
-  let x = cell % width;
-  let y = Math.floor(cell / width);
-
-  let isNotFirstRow = y > 0;
-  let isNotLastRow = y < height - 1;
-
-  if (isNotFirstRow) nearbyCells.push(cell - width); //up
-  if (isNotLastRow) nearbyCells.push(cell + width); //down
-
-  if (x > 0) {
-    nearbyCells.push(cell - 1); //left
-    if (isNotFirstRow) nearbyCells.push(cell - width - 1); //up left
-    if (isNotLastRow) nearbyCells.push(cell + width - 1); //down left
+function updateSinglePlayer(user: ChaosUser) {
+  const uid = user.user.uid || String(user.user.id)
+  const prevScore = scoreBoard.value[uid]?.score ?? 0
+  scoreBoard.value[uid] = {
+    uid,
+    name: user.user.nickName || uid,
+    avatar: user.user.avatar || '',
+    score: user.score,
+    correct: user.countCorrect,
+    incorrect: user.countIncorrect ?? user.countError,
+    usePropCount: user.usePropCount,
+    lastOpen: user.lastOpen,
   }
-
-  if (x < width - 1) {
-    nearbyCells.push(cell + 1); //right
-    if (isNotFirstRow) nearbyCells.push(cell - width + 1); //up right
-    if (isNotLastRow) nearbyCells.push(cell + width + 1); //down right
+  // 自己的分数变化动画
+  if (uid === getMyUid() && user.score !== prevScore && scoreTip.value) {
+    scoreTip.value.tips(user.score - prevScore)
   }
+}
 
-  return nearbyCells;
-};
+function getMyUid(): string {
+  // 尝试从记分板中查找自己 — 使用最后一个加入的玩家
+  // 实际项目中应从登录信息获取
+  const entries = Object.entries(scoreBoard.value)
+  if (entries.length === 0) return ''
+  // 返回最后一个条目(通常是自己)
+  return entries[entries.length - 1][0]
+}
 
-const getImageSrc = (cell: Cell) => {
-  let mines = cell.Mines;
+// ========== 区域判断 ==========
+function isInNoFlagZone(index: number): boolean {
+  const zone = minefield.value.noFlagZone
+  if (!zone) return false
+  const r = Math.floor(index / minefield.value.Width)
+  const c = index % minefield.value.Width
+  return r >= zone.startRow && r <= zone.endRow && c >= zone.startColumn && c <= zone.endColumn
+}
+
+function isInHighScoreZone(index: number): boolean {
+  const zone = minefield.value.highScoreZone
+  if (!zone) return false
+  const r = Math.floor(index / minefield.value.Width)
+  const c = index % minefield.value.Width
+  return r >= zone.startRow && r <= zone.endRow && c >= zone.startColumn && c <= zone.endColumn
+}
+
+function isInDetectorRange(index: number): boolean {
+  const detector = activeEffects.value.find(e => e.propId === 101)
+  if (!detector || detector.centerCol === undefined || detector.centerRow === undefined) return false
+  const r = Math.floor(index / minefield.value.Width)
+  const c = index % minefield.value.Width
+  const dr = Math.abs(r - detector.centerRow)
+  const dc = Math.abs(c - detector.centerCol)
+  return dr <= 2 && dc <= 2  // 5x5 范围(中心 ±2)
+}
+
+function isInXjbdRange(index: number): boolean {
+  const xjbd = activeEffects.value.find(e => e.propId === 102)
+  if (!xjbd || xjbd.centerCol === undefined || xjbd.centerRow === undefined) return false
+  const r = Math.floor(index / minefield.value.Width)
+  const c = index % minefield.value.Width
+  const dr = Math.abs(r - xjbd.centerRow)
+  const dc = Math.abs(c - xjbd.centerCol)
+  return dr <= 3 && dc <= 3  // 7x7 范围(中心 ±3)
+}
+
+// ========== 图片 ==========
+function getImageSrc(cell: Cell): string {
+  let mines = cell.Mines
   if (cell.IsOpen) {
-    if (cell.IsMine) {
-      return `/src/assets/themes/wom/flag.png`;
-    }
-    if (cell.Mines === 9) {
-      return `/src/assets/themes/wom/closed.png`;
-    }
-    return `/src/assets/themes/wom/type${mines}.png`;
+    if (cell.IsMine) return `/src/assets/themes/wom/flag.png`
+    if (cell.Mines === 9) return `/src/assets/themes/wom/closed.png`
+    return `/src/assets/themes/wom/type${mines}.png`
   }
-  if (cell.IsFlagged) {
-    return `/src/assets/themes/wom/flag.png`;
+  if (cell.IsFlagged) return `/src/assets/themes/wom/flag.png`
+  return `/src/assets/themes/wom/closed.png`
+}
+
+// ========== 计时器 ==========
+function startTimer() {
+  if (!timerRunning) {
+    timerRunning = true
+    intervalFlag = window.setInterval(() => {
+      timeWatcher.value = msToTime(Date.now() - startTimeStamp)
+    }, 1)
   }
-  return `/src/assets/themes/wom/closed.png`;
-};
+}
 
 function msToTime(duration: number): string {
-  const milliseconds = duration % 10;
-  const seconds = Math.floor(duration / 1000);
-  const secondsStr = seconds < 10 ? '0' + seconds : seconds;
-  return `${secondsStr}:${milliseconds}`;
+  const milliseconds = duration % 10
+  const seconds = Math.floor(duration / 1000)
+  const secondsStr = seconds < 10 ? '0' + seconds : String(seconds)
+  return `${secondsStr}:${milliseconds}`
 }
 
+// ========== 结算 UI ==========
+function getRankBorder(rank: number) {
+  if (rank === 1) return '3px solid gold'
+  if (rank === 2) return '3px solid #aaa'
+  if (rank === 3) return '3px solid #c96'
+  return '2px solid #eee'
+}
+function getRankIcon(rank: number) {
+  if (rank === 1) return '🥇'
+  if (rank === 2) return '🥈'
+  if (rank === 3) return '🥉'
+  return ''
+}
+
+// ========== 提示 ==========
 function doHint() {
-  // 简单提示：找一个未打开的格子，挖开它，如果是空格则继续挖开周围
   for (let i = 0; i < minefield.value.Cell.length; i++) {
-    const cell = minefield.value.Cell[i];
+    const cell = minefield.value.Cell[i]
     if (!cell.IsOpen && !cell.IsFlagged && !cell.IsMine) {
-      const r = Math.floor(i / minefield.value.Width);
-      const c = i % minefield.value.Width;
-      doOpen({ a: 0, c, r });
-      break;
+      const r = Math.floor(i / minefield.value.Width)
+      const c = i % minefield.value.Width
+      doOpen({ a: 0, c, r })
+      break
     }
   }
 }
 
+// ========== 退出 / 重置 ==========
 function exitRoom() {
-  wsClient.send({ url: 'leave' });
   ElMessageBox.confirm('确定要退出房间吗？', '退出确认', {
-    confirmButtonText: '退出',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      // Optionally we can also clear local state here
-      minefield.value = {
-        Width: 0,
-        Height: 0,
-        Cells: 0,
-        Mines: 0,
-        Cell: [],
-        First: false,
-        StartTimeStamp: 0,
-      };
-      scoreBoard.value = {};
-      timeWatcher.value = '00:000';
-      wsClient.off('chaos/enter', onEnter);
-      wsClient.off('chaos/action', onAction);
-      wsClient.off('chaos/refresh/users', onRefreshUsers);
-      wsClient.off('chaos/finish', onFinish);
-      wsClient.off('ready', onReady);
-      wsClient.off('disconnect', onDisconnect);
-      wsClient.close();
-    })
-    .catch(() => {});
+    confirmButtonText: '退出', cancelButtonText: '取消', type: 'warning',
+  }).then(() => {
+    wsClient.send({ url: 'leave' })
+    minefield.value = { Width: 0, Height: 0, Cells: 0, Mines: 0, Cell: [], First: false, StartTimeStamp: 0, highScoreZone: null, noFlagZone: null, maxTime: 3600000 }
+    scoreBoard.value = {}
+    myProps.value = []
+    activeEffects.value = []
+    timeWatcher.value = '00:000'
+    cleanup()
+  }).catch(() => {})
 }
 
 function reset() {
-  wsClient.off('chaos/enter', onEnter);
-  wsClient.off('chaos/action', onAction);
-  wsClient.off('chaos/refresh/users', onRefreshUsers);
-  wsClient.off('chaos/finish', onFinish);
-  wsClient.off('ready', onReady);
-  wsClient.off('disconnect', onDisconnect);
-  wsClient.close();
-  initGame();
+  cleanup()
+  minefield.value = { Width: 0, Height: 0, Cells: 0, Mines: 0, Cell: [], First: false, StartTimeStamp: 0, highScoreZone: null, noFlagZone: null, maxTime: 3600000 }
+  scoreBoard.value = {}
+  myProps.value = []
+  activeEffects.value = []
+  cdEndTime.value = 0
+  cdRemaining.value = 0
+  usingPropId.value = null
+  timeWatcher.value = '00:000'
+  timerRunning = false
+  initGame()
+  startEffectUpdateLoop()
 }
 </script>
 
 <style scoped>
+/* ===== 顶部栏 ===== */
 .topPositionFixed {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 20px;
+  padding: 10px 16px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
-
 .header-content {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
 }
-
+.flag-switch-button {
+  color: #fff !important;
+  border: none !important;
+  font-weight: 700;
+  transition: all 0.25s;
+}
+/* CD / Buff 指示器 */
+.cd-indicator {
+  color: #f87171;
+  font-weight: 700;
+  font-size: 15px;
+  min-width: 115px;
+  text-align: center;
+  flex-shrink: 0;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  background: rgba(248, 113, 113, 0.1);
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+.buff-indicator {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  min-width: 110px;
+  text-align: center;
+  flex-shrink: 0;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+.buff-shield {
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.12);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+}
+.buff-double {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
 .timeWatcher {
-  font-size: 26px;
-  font-weight: bold;
-  color: #00bd7e;
-  margin-left: 20px;
+  font-size: 28px;
+  font-weight: 800;
+  font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+  font-variant-numeric: tabular-nums;
+  color: #5eead4;
+  margin-left: 16px;
+  text-shadow: 0 0 16px rgba(94, 234, 212, 0.3);
+  width: 110px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.scoreTipParent {
+  height: 0;
+  overflow: visible;
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+/* 道具栏 — 左下角固定, 不占布局空间 */
+.prop-bar-fixed {
+  position: fixed;
+  bottom: 50px;
+  left: 16px;
+  z-index: 100;
 }
 
+/* ===== 主体 ===== */
 .main-layout {
   display: flex;
   justify-content: center;
-  gap: 20px;
-  height: calc(100vh - 150px);
+  gap: 16px;
+  height: calc(100vh - 112px);
   max-width: 100vw;
+  padding: 10px 12px;
 }
-
 .left-panel {
-  width: 150px;
+  width: 235px;
   flex-shrink: 0;
   overflow-y: auto;
+  border-radius: 12px;
 }
-
 .center-panel {
   flex-grow: 1;
   display: flex;
-  justify-content: center;
-  max-width: calc(100% - 220px);
+  justify-content: flex-start;
+  padding-left: 8px;
+  max-width: calc(100% - 275px);
 }
 
+/* ===== 棋盘 ===== */
 .board {
   display: grid;
-  padding: 10px;
-  background: #f0f0f0;
-  border-radius: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
-
+.cell-wrapper {
+  position: relative;
+  transition: transform 0.1s;
+}
+.cell-wrapper:active {
+  transform: scale(0.92);
+}
 .cell {
   background-size: cover;
-  position: relative;
   box-sizing: border-box;
+  cursor: pointer;
+  image-rendering: pixelated;
+  border-radius: 2px;
+}
+.cell:hover {
+  filter: brightness(1.25) saturate(1.1);
+  z-index: 1;
 }
 
-.blocked-overlay {
+/* ===== 快捷键提示 ===== */
+.key-hint {
+  display: inline-block;
+  font-size: 10px;
+  font-family: inherit;
+  padding: 1px 6px;
+  margin-left: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #aaa;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+/* ===== 遮罩层 ===== */
+/* CD 冷却 — 红色扫描线 */
+.cd-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 0, 0, 0.2);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 60, 60, 0.12) 0px,
+    rgba(255, 60, 60, 0.12) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+  pointer-events: none;
   z-index: 10;
-  cursor: not-allowed;
+  border-radius: 2px;
+}
+
+/* 红区 — 禁止标记 */
+.no-flag-zone-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255, 50, 50, 0.45);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 2px;
+}
+
+/* 黄区 — 高分区 */
+.high-score-zone-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255, 200, 50, 0.30);
+  pointer-events: none;
+  z-index: 4;
+  border-radius: 2px;
+}
+
+/* 探测仪 5x5 */
+.detector-highlight {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 230, 120, 0.22);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 2px;
+  box-shadow: inset 0 0 8px rgba(0, 230, 120, 0.15);
+}
+.detector-highlight-mine {
+  background: rgba(255, 80, 40, 0.55);
+  border: 1.5px dashed rgba(255, 80, 40, 0.9);
+  box-shadow: inset 0 0 10px rgba(255, 80, 40, 0.3);
+}
+
+/* 雷之奥义 7x7 — 紫光闪烁 */
+.xjbd-highlight {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(140, 60, 255, 0.28);
+  pointer-events: none;
+  z-index: 6;
+  border-radius: 2px;
+  animation: xjbd-flash 0.35s ease-in-out infinite alternate;
+}
+@keyframes xjbd-flash {
+  from { background: rgba(140, 60, 255, 0.18); box-shadow: inset 0 0 6px rgba(140, 60, 255, 0.2); }
+  to   { background: rgba(140, 60, 255, 0.45); box-shadow: inset 0 0 14px rgba(140, 60, 255, 0.4); }
 }
 </style>

@@ -36,18 +36,25 @@ const toggleDark = useToggle(isDark);
 </template>
 
 <style>
-.foot-container{
+.foot-container {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 12px;
 }
 .icon-btn {
   cursor: pointer;
-  width: 1.2rem;
-  height: 1.2rem;
+  width: 1.4rem;
+  height: 1.4rem;
   background-color: transparent;
-  display: block;
-  margin: 0 0.5rem;
-  cursor: pointer;
-  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  transition: color 0.2s, transform 0.2s;
+}
+.icon-btn:hover {
+  color: #d0d0d0;
+  transform: scale(1.15);
 }
 </style>

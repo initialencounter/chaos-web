@@ -42,9 +42,12 @@ defineExpose({
 .animated-div {
   position: absolute;
   top: 0;
-  color: #2b8a2d;
+  color: #5eead4;
+  font-weight: 700;
+  font-size: 15px;
   width: 10rem;
   opacity: 0;
+  text-shadow: 0 0 10px rgba(94, 234, 212, 0.5);
   animation: moveAndFade 2s ease-out;
 }
 
