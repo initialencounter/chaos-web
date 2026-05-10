@@ -3,39 +3,85 @@
     <div class="prop-bar-inner">
       <div class="prop-label">道具栏</div>
       <div
-        v-for="prop in props"
+        v-for="prop in props.props"
         :key="prop.id"
         class="prop-item"
         :class="{
           'prop-active': prop.active && usingPropId === prop.id,
           'prop-disabled': cdRemaining > 0,
           'prop-auto': !prop.active,
+          'prop-countdown': isAutoActive(prop.id),
         }"
         @click="prop.active ? $emit('useProp', prop.id) : null"
         :title="getPropDesc(prop)"
       >
-        <el-badge :value="prop.num" :offset="[-4, 0]">
-          <img :src="prop.icon" class="prop-icon" />
+        <el-badge :value="getBadgeValue(prop)" :offset="[-4, 0]" :class="{ 'countdown-badge': isAutoActive(prop.id) }">
+          <img :src="prop.icon" class="prop-icon" :class="{ 'prop-icon-pulse': isAutoActive(prop.id) }" />
         </el-badge>
         <div class="prop-name">{{ getPropDisplayName(prop.name) }}</div>
+        <div v-if="isAutoActive(prop.id)" class="prop-timer-bar">
+          <div class="prop-timer-fill" :style="{ width: getTimerPercent(prop.id) + '%' }" />
+        </div>
       </div>
-      <span v-if="props.length === 0" class="prop-empty">暂无道具</span>
+      <span v-if="props.props.length === 0" class="prop-empty">暂无道具</span>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import type { Prop } from '@/types'
+import { ref, onMounted, onUnmounted } from 'vue'
+import type { Prop, ActivePropEffect } from '@/types'
 
-defineProps<{
+const props = defineProps<{
   props: Prop[]
   usingPropId: number | null
   cdRemaining: number
+  activeEffects: ActivePropEffect[]
 }>()
 
 defineEmits<{
   useProp: [propId: number]
 }>()
+
+const now = ref(Date.now())
+let timer: number | null = null
+
+onMounted(() => {
+  timer = window.setInterval(() => {
+    now.value = Date.now()
+  }, 100)
+})
+
+onUnmounted(() => {
+  if (timer) {
+    clearInterval(timer)
+    timer = null
+  }
+})
+
+function isAutoActive(propId: number): boolean {
+  return props.activeEffects.some(e => e.propId === propId && (e.startTime + e.remainingMs) > now.value)
+}
+
+function getAutoRemaining(propId: number): number {
+  const e = props.activeEffects.find(e => e.propId === propId)
+  if (!e) return 0
+  return Math.max(0, (e.startTime + e.remainingMs - now.value) / 1000)
+}
+
+function getBadgeValue(prop: Prop): string | number {
+  if (!prop.active && isAutoActive(prop.id)) {
+    return getAutoRemaining(prop.id).toFixed(1) + 's'
+  }
+  return prop.num
+}
+
+function getTimerPercent(propId: number): number {
+  const e = props.activeEffects.find(e => e.propId === propId)
+  if (!e || e.remainingMs <= 0) return 0
+  const remaining = Math.max(0, e.startTime + e.remainingMs - now.value)
+  return (remaining / e.remainingMs) * 100
+}
 
 function getPropDisplayName(name: string): string {
   const map: Record<string, string> = {
@@ -127,5 +173,37 @@ function getPropDesc(prop: Prop): string {
   color: #666;
   padding: 0 10px;
   font-style: italic;
+}
+
+/* 自动道具倒计时样式 */
+.prop-countdown {
+  border-color: rgba(96, 165, 250, 0.5) !important;
+  border-style: solid !important;
+  background: rgba(96, 165, 250, 0.08);
+}
+.prop-icon-pulse {
+  animation: icon-pulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes icon-pulse {
+  from { filter: drop-shadow(0 0 3px rgba(96, 165, 250, 0.4)); }
+  to   { filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.8)); }
+}
+.prop-timer-bar {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.prop-timer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #60a5fa, #34d399);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+:deep(.countdown-badge .el-badge__content) {
+  background: #60a5fa !important;
+  font-size: 10px !important;
 }
 </style>

@@ -190,6 +190,7 @@
       :props="myProps"
       :using-prop-id="usingPropId"
       :cd-remaining="cdRemaining"
+      :active-effects="activeEffects"
       @use-prop="startUseProp"
     />
   </div>
@@ -795,10 +796,27 @@ function startCdTimer() {
 function startEffectUpdateLoop() {
   effectUpdateTimer = window.setInterval(() => {
     const now = Date.now()
+    const expiredAutoIds: number[] = []
     activeEffects.value = activeEffects.value.filter(e => {
       const elapsed = now - e.startTime
-      return elapsed < e.remainingMs
+      const expired = elapsed >= e.remainingMs
+      if (expired) {
+        // 自动道具效果过期时, 同步清理道具栏库存
+        if (e.propId === 1001 || e.propId === 1002) {
+          expiredAutoIds.push(e.propId)
+        }
+      }
+      return !expired
     })
+    for (const propId of expiredAutoIds) {
+      const inv = myProps.value.find(p => p.id === propId)
+      if (inv) {
+        inv.num -= 1
+        if (inv.num <= 0) {
+          myProps.value = myProps.value.filter(p => p.id !== propId)
+        }
+      }
+    }
   }, 500)
 }
 
@@ -917,7 +935,7 @@ function updateScoreboard(users: ChaosUser[]) {
     if (uid === getMyUid() && u.score !== prevSelfScore) {
       const delta = u.score - prevSelfScore
       if (delta !== 0 && scoreTip.value) {
-        scoreTip.value.tips(delta)
+        scoreTip.value.tips(delta, doubleScoreActive.value)
       }
     }
   })
@@ -939,7 +957,7 @@ function updateSinglePlayer(user: ChaosUser) {
   }
   // 自己的分数变化动画
   if (uid === getMyUid() && user.score !== prevScore && scoreTip.value) {
-    scoreTip.value.tips(user.score - prevScore)
+    scoreTip.value.tips(user.score - prevScore, doubleScoreActive.value)
   }
 }
 
