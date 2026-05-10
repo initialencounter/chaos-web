@@ -71,7 +71,7 @@ function getPropDesc(prop: Prop): string {
     chaos_detector: '显示5x5范围的雷,持续8秒。点击后选择格子使用',
     chaos_xjbd: '自动完成7x7区域,雷自动标记。点击后选择格子使用',
     chaos_double_score: '10秒内得分加倍。获得时自动使用',
-    chaos_shield: '6秒无敌,踩雷不进入冷却但每次减1秒。获得时自动使用',
+    chaos_shield: '不限时间,踩雷时消耗一个护盾,可叠加。获得时自动使用',
   }
   return descs[prop.name] || ''
 }

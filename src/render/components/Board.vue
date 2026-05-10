@@ -107,12 +107,15 @@ const usingPropId = ref<number | null>(null) // 正在使用的主动道具 ID
 const activeEffects = ref<ActivePropEffect[]>([]) // 当前激活的道具效果
 
 // 护盾/双倍 激活标志(计算属性)
-const shieldActive = computed(() => activeEffects.value.some(e => e.propId === 1002))
-const doubleScoreActive = computed(() => activeEffects.value.some(e => e.propId === 1001))
-const shieldRemaining = computed(() => {
-  const e = activeEffects.value.find(e => e.propId === 1002)
-  return e ? Math.max(0, (e.startTime + e.remainingMs - Date.now()) / 1000) : 0
+const shieldActive = computed(() => {
+  const p = myProps.value.find(p => p.id === 1002)
+  return p ? p.num > 0 : false
 })
+const shieldCount = computed(() => {
+  const p = myProps.value.find(p => p.id === 1002)
+  return p ? p.num : 0
+})
+const doubleScoreActive = computed(() => activeEffects.value.some(e => e.propId === 1001))
 const doubleRemaining = computed(() => {
   const e = activeEffects.value.find(e => e.propId === 1001)
   return e ? Math.max(0, (e.startTime + e.remainingMs - Date.now()) / 1000) : 0
@@ -342,8 +345,9 @@ function onPropGain(data: any) {
   const p = data.prop
   ElMessage.success(`获得道具: ${getPropDisplayName(p.name)} (+${p.num})`)
 
-  // 自动道具 (护盾/双倍): 获得即激活效果, 不等待服务端 chaos/prop/use
-  if (!p.active && (p.id === 1001 || p.id === 1002)) {
+  // 自动道具 (双倍): 获得即激活效果, 不等待服务端 chaos/prop/use
+  // 护盾不限时间, 不需要注册定时效果
+  if (!p.active && p.id === 1001) {
     registerAutoPropEffect(p.id, p.duration, p.name, data.column, data.row)
   }
 
@@ -384,17 +388,17 @@ function onPropUse(data: any) {
   if (!propId)
     return
 
-  // 自动道具 (护盾 1002, 双倍 1001): onPropGain 已激活效果, 这里只扣减库存
+  // 自动道具 (双倍 1001): onPropGain 已激活效果, 这里只扣减库存
+  // 护盾 (1002) 不限时间, 踩雷时消耗, 此处不扣减
   // 主动道具 (101, 102): handlePropUse 已处理全部, 此处跳过
-  const isAutoProp = propId === 1001 || propId === 1002
-  if (!isAutoProp)
+  if (propId !== 1001)
     return
 
-  const inventoryProp = myProps.value.find(p => p.id === propId)
+  const inventoryProp = myProps.value.find(p => p.id === 1001)
   if (inventoryProp) {
     inventoryProp.num -= 1
     if (inventoryProp.num <= 0) {
-      myProps.value = myProps.value.filter(p => p.id !== propId)
+      myProps.value = myProps.value.filter(p => p.id !== 1001)
     }
   }
 }
@@ -491,16 +495,16 @@ function handleClick(event: MouseEvent, index: number) {
     openSound.play()
     if (!cell.IsOpen && !cell.IsFlagged) {
       if (cell.IsMine) {
-        // 护盾: 踩雷不进入冷却但减少护盾时间
+        // 护盾: 踩雷不进入冷却, 消耗一个护盾
         if (shieldActive.value) {
-          const shield = activeEffects.value.find(e => e.propId === 1002)
-          if (shield) {
-            shield.remainingMs -= 1000
-            if (shield.remainingMs <= 0) {
-              activeEffects.value = activeEffects.value.filter(e => e.propId !== 1002)
+          const inv = myProps.value.find(p => p.id === 1002)
+          if (inv) {
+            inv.num -= 1
+            if (inv.num <= 0) {
+              myProps.value = myProps.value.filter(p => p.id !== 1002)
             }
           }
-          ElMessage.warning('踩雷！护盾保护')
+          ElMessage.warning(`踩雷！护盾保护 (剩余 ${shieldCount.value} 个)`)
         }
         else {
           applyCooldown()
@@ -672,7 +676,7 @@ function startCdTimer() {
   }, 100)
 }
 
-// ========== 主动效果更新循环(护盾/双倍计时) ==========
+// ========== 主动效果更新循环(双倍计时) ==========
 function startEffectUpdateLoop() {
   effectUpdateTimer = window.setInterval(() => {
     const now = Date.now()
@@ -681,8 +685,8 @@ function startEffectUpdateLoop() {
       const elapsed = now - e.startTime
       const expired = elapsed >= e.remainingMs
       if (expired) {
-        // 自动道具效果过期时, 同步清理道具栏库存
-        if (e.propId === 1001 || e.propId === 1002) {
+        // 自动道具效果过期时, 同步清理道具栏库存 (护盾不限时, 无需处理)
+        if (e.propId === 1001) {
           expiredAutoIds.push(e.propId)
         }
       }
@@ -1142,7 +1146,7 @@ function reset() {
       <!-- 双倍/护盾激活指示器 -->
       <div style="display: flex; gap: 8px; align-items: center">
         <span v-if="shieldActive" class="buff-indicator buff-shield">
-          🛡 护盾 {{ shieldRemaining.toFixed(1) }}s
+          🛡 护盾 x{{ shieldCount }}
         </span>
         <span v-if="doubleScoreActive" class="buff-indicator buff-double">
           ⚡ 双倍 {{ doubleRemaining.toFixed(1) }}s
