@@ -1,8 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx vue-tsc *)",
-      "Bash(npx vite *)"
+      "Bash(npx eslint *)",
+      "Bash(cp -r \"C:/Users/29115/dev/tapsss/fast-vite-electron/src/render/assets/audio\" \"C:/Users/29115/dev/tapsss/fast-vite-electron/src/render/public/assets/\")",
+      "Bash(cp -r \"C:/Users/29115/dev/tapsss/fast-vite-electron/src/render/assets/themes\" \"C:/Users/29115/dev/tapsss/fast-vite-electron/src/render/public/assets/\")"
     ]
   }
 }

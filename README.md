@@ -1,33 +1,58 @@
-# mines-client
+# Mines Client Lite
 
-This template should help get you started developing with Vue 3 in Vite.
+基于 Vite + Electron 的扫雷游戏桌面客户端，使用 [Doubleshot](https://github.com/Doubleshotjs/doubleshot) 构建，极速开发体验。
 
-## Recommended IDE Setup
+## 技术栈
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- **渲染进程**: Vue 3 + Element Plus + Vue Router
+- **主进程**: Electron + esbuild (vite-plugin-doubleshot)
+- **打包**: electron-builder
+- **语言**: TypeScript
 
-## Type Support for `.vue` Imports in TS
+## 快速开始
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+```bash
+# 安装依赖 (需要 pnpm)
+pnpm install
 
-## Customize configuration
+# 开发模式
+pnpm dev
 
-See [Vite Configuration Reference](https://vitejs.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
+# 构建
+pnpm build
 ```
 
-### Compile and Hot-Reload for Development
+## 环境变量
 
-```sh
-npm run dev
+复制 `.env.example` 为 `.env`，填入对应配置：
+
+| 变量 | 说明 |
+|---|---|
+| `ENCRYPT_KEY` | AES 加密密钥 |
+| `ENCRYPT_SALT` | 加密盐值 |
+| `ENCRYPT_SECRET_KEY` | 请求体加密密钥 |
+| `DECRYPT_SECRET_KEY` | 响应体解密密钥 |
+
+`.env` 已加入 `.gitignore`，不会被提交到仓库。
+
+## 项目结构
+
+```
+src/
+├── main/       # Electron 主进程
+├── preload/    # 预加载脚本
+├── render/     # Vue 渲染进程
+└── common/     # 共享模块
 ```
 
-### Type-Check, Compile and Minify for Production
+## PNPM 配置
 
-```sh
-npm run build
+请在 `.npmrc` 中使用以下配置之一：
+
 ```
+node-linker=hoisted
+```
+
+## 许可
+
+基于 [fast-vite-electron](https://github.com/ArcherGu/fast-vite-electron) 模板构建。

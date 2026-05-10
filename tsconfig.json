@@ -1,21 +1,44 @@
 {
   "compilerOptions": {
-    "types": [
-      "node"
-    ]
-  },
-  "files": [],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
+    "target": "ESNext",
+    "jsx": "preserve",
+    "lib": [
+      "esnext",
+      "dom"
+    ],
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@/*": [
+        "./src/render/*"
+      ],
+      "@render/*": [
+        "./src/render/*"
+      ],
+      "@main/*": [
+        "./src/main/*"
+      ],
+      "@common/*": [
+        "./src/common/*"
+      ]
     },
-    {
-      "path": "./tsconfig.app.json"
-    }
-  ],
+    "resolveJsonModule": true,
+    "types": [
+      "vite/client",
+      "./src/preload"
+    ],
+    "strict": false,
+    "noImplicitAny": false,
+    "noEmit": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
   "include": [
-    "proxy.ts",
-    "encrypt.ts",
-    "shims-vue.d.ts"
-  ],
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue"
+  ]
 }

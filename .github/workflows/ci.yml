@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions: write-all
+
+jobs:
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Get version
+        id: get_version
+        shell: bash
+        run: |
+          echo "version=${GITHUB_REF:11}" >> $GITHUB_ENV
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6.0.5
+
+      - name: Set node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          cache: pnpm
+
+      - name: Install
+        run: pnpm i
+
+      - name: Build render & main
+        run: pnpm run build
+
+      - name: Package electron
+        run: npx electron-builder --win --publish never
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/v${{ env.version }}/*.exe
+            release/v${{ env.version }}/*.blockmap
+            release/v${{ env.version }}/*.yml
+          name: 'Mines Client Lite ${{ env.version }}'
