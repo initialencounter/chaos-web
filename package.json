@@ -1,6 +1,6 @@
 {
   "name": "tapsss.initialencounter.chaos",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "packageManager": "pnpm@11.0.9",
   "description": "Vite + Electron with esbuild, so fast! ⚡",
   "main": "dist/main/index.js",
