@@ -93,7 +93,7 @@ function _setKeybind(action: keyof typeof defaultKeybinds, key: string) {
 // ========== 音效 ==========
 const openSound = new Howl({ src: ['./assets/audio/open.mp3'], volume: 0.5 })
 const flagSound = new Howl({ src: ['./assets/audio/flag.mp3'], volume: 0.5 })
-const _boomSound = new Howl({ src: ['./assets/audio/boom.mp3'], volume: 0.5 })
+const boomSound = new Howl({ src: ['./assets/audio/boom.mp3'], volume: 0.5 })
 
 // ========== 响应式状态 ==========
 const minefield = ref<Minefield>({
@@ -126,6 +126,7 @@ const cdEndTime = ref(0) // 冷却结束时间戳
 const cdRemaining = ref(0) // 剩余冷却秒数
 const isBlocked = computed(() => cdRemaining.value > 0)
 const cdTimer = ref<number | null>(null)
+const errorCount = ref(0) // 累计错误次数 (用于递增冷却)
 
 const isJoined = ref(false)
 const currentUid = ref<string>('')
@@ -636,6 +637,7 @@ function handleClick(event: MouseEvent, index: number) {
     if (!cell.IsOpen) {
       // 标记非雷会进入冷却
       if (!cell.IsMine) {
+        boomSound.play()
         applyCooldown()
         ElMessage({ message: '标记错误', type: 'info', duration: 800 })
       }
@@ -662,6 +664,7 @@ function handleClick(event: MouseEvent, index: number) {
           ElMessage.warning(`踩雷！护盾保护 (剩余 ${shieldCount.value} 个)`)
         }
         else {
+          boomSound.play()
           applyCooldown()
           ElMessage({ message: '踩雷', type: 'info', duration: 800 })
         }
@@ -809,8 +812,10 @@ function collectChainOpen(sr: number, sc: number, w: number, h: number, visited:
 
 // ========== 冷却系统 ==========
 function applyCooldown() {
+  errorCount.value++
   const now = Date.now()
-  cdEndTime.value = Math.max(cdEndTime.value, now) + COOLDOWN_PER_ERROR * 1000
+  const penalty = 2.5 + errorCount.value * COOLDOWN_PER_ERROR
+  cdEndTime.value = Math.max(cdEndTime.value, now) + penalty * 1000
   cdRemaining.value = (cdEndTime.value - now) / 1000
   startCdTimer()
 }
@@ -1149,6 +1154,7 @@ function reset() {
   activeEffects.value = []
   cdEndTime.value = 0
   cdRemaining.value = 0
+  errorCount.value = 0
   hintCount.value = 0
   usingPropId.value = null
   timeWatcher.value = '00:000'
