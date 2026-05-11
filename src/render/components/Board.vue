@@ -101,6 +101,9 @@ const cdRemaining = ref(0) // 剩余冷却秒数
 const isBlocked = computed(() => cdRemaining.value > 0)
 const cdTimer = ref<number | null>(null)
 
+const isJoined = ref(false)
+const currentUid = ref<string>('')
+
 // 道具系统
 const myProps = ref<Prop[]>([]) // 我的道具库存
 const usingPropId = ref<number | null>(null) // 正在使用的主动道具 ID
@@ -171,7 +174,17 @@ function hasProp(propId: number): boolean {
 }
 
 // ========== 生命周期 ==========
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const status = await window.electronAPI.getLoginStatus()
+    if (status.loggedIn && status.uid) {
+      currentUid.value = status.uid
+    }
+  }
+  catch (e) {
+    console.error('Failed to get uid', e)
+  }
+
   initGame()
   startEffectUpdateLoop()
   window.addEventListener('keydown', onKeydown)
@@ -271,12 +284,24 @@ function onEnter(data: any) {
 
   if (data.users) {
     updateScoreboard(data.users)
+    checkIfJoined(data.users)
   }
 
   startTimer()
+}
 
-  // 加入乱斗
+function checkIfJoined(users: ChaosUser[]) {
+  if (!isJoined.value && currentUid.value) {
+    const me = users.find(u => (u.user.uid || String(u.user.id)) === currentUid.value)
+    if (me) {
+      isJoined.value = true
+    }
+  }
+}
+
+function handleJoin() {
   wsClient.send({ channel: 'App', version: 30610, url: 'join' })
+  isJoined.value = true
 }
 
 function parseZone(mapObj: any, prefix: string): ZoneRect | null {
@@ -326,6 +351,7 @@ function onAction(data: any) {
 function onRefreshUsers(data: any) {
   if (data.users) {
     updateScoreboard(data.users)
+    checkIfJoined(data.users)
   }
 }
 
@@ -449,6 +475,11 @@ function getPropDisplayName(name: string): string {
 
 // ========== 点击处理 ==========
 function handleClick(event: MouseEvent, index: number) {
+  if (!isJoined.value) {
+    ElMessage.warning('观战模式中，请先加入乱斗')
+    return
+  }
+
   if (isBlocked.value) {
     ElMessage.warning(`冷却中，${cdRemaining.value.toFixed(1)}s 后恢复`)
     return
@@ -866,13 +897,7 @@ function updateSinglePlayer(user: ChaosUser) {
 }
 
 function getMyUid(): string {
-  // 尝试从记分板中查找自己 — 使用最后一个加入的玩家
-  // 实际项目中应从登录信息获取
-  const entries = Object.entries(scoreBoard.value)
-  if (entries.length === 0)
-    return ''
-  // 返回最后一个条目(通常是自己)
-  return entries[entries.length - 1][0]
+  return currentUid.value || ''
 }
 
 // ========== 区域判断 ==========
@@ -990,22 +1015,7 @@ function doHint() {
   }
 }
 
-// ========== 退出 / 重置 ==========
-function _exitRoom() {
-  ElMessageBox.confirm('确定要退出房间吗？', '退出确认', {
-    confirmButtonText: '退出',
-    cancelButtonText: '取消',
-    type: 'warning',
-  }).then(() => {
-    wsClient.send({ url: 'leave' })
-    minefield.value = { Width: 0, Height: 0, Cells: 0, Mines: 0, Cell: [], First: false, StartTimeStamp: 0, highScoreZone: null, noFlagZone: null, maxTime: 3600000 }
-    scoreBoard.value = {}
-    myProps.value = []
-    activeEffects.value = []
-    timeWatcher.value = '00:000'
-    cleanup()
-  }).catch(() => {})
-}
+// ========== 重置 ==========
 
 function reset() {
   cleanup()
@@ -1019,6 +1029,7 @@ function reset() {
   usingPropId.value = null
   timeWatcher.value = '00:000'
   timerRunning = false
+  isJoined.value = false
   initGame()
   startEffectUpdateLoop()
 }
@@ -1241,6 +1252,14 @@ function reset() {
       @use-prop="startUseProp"
     />
   </div>
+
+  <!-- =================== 观战加入栏 =================== -->
+  <div v-if="!isJoined" class="join-bar">
+    <span>您当前处于观战状态</span>
+    <el-button type="primary" @click="handleJoin">
+      加入乱斗
+    </el-button>
+  </div>
 </template>
 
 <style scoped>
@@ -1357,6 +1376,26 @@ function reset() {
   bottom: 50px;
   left: 16px;
   z-index: 100;
+}
+
+/* 观战加入栏 */
+.join-bar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 12px 24px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 200;
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 /* ===== 主体 ===== */

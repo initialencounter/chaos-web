@@ -5,7 +5,6 @@ import Board from '@/components/Board.vue'
 import Footer from '@/components/Footer.vue'
 
 const showLogin = ref(false)
-const showJoinPrompt = ref(false)
 const gameStarted = ref(false)
 const loginLoading = ref(false)
 const loginForm = ref({ id: '', password: '' })
@@ -15,7 +14,7 @@ onMounted(async () => {
   try {
     const status = await window.electronAPI.getLoginStatus()
     if (status.loggedIn) {
-      showJoinPrompt.value = true
+      gameStarted.value = true
     }
     else {
       showLogin.value = true
@@ -36,7 +35,7 @@ async function handleLogin() {
     const result = await window.electronAPI.login(loginForm.value.id, loginForm.value.password)
     if (result.success) {
       showLogin.value = false
-      showJoinPrompt.value = true
+      gameStarted.value = true
     }
     else {
       loginError.value = result.code === 10316 ? 'uid或密码错误' : (result.msg || '登录失败')
@@ -51,18 +50,9 @@ async function handleLogin() {
   }
 }
 
-function handleJoinBrawl(join: boolean) {
-  showJoinPrompt.value = false
-  window.electronAPI.sendJoinBrawlResponse(join)
-  if (join) {
-    gameStarted.value = true
-  }
-}
-
 async function handleLogout() {
   await window.electronAPI.logout()
   gameStarted.value = false
-  showJoinPrompt.value = false
   showLogin.value = true
   loginForm.value = { id: '', password: '' }
   loginError.value = ''
@@ -94,31 +84,6 @@ async function handleLogout() {
         登录
       </el-button>
     </el-form>
-  </el-dialog>
-
-  <!-- Join brawl prompt -->
-  <el-dialog
-    v-model="showJoinPrompt"
-    title="乱斗房间"
-    width="340px"
-    :close-on-click-modal="false"
-    :close-on-press-escape="false"
-    :show-close="false"
-    center
-  >
-    <div style="text-align: center; padding: 12px 0">
-      <p style="font-size: 15px; margin-bottom: 18px; color: #d0d0d0">
-        是否加入乱斗房间？
-      </p>
-      <div style="display: flex; gap: 12px; justify-content: center">
-        <el-button @click="handleJoinBrawl(false)">
-          暂不加入
-        </el-button>
-        <el-button type="primary" @click="handleJoinBrawl(true)">
-          加入乱斗
-        </el-button>
-      </div>
-    </div>
   </el-dialog>
 
   <!-- Game shell -->
