@@ -362,6 +362,10 @@ function onFinish(data: any) {
     resultList.value = sorted
     showResultDialog.value = true
   }
+  if (timerRunning) {
+    clearInterval(intervalFlag)
+    timerRunning = false
+  }
 }
 
 // ========== chaos/prop/gain — 获得道具 ==========
