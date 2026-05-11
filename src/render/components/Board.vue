@@ -126,7 +126,9 @@ const cdEndTime = ref(0) // 冷却结束时间戳
 const cdRemaining = ref(0) // 剩余冷却秒数
 const isBlocked = computed(() => cdRemaining.value > 0)
 const cdTimer = ref<number | null>(null)
-const errorCount = ref(0) // 累计错误次数 (用于递增冷却)
+const serverErrorCount = ref(0) // 服务端累计错误次数
+const cdTotal = ref(0) // 本次冷却总时长 (用于进度条)
+const cdPercent = computed(() => cdTotal.value > 0 ? Math.max(0, (cdRemaining.value / cdTotal.value) * 100) : 0)
 
 const isJoined = ref(false)
 const currentUid = ref<string>('')
@@ -336,6 +338,7 @@ function onEnter(data: any) {
   if (data.users) {
     updateScoreboard(data.users)
     checkIfJoined(data.users)
+    syncMyErrorCount(data.users)
   }
 
   startTimer()
@@ -397,6 +400,11 @@ function onAction(data: any) {
     updateSinglePlayer(data.user)
     // 追踪其他玩家的光标位置
     trackPlayerCursor(data)
+    // 同步服务端错误次数 (用于冷却计算)
+    const uid = data.user.user?.uid || String(data.user.user?.id || '')
+    if (uid === getMyUid()) {
+      serverErrorCount.value = data.user.countError ?? data.user.countIncorrect ?? 0
+    }
   }
 }
 
@@ -473,6 +481,17 @@ function onRefreshUsers(data: any) {
   if (data.users) {
     updateScoreboard(data.users)
     checkIfJoined(data.users)
+    syncMyErrorCount(data.users)
+  }
+}
+
+// ========== 同步服务端错误次数 ==========
+function syncMyErrorCount(users: any[]) {
+  if (!currentUid.value)
+    return
+  const me = users.find((u: any) => (u.user?.uid || String(u.user?.id)) === currentUid.value)
+  if (me) {
+    serverErrorCount.value = me.countError ?? me.countIncorrect ?? 0
   }
 }
 
@@ -812,9 +831,9 @@ function collectChainOpen(sr: number, sc: number, w: number, h: number, visited:
 
 // ========== 冷却系统 ==========
 function applyCooldown() {
-  errorCount.value++
   const now = Date.now()
-  const penalty = 2.5 + errorCount.value * COOLDOWN_PER_ERROR
+  const penalty = 2.5 + (serverErrorCount.value + 1) * COOLDOWN_PER_ERROR
+  cdTotal.value = penalty
   cdEndTime.value = Math.max(cdEndTime.value, now) + penalty * 1000
   cdRemaining.value = (cdEndTime.value - now) / 1000
   startCdTimer()
@@ -1154,7 +1173,8 @@ function reset() {
   activeEffects.value = []
   cdEndTime.value = 0
   cdRemaining.value = 0
-  errorCount.value = 0
+  cdTotal.value = 0
+  serverErrorCount.value = 0
   hintCount.value = 0
   usingPropId.value = null
   timeWatcher.value = '00:000'
@@ -1321,6 +1341,20 @@ function reset() {
     </div>
 
     <div class="center-panel">
+      <!-- 冷却遮罩 -->
+      <div v-if="isBlocked" class="cd-overlay-dialog">
+        <div class="cd-overlay-card">
+          <span class="cd-overlay-title">冷却中</span>
+          <div class="cd-progress-bar">
+            <div
+              class="cd-progress-fill"
+              :style="{ width: `${cdPercent}%` }"
+            />
+          </div>
+          <span class="cd-overlay-time">{{ cdRemaining.toFixed(1) }}s</span>
+        </div>
+      </div>
+
       <el-scrollbar>
         <div
           v-if="minefield.Width > 0"
@@ -1582,11 +1616,60 @@ function reset() {
   border-radius: 12px;
 }
 .center-panel {
+  position: relative;
   flex-grow: 1;
   display: flex;
   justify-content: flex-start;
   padding-left: 8px;
   max-width: calc(100% - 275px);
+}
+
+/* ===== 冷却遮罩 ===== */
+.cd-overlay-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  pointer-events: all;
+}
+.cd-overlay-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 36px;
+  background: rgba(20, 20, 30, 0.92);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 100, 100, 0.25);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+}
+.cd-overlay-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f66;
+}
+.cd-progress-bar {
+  width: 200px;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.cd-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f66, #fa0);
+  transition: width 0.1s linear;
+}
+.cd-overlay-time {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ===== 棋盘 ===== */
