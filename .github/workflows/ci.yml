@@ -32,6 +32,13 @@ jobs:
         run: |
           echo "version=${GITHUB_REF:11}" >> $GITHUB_ENV
 
+      - name: set .env
+        run: |
+          echo "ENCRYPT_KEY=${{ secrets.ENCRYPT_KEY }}" > .env
+          echo "ENCRYPT_SALT=${{ secrets.ENCRYPT_SALT }}" >> .env
+          echo "ENCRYPT_SECRET_KEY=${{ secrets.ENCRYPT_SECRET_KEY }}" >> .env
+          echo "DECRYPT_SECRET_KEY=${{ secrets.DECRYPT_SECRET_KEY }}" >> .env
+
       - name: Install pnpm
         uses: pnpm/action-setup@v6.0.5
 
