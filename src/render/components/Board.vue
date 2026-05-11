@@ -93,7 +93,7 @@ function _setKeybind(action: keyof typeof defaultKeybinds, key: string) {
 // ========== 音效 ==========
 const openSound = new Howl({ src: ['./assets/audio/open.mp3'], volume: 0.5 })
 const flagSound = new Howl({ src: ['./assets/audio/flag.mp3'], volume: 0.5 })
-const boomSound = new Howl({ src: ['./assets/audio/boom.mp3'], volume: 0.5 })
+const boomSound = new Howl({ src: ['./assets/audio/boom.mp3'], volume: 0.2 })
 
 // ========== 响应式状态 ==========
 const minefield = ref<Minefield>({
