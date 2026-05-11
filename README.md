@@ -26,10 +26,10 @@ pnpm build
 
 复制 `.env.example` 为 `.env`，填入对应配置：
 
-| 变量 | 说明 |
-|---|---|
-| `ENCRYPT_KEY` | AES 加密密钥 |
-| `ENCRYPT_SALT` | 加密盐值 |
+| 变量                 | 说明           |
+| -------------------- | -------------- |
+| `ENCRYPT_KEY`        | AES 加密密钥   |
+| `ENCRYPT_SALT`       | 加密盐值       |
 | `ENCRYPT_SECRET_KEY` | 请求体加密密钥 |
 | `DECRYPT_SECRET_KEY` | 响应体解密密钥 |
 

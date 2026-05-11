@@ -57,6 +57,32 @@ function toggleTheme() {
   saveTheme(currentTheme.value)
 }
 
+// ========== 玩家光标显示 (localStorage 持久化) ==========
+type PlayerCursorMode = 'full' | 'avatar' | 'off'
+const PLAYER_CURSOR_MODE_KEY = 'mines-player-cursor-mode'
+
+function loadPlayerCursorMode(): PlayerCursorMode {
+  try {
+    const saved = localStorage.getItem(PLAYER_CURSOR_MODE_KEY)
+    return saved === 'avatar' ? 'avatar' : saved === 'off' ? 'off' : 'full'
+  }
+  catch { return 'full' }
+}
+function savePlayerCursorMode(mode: PlayerCursorMode) {
+  localStorage.setItem(PLAYER_CURSOR_MODE_KEY, mode)
+}
+const playerCursorMode = ref<PlayerCursorMode>(loadPlayerCursorMode())
+
+function togglePlayerCursorMode() {
+  const modes: PlayerCursorMode[] = ['full', 'avatar', 'off']
+  const idx = modes.indexOf(playerCursorMode.value)
+  playerCursorMode.value = modes[(idx + 1) % 3]
+  savePlayerCursorMode(playerCursorMode.value)
+}
+
+const showPlayerCursors = computed(() => playerCursorMode.value !== 'off')
+const showPlayerNames = computed(() => playerCursorMode.value === 'full')
+
 /** 更新单个快捷键 (来自外部设置) */
 function _setKeybind(action: keyof typeof defaultKeybinds, key: string) {
   const updated = { ...keybinds.value, [action]: key.toUpperCase() }
@@ -133,6 +159,27 @@ let startTimeStamp = 0
 let timerRunning = false
 let intervalFlag: number
 let effectUpdateTimer: number | null = null
+
+// 其他玩家光标追踪
+interface PlayerCursor {
+  uid: string
+  name: string
+  avatar: string
+  cellIndex: number
+}
+const playerCursors = ref<Record<string, PlayerCursor>>({})
+
+interface TrailParticle {
+  id: number
+  avatar: string
+  fromIndex: number
+  toIndex: number
+}
+const trails = ref<TrailParticle[]>([])
+let trailIdSeq = 0
+
+// 记录已初始化的光标 (用于跳过首次渲染的位置过渡)
+const initializedCursors = ref<Set<string>>(new Set())
 
 // ScoreTip 引用
 const scoreTip = ref<InstanceType<typeof ScoreTip> | null>(null)
@@ -212,6 +259,9 @@ function cleanup() {
     clearInterval(cdTimer.value)
   if (effectUpdateTimer)
     clearInterval(effectUpdateTimer)
+  playerCursors.value = {}
+  trails.value = []
+  initializedCursors.value = new Set()
 }
 
 // ========== WebSocket 初始化 ==========
@@ -344,6 +394,76 @@ function onAction(data: any) {
   }
   if (data.user) {
     updateSinglePlayer(data.user)
+    // 追踪其他玩家的光标位置
+    trackPlayerCursor(data)
+  }
+}
+
+// ========== 玩家光标追踪 ==========
+function trackPlayerCursor(data: any) {
+  if (!data.actions?.length)
+    return
+  const uid = data.user?.user?.uid || String(data.user?.user?.id || '')
+  if (!uid || uid === getMyUid())
+    return
+
+  const name = data.user.user.nickName || uid
+  const avatar = data.user.user.avatar || ''
+  const lastAction = data.actions[data.actions.length - 1]
+  const newCellIndex = lastAction.r * minefield.value.Width + lastAction.c
+  const prev = playerCursors.value[uid]
+
+  if (prev && prev.cellIndex !== newCellIndex) {
+    const trail: TrailParticle = {
+      id: ++trailIdSeq,
+      avatar: avatar || prev.avatar,
+      fromIndex: prev.cellIndex,
+      toIndex: newCellIndex,
+    }
+    trails.value = [...trails.value, trail]
+    setTimeout(() => {
+      trails.value = trails.value.filter(t => t.id !== trail.id)
+    }, 600)
+  }
+
+  if (!initializedCursors.value.has(uid)) {
+    initializedCursors.value = new Set([...initializedCursors.value, uid])
+  }
+
+  playerCursors.value = {
+    ...playerCursors.value,
+    [uid]: { uid, name, avatar, cellIndex: newCellIndex },
+  }
+}
+
+function cursorInitialized(uid: string): boolean {
+  return initializedCursors.value.has(uid)
+}
+
+function playerCursorStyle(cursor: PlayerCursor) {
+  const pos = cellIndexToPos(cursor.cellIndex)
+  return {
+    left: `${pos.x + cellSize / 2}px`,
+    top: `${pos.y + cellSize / 2}px`,
+  }
+}
+
+function cellIndexToPos(index: number) {
+  const col = index % minefield.value.Width
+  const row = Math.floor(index / minefield.value.Width)
+  return { x: col * cellSize, y: row * cellSize }
+}
+
+function trailStyle(trail: TrailParticle) {
+  const from = cellIndexToPos(trail.fromIndex)
+  const to = cellIndexToPos(trail.toIndex)
+  return {
+    'left': `${to.x}px`,
+    'top': `${to.y}px`,
+    '--trail-from-x': `${from.x}px`,
+    '--trail-from-y': `${from.y}px`,
+    '--trail-to-x': `${to.x}px`,
+    '--trail-to-y': `${to.y}px`,
   }
 }
 
@@ -1137,6 +1257,13 @@ function reset() {
         {{ currentTheme === 'wom' ? 'WOM' : '巧克力' }}
       </el-button>
 
+      <el-button
+        class="cursor-mode-button"
+        @click="togglePlayerCursorMode"
+      >
+        {{ playerCursorMode === 'full' ? '👤 玩家' : playerCursorMode === 'avatar' ? '👤 仅头像' : '👤 隐藏' }}
+      </el-button>
+
       <!-- 道具快捷键按钮 -->
       <el-button
         v-if="hasProp(101)"
@@ -1241,6 +1368,37 @@ function reset() {
               class="xjbd-highlight"
             />
           </div>
+
+          <!-- 其他玩家光标 (绝对定位, 带移动过渡) -->
+          <template v-for="(cursor, uid) in playerCursors" :key="uid">
+            <div
+              v-if="showPlayerCursors && uid !== currentUid"
+              class="player-cursor"
+              :class="{ 'player-cursor--init': !cursorInitialized(uid) }"
+              :style="playerCursorStyle(cursor)"
+            >
+              <img
+                :src="resolveImageUrl(cursor.avatar)"
+                class="player-cursor-avatar"
+              >
+              <span v-if="showPlayerNames" class="player-cursor-name">{{ cursor.name }}</span>
+            </div>
+          </template>
+
+          <!-- 轨迹粒子 -->
+          <template v-if="showPlayerCursors">
+            <div
+              v-for="trail in trails"
+              :key="trail.id"
+              class="trail-particle"
+              :style="trailStyle(trail)"
+            >
+              <img
+                :src="resolveImageUrl(trail.avatar)"
+                class="trail-avatar"
+              >
+            </div>
+          </template>
         </div>
       </el-scrollbar>
     </div>
@@ -1427,6 +1585,7 @@ function reset() {
 
 /* ===== 棋盘 ===== */
 .board {
+  position: relative;
   display: grid;
   padding: 8px;
   background: rgba(0, 0, 0, 0.35);
@@ -1453,6 +1612,90 @@ function reset() {
 .cell:hover {
   filter: brightness(1.25) saturate(1.1);
   z-index: 1;
+}
+
+/* ===== 玩家光标 ===== */
+.player-cursor {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -50%);
+  transition:
+    left 0.35s ease,
+    top 0.35s ease;
+}
+.player-cursor--init {
+  transition: none;
+  animation: cursor-pop-in 0.3s ease-out;
+}
+.player-cursor-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #ffd700;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+  object-fit: cover;
+  background: #333;
+}
+.player-cursor-name {
+  font-size: 9px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  margin-top: 1px;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes cursor-pop-in {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+/* ===== 轨迹粒子 ===== */
+.trail-particle {
+  position: absolute;
+  z-index: 9;
+  pointer-events: none;
+  animation: trail-fly 0.5s ease-out forwards;
+}
+.trail-avatar {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  object-fit: cover;
+  background: #333;
+  opacity: 0.7;
+}
+
+@keyframes trail-fly {
+  0% {
+    transform: translate(
+      calc(var(--trail-from-x) - var(--trail-to-x, 0px)),
+      calc(var(--trail-from-y) - var(--trail-to-y, 0px))
+    );
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
 }
 
 /* ===== 快捷键提示 ===== */
