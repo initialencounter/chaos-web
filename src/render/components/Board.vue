@@ -396,6 +396,7 @@ function onJoin(data: any) {
 function onJoinEvent(data: any) {
   if (data.user) {
     ElMessage.info(`${data.user.user?.nickName || data.user.user?.uid} 加入了游戏`)
+    updateSinglePlayer(data.user)
   }
 }
 
