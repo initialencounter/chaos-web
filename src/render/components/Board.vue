@@ -128,6 +128,8 @@ const minefield = ref<Minefield>({
 const timeWatcher = ref('00:000')
 const scoreBoard = ref<ScoreBoardType>({})
 const flagMode = ref(false)
+const spaceHeld = ref(false)
+const effectiveFlagMode = computed(() => flagMode.value !== spaceHeld.value)
 
 // CD 系统
 // 提示系统
@@ -226,6 +228,13 @@ function onKeydown(e: KeyboardEvent) {
 
   const key = e.key.toUpperCase()
 
+  if (e.code === 'Space') {
+    e.preventDefault()
+    if (!spaceHeld.value) {
+      spaceHeld.value = true
+    }
+    return
+  }
   if (key === keybinds.value.flagMode.toUpperCase()) {
     e.preventDefault()
     flagMode.value = !flagMode.value
@@ -239,6 +248,12 @@ function onKeydown(e: KeyboardEvent) {
   if (key === keybinds.value.xjbd.toUpperCase() && hasProp(102)) {
     e.preventDefault()
     startUseProp(102)
+  }
+}
+
+function onKeyup(e: KeyboardEvent) {
+  if (e.code === 'Space') {
+    spaceHeld.value = false
   }
 }
 
@@ -262,10 +277,12 @@ onMounted(async () => {
   initGame()
   startEffectUpdateLoop()
   window.addEventListener('keydown', onKeydown)
+  window.addEventListener('keyup', onKeyup)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('keyup', onKeyup)
   cleanup()
 })
 
@@ -721,7 +738,7 @@ function handleClick(event: MouseEvent, index: number) {
   openSound.stop()
 
   const isRightClick = event.button === 2
-  const shouldFlag = isRightClick !== flagMode.value
+  const shouldFlag = isRightClick !== effectiveFlagMode.value
 
   // 红区检查 — 只能打开,不能标记
   if (shouldFlag && isInNoFlagZone(index)) {
@@ -1450,12 +1467,13 @@ function reset() {
         提示 ({{ maxHints - hintCount }})
       </el-button>
       <el-button
-        :style="{ background: flagMode ? '#5282b8' : '#5c8f4b', width: 'auto' }"
+        :style="{ background: effectiveFlagMode ? '#5282b8' : '#5c8f4b', width: 'auto' }"
         class="flag-switch-button"
         @click="flagMode = !flagMode"
       >
-        {{ flagMode ? '标记' : '挖开' }}模式
+        {{ effectiveFlagMode ? '标记' : '挖开' }}模式
         <kbd class="key-hint">{{ keybinds.flagMode }}</kbd>
+        <span v-if="spaceHeld" class="space-held-hint">[Space]</span>
       </el-button>
 
       <el-button class="theme-switch-button" @click="toggleTheme">
