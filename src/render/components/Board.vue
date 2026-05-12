@@ -860,14 +860,18 @@ function handleClick(event: MouseEvent, index: number) {
             delete myProps.value[1002]
           }
           ElMessage.warning(`标记错误！护盾保护 (剩余 ${shieldCount.value} 个)`)
+          doFlag({ a: 0, c, r })
         }
         else {
           boomSound.play()
           applyCooldown()
           ElMessage({ message: '标记错误', type: 'info', duration: 800 })
+          doFlag({ a: 1, c, r })
         }
       }
-      doFlag({ a: 1, c, r })
+      else {
+        doFlag({ a: 1, c, r })
+      }
     }
     else {
       doExpand(index)
@@ -886,14 +890,18 @@ function handleClick(event: MouseEvent, index: number) {
           }
           wsClient.send({ propId: 1002, column: c, row: r, url: 'prop/use' }) // 同步消耗
           ElMessage.warning(`踩雷！护盾保护 (剩余 ${shieldCount.value} 个)`)
+          doOpen({ a: 1, c, r })
         }
         else {
           boomSound.play()
           applyCooldown()
           ElMessage({ message: '踩雷', type: 'info', duration: 800 })
+          doOpen({ a: 0, c, r })
         }
       }
-      doOpen({ a: 0, c, r })
+      else {
+        doOpen({ a: 0, c, r })
+      }
     }
     else if (cell.IsOpen) {
       doExpand(index)
