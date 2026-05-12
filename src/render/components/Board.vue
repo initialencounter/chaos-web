@@ -136,7 +136,7 @@ const currentUid = ref<string>('')
 // 道具系统
 const myProps = ref<Prop[]>([]) // 我的道具库存
 const usingPropId = ref<number | null>(null) // 正在使用的主动道具 ID
-const activeEffects = ref<ActivePropEffect[]>([]) // 当前激活的道具效果
+const activeEffects = ref<Record<number, ActivePropEffect>>({}) // propId → 激活效果
 
 // 护盾/双倍 激活标志(计算属性)
 const shieldActive = computed(() => {
@@ -147,9 +147,9 @@ const shieldCount = computed(() => {
   const p = myProps.value.find(p => p.id === 1002)
   return p ? p.num : 0
 })
-const doubleScoreActive = computed(() => activeEffects.value.some(e => e.propId === 1001))
+const doubleScoreActive = computed(() => !!activeEffects.value[1001])
 const doubleRemaining = computed(() => {
-  const e = activeEffects.value.find(e => e.propId === 1001)
+  const e = activeEffects.value[1001]
   return e ? Math.max(0, (e.startTime + e.remainingMs - Date.now()) / 1000) : 0
 })
 
@@ -558,22 +558,24 @@ function onPropGain(data: any) {
   })
 }
 
-/** 立即注册自动道具的激活效果 (护盾/双倍在获得瞬间开始计时) */
+/** 立即注册自动道具的激活效果 (护盾/双倍在获得瞬间开始计时), 已有则叠加 duration */
 function registerAutoPropEffect(propId: number, duration: number, name: string, col?: number, row?: number) {
-  const effect: ActivePropEffect = {
-    propId,
-    propName: name,
-    remainingMs: duration,
-    startTime: Date.now(),
-    centerCol: col,
-    centerRow: row,
-  }
-  const existingIdx = activeEffects.value.findIndex(e => e.propId === propId)
-  if (existingIdx >= 0) {
-    activeEffects.value[existingIdx] = effect // 刷新时间
+  const existing = activeEffects.value[propId]
+  if (existing) {
+    const elapsed = Date.now() - existing.startTime
+    const remaining = Math.max(0, existing.remainingMs - elapsed)
+    existing.startTime = Date.now()
+    existing.remainingMs = remaining + duration
   }
   else {
-    activeEffects.value.push(effect)
+    activeEffects.value[propId] = {
+      propId,
+      propName: name,
+      remainingMs: duration,
+      startTime: Date.now(),
+      centerCol: col,
+      centerRow: row,
+    }
   }
 }
 
@@ -757,20 +759,13 @@ function handlePropUse(propId: number, row: number, col: number) {
   const knownNames: Record<number, string> = { 101: 'chaos_detector', 102: 'chaos_xjbd' }
   const dur = knownDurations[propId]
   if (dur) {
-    const effect: ActivePropEffect = {
+    activeEffects.value[propId] = {
       propId,
       propName: knownNames[propId] || `prop_${propId}`,
       remainingMs: dur,
       startTime: Date.now(),
       centerCol: col,
       centerRow: row,
-    }
-    const existingIdx = activeEffects.value.findIndex(e => e.propId === propId)
-    if (existingIdx >= 0) {
-      activeEffects.value[existingIdx] = effect
-    }
-    else {
-      activeEffects.value.push(effect)
     }
   }
 
@@ -885,17 +880,19 @@ function startEffectUpdateLoop() {
   effectUpdateTimer = window.setInterval(() => {
     const now = Date.now()
     const expiredAutoIds: number[] = []
-    activeEffects.value = activeEffects.value.filter((e) => {
+    for (const key of Object.keys(activeEffects.value)) {
+      const e = activeEffects.value[key]
+      if (!e)
+        continue
       const elapsed = now - e.startTime
-      const expired = elapsed >= e.remainingMs
-      if (expired) {
+      if (elapsed >= e.remainingMs) {
         // 自动道具效果过期时, 同步清理道具栏库存 (护盾不限时, 无需处理)
         if (e.propId === 1001) {
           expiredAutoIds.push(e.propId)
         }
+        delete activeEffects.value[e.propId]
       }
-      return !expired
-    })
+    }
     for (const propId of expiredAutoIds) {
       const inv = myProps.value.find(p => p.id === propId)
       if (inv) {
@@ -1093,7 +1090,7 @@ function isInHighScoreZone(index: number): boolean {
 }
 
 function isInDetectorRange(index: number): boolean {
-  const detector = activeEffects.value.find(e => e.propId === 101)
+  const detector = activeEffects.value[101]
   if (!detector || detector.centerCol === undefined || detector.centerRow === undefined)
     return false
   const r = Math.floor(index / minefield.value.Width)
@@ -1104,7 +1101,7 @@ function isInDetectorRange(index: number): boolean {
 }
 
 function isInXjbdRange(index: number): boolean {
-  const xjbd = activeEffects.value.find(e => e.propId === 102)
+  const xjbd = activeEffects.value[102]
   if (!xjbd || xjbd.centerCol === undefined || xjbd.centerRow === undefined)
     return false
   const r = Math.floor(index / minefield.value.Width)
@@ -1195,7 +1192,7 @@ function reset() {
   minefield.value = { Width: 0, Height: 0, Cells: 0, Mines: 0, Cell: [], First: false, StartTimeStamp: 0, highScoreZone: null, noFlagZone: null, maxTime: 3600000 }
   scoreBoard.value = {}
   myProps.value = []
-  activeEffects.value = []
+  activeEffects.value = {}
   cdEndTime.value = 0
   cdRemaining.value = 0
   cdTotal.value = 0

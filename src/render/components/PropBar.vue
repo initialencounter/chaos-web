@@ -7,7 +7,7 @@ const props = defineProps<{
   props: Prop[]
   usingPropId: number | null
   cdRemaining: number
-  activeEffects: ActivePropEffect[]
+  activeEffects: Record<number, ActivePropEffect>
 }>()
 
 defineEmits<{
@@ -31,11 +31,12 @@ onUnmounted(() => {
 })
 
 function isAutoActive(propId: number): boolean {
-  return props.activeEffects.some(e => e.propId === propId && (e.startTime + e.remainingMs) > now.value)
+  const e = props.activeEffects[propId]
+  return !!e && (e.startTime + e.remainingMs) > now.value
 }
 
 function getAutoRemaining(propId: number): number {
-  const e = props.activeEffects.find(e => e.propId === propId)
+  const e = props.activeEffects[propId]
   if (!e)
     return 0
   return Math.max(0, (e.startTime + e.remainingMs - now.value) / 1000)
@@ -49,7 +50,7 @@ function getBadgeValue(prop: Prop): string | number {
 }
 
 function getTimerPercent(propId: number): number {
-  const e = props.activeEffects.find(e => e.propId === propId)
+  const e = props.activeEffects[propId]
   if (!e || e.remainingMs <= 0)
     return 0
   const remaining = Math.max(0, e.startTime + e.remainingMs - now.value)
