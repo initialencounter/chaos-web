@@ -131,7 +131,6 @@ const flagMode = ref(false)
 const spaceHeld = ref(false)
 const effectiveFlagMode = computed(() => flagMode.value !== spaceHeld.value)
 
-// CD 系统
 // 提示系统
 const hintCount = ref(0)
 const maxHints = 5
@@ -178,6 +177,104 @@ const doubleRemaining = computed(() => {
   const e = activeEffects.value[1001]
   return e ? Math.max(0, (e.startTime + e.remainingMs - Date.now()) / 1000) : 0
 })
+
+// ========== 预计算区域/效果集合 (模板 O(1) 查找) ==========
+const noFlagZoneSet = ref<Set<number>>(new Set())
+const highScoreZoneSet = ref<Set<number>>(new Set())
+const detectorRangeSet = ref<Set<number>>(new Set())
+const xjbdRangeSet = ref<Set<number>>(new Set())
+const overlayVersion = ref(0)
+
+function rebuildZoneSets() {
+  const w = minefield.value.Width
+  const nf = minefield.value.noFlagZone
+  const nfSet = new Set<number>()
+  if (nf) {
+    for (let r = nf.startRow; r <= nf.endRow; r++) {
+      for (let c = nf.startColumn; c <= nf.endColumn; c++)
+        nfSet.add(r * w + c)
+    }
+  }
+  noFlagZoneSet.value = nfSet
+
+  const hs = minefield.value.highScoreZone
+  const hsSet = new Set<number>()
+  if (hs) {
+    for (let r = hs.startRow; r <= hs.endRow; r++) {
+      for (let c = hs.startColumn; c <= hs.endColumn; c++)
+        hsSet.add(r * w + c)
+    }
+  }
+  highScoreZoneSet.value = hsSet
+  overlayVersion.value++
+}
+
+function rebuildEffectSets() {
+  const w = minefield.value.Width
+  const h = minefield.value.Height
+
+  const detSet = new Set<number>()
+  const detector = activeEffects.value[101]
+  if (detector?.centerCol !== undefined && detector?.centerRow !== undefined) {
+    const r0 = Math.max(0, detector.centerRow - 2)
+    const r1 = Math.min(h - 1, detector.centerRow + 2)
+    const c0 = Math.max(0, detector.centerCol - 2)
+    const c1 = Math.min(w - 1, detector.centerCol + 2)
+    for (let r = r0; r <= r1; r++) {
+      for (let c = c0; c <= c1; c++)
+        detSet.add(r * w + c)
+    }
+  }
+  detectorRangeSet.value = detSet
+
+  const xjbdSet = new Set<number>()
+  const xjbd = activeEffects.value[102]
+  if (xjbd?.centerCol !== undefined && xjbd?.centerRow !== undefined) {
+    const r0 = Math.max(0, xjbd.centerRow - 3)
+    const r1 = Math.min(h - 1, xjbd.centerRow + 3)
+    const c0 = Math.max(0, xjbd.centerCol - 3)
+    const c1 = Math.min(w - 1, xjbd.centerCol + 3)
+    for (let r = r0; r <= r1; r++) {
+      for (let c = c0; c <= c1; c++)
+        xjbdSet.add(r * w + c)
+    }
+  }
+  xjbdRangeSet.value = xjbdSet
+  overlayVersion.value++
+}
+
+// ========== 邻近格子缓存 ==========
+let nearbyCache: number[][] = []
+function buildNearbyCache() {
+  const w = minefield.value.Width
+  const h = minefield.value.Height
+  const total = w * h
+  nearbyCache = Array.from({ length: total })
+  for (let i = 0; i < total; i++) {
+    const x = i % w
+    const y = Math.floor(i / w)
+    const nearby: number[] = []
+    if (y > 0)
+      nearby.push(i - w)
+    if (y < h - 1)
+      nearby.push(i + w)
+    if (x > 0) {
+      nearby.push(i - 1)
+      if (y > 0)
+        nearby.push(i - w - 1)
+      if (y < h - 1)
+        nearby.push(i + w - 1)
+    }
+    if (x < w - 1) {
+      nearby.push(i + 1)
+      if (y > 0)
+        nearby.push(i - w + 1)
+      if (y < h - 1)
+        nearby.push(i + w + 1)
+    }
+    nearbyCache[i] = nearby
+  }
+}
 
 // 结算
 const showResultDialog = ref(false)
@@ -379,6 +476,8 @@ function onEnter(data: any) {
   minefield.value.Cell = cells
   minefield.value.StartTimeStamp = data.map.createTime || Date.now()
   startTimeStamp = minefield.value.StartTimeStamp
+  rebuildZoneSets()
+  buildNearbyCache()
 
   if (data.users) {
     updateScoreboard(data.users)
@@ -828,7 +927,7 @@ function handlePropUse(propId: number, row: number, col: number) {
   }
 
   // ==== 探测仪(id=101): 只需激活视觉效果，服务端处理道具消耗 ====
-  //  客户端根据已有地图数据高亮 5x5 范围内的雷（见 isInDetectorRange）
+  //  客户端根据已有地图数据高亮 5x5 范围内的雷（见 detectorRangeSet）
 
   // 注册激活效果（服务端可能不广播 prop/use, 客户端主动登记）
   const knownDurations: Record<number, number> = { 101: 10000, 102: 1500 }
@@ -846,6 +945,7 @@ function handlePropUse(propId: number, row: number, col: number) {
       centerCol: col,
       centerRow: row,
     }
+    rebuildEffectSets()
   }
 
   ElMessage.success(`使用 ${getPropDisplayName(prop.name)}`)
@@ -987,6 +1087,8 @@ function startEffectUpdateLoop() {
         }
       }
     }
+    if (Object.keys(activeEffects.value).length === 0 || expiredAutoIds.length > 0)
+      rebuildEffectSets()
   }, 500)
 }
 
@@ -1098,30 +1200,7 @@ function sendActions(actions: Action[]) {
 }
 
 function getNearbyCells(cell: number): number[] {
-  const nearby: number[] = []
-  const w = minefield.value.Width
-  const h = minefield.value.Height
-  const x = cell % w
-  const y = Math.floor(cell / w)
-  if (y > 0)
-    nearby.push(cell - w)
-  if (y < h - 1)
-    nearby.push(cell + w)
-  if (x > 0) {
-    nearby.push(cell - 1)
-    if (y > 0)
-      nearby.push(cell - w - 1)
-    if (y < h - 1)
-      nearby.push(cell + w - 1)
-  }
-  if (x < w - 1) {
-    nearby.push(cell + 1)
-    if (y > 0)
-      nearby.push(cell - w + 1)
-    if (y < h - 1)
-      nearby.push(cell + w + 1)
-  }
-  return nearby
+  return nearbyCache[cell] || []
 }
 
 // ========== 记分板 ==========
@@ -1176,58 +1255,7 @@ function getMyUid(): string {
 
 // ========== 区域判断 ==========
 function isInNoFlagZone(index: number): boolean {
-  const zone = minefield.value.noFlagZone
-  if (!zone)
-    return false
-  const r = Math.floor(index / minefield.value.Width)
-  const c = index % minefield.value.Width
-  return (
-    r >= zone.startRow
-    && r <= zone.endRow
-    && c >= zone.startColumn
-    && c <= zone.endColumn
-  )
-}
-
-function isInHighScoreZone(index: number): boolean {
-  const zone = minefield.value.highScoreZone
-  if (!zone)
-    return false
-  const r = Math.floor(index / minefield.value.Width)
-  const c = index % minefield.value.Width
-  return (
-    r >= zone.startRow
-    && r <= zone.endRow
-    && c >= zone.startColumn
-    && c <= zone.endColumn
-  )
-}
-
-function isInDetectorRange(index: number): boolean {
-  const detector = activeEffects.value[101]
-  if (
-    !detector
-    || detector.centerCol === undefined
-    || detector.centerRow === undefined
-  ) {
-    return false
-  }
-  const r = Math.floor(index / minefield.value.Width)
-  const c = index % minefield.value.Width
-  const dr = Math.abs(r - detector.centerRow)
-  const dc = Math.abs(c - detector.centerCol)
-  return dr <= 2 && dc <= 2 // 5x5 范围(中心 ±2)
-}
-
-function isInXjbdRange(index: number): boolean {
-  const xjbd = activeEffects.value[102]
-  if (!xjbd || xjbd.centerCol === undefined || xjbd.centerRow === undefined)
-    return false
-  const r = Math.floor(index / minefield.value.Width)
-  const c = index % minefield.value.Width
-  const dr = Math.abs(r - xjbd.centerRow)
-  const dc = Math.abs(c - xjbd.centerCol)
-  return dr <= 3 && dc <= 3 // 7x7 范围(中心 ±3)
+  return noFlagZoneSet.value.has(index)
 }
 
 // ========== 图片 ==========
@@ -1252,7 +1280,7 @@ function startTimer() {
     timerRunning = true
     intervalFlag = window.setInterval(() => {
       timeWatcher.value = msToTime(Date.now() - startTimeStamp)
-    }, 1)
+    }, 50)
   }
 }
 
@@ -1571,47 +1599,23 @@ function reset() {
           <div
             v-for="(cell, index) in minefield.Cell"
             :key="index"
+            v-memo="[cell.IsOpen, cell.IsFlagged, cell.IsMine, cell.Mines, isBlocked, currentTheme, overlayVersion]"
             class="cell-wrapper"
-            :style="{
-              width: `${cellSize}px`,
-              height: `${cellSize}px`,
-            }"
           >
-            <!-- 格子图片 -->
             <div
-              :style="{
-                backgroundImage: `url(${getImageSrc(cell)})`,
-                width: '100%',
-                height: '100%',
-                backgroundSize: 'cover',
-              }"
+              :style="{ backgroundImage: `url(${getImageSrc(cell)})` }"
               class="cell"
               @mousedown="(event) => handleClick(event, index)"
             />
-
-            <!-- CD 遮罩 -->
             <div v-if="isBlocked" class="cd-overlay" />
-
-            <!-- 红区遮罩 (只能打开不能插旗) -->
-            <div v-if="isInNoFlagZone(index)" class="no-flag-zone-overlay" />
-
-            <!-- 黄区遮罩 (高分区域) -->
+            <div v-if="noFlagZoneSet.has(index)" class="no-flag-zone-overlay" />
+            <div v-if="highScoreZoneSet.has(index)" class="high-score-zone-overlay" />
             <div
-              v-if="isInHighScoreZone(index)"
-              class="high-score-zone-overlay"
-            />
-
-            <!-- 探测仪 5x5 高亮 -->
-            <div
-              v-if="isInDetectorRange(index)"
+              v-if="detectorRangeSet.has(index)"
               class="detector-highlight"
-              :class="{
-                'detector-highlight-mine': cell.IsMine && !cell.IsOpen,
-              }"
+              :class="{ 'detector-highlight-mine': cell.IsMine && !cell.IsOpen }"
             />
-
-            <!-- 雷之奥义 7x7 区域闪烁 -->
-            <div v-if="isInXjbdRange(index)" class="xjbd-highlight" />
+            <div v-if="xjbdRangeSet.has(index)" class="xjbd-highlight" />
           </div>
 
           <!-- 其他玩家光标 (绝对定位, 带移动过渡) -->
@@ -1878,6 +1882,7 @@ function reset() {
 
 /* ===== 棋盘 ===== */
 .board {
+  --cell-size: 24px;
   position: relative;
   display: grid;
   padding: 8px;
@@ -1890,12 +1895,16 @@ function reset() {
 }
 .cell-wrapper {
   position: relative;
+  width: var(--cell-size);
+  height: var(--cell-size);
   transition: transform 0.1s;
 }
 .cell-wrapper:active {
   transform: scale(0.92);
 }
 .cell {
+  width: 100%;
+  height: 100%;
   background-size: cover;
   box-sizing: border-box;
   cursor: pointer;
