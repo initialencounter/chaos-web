@@ -253,6 +253,7 @@ function cleanup() {
   wsClient.off('chaos/prop/gain', onPropGain)
   wsClient.off('chaos/prop/use', onPropUse)
   wsClient.off('chaos/join/event', onJoinEvent)
+  wsClient.off('chaos/join', onJoin)
   wsClient.off('ready', onReady)
   wsClient.off('disconnect', onDisconnect)
   wsClient.close()
@@ -277,6 +278,7 @@ function initGame() {
   wsClient.on('chaos/prop/gain', onPropGain)
   wsClient.on('chaos/prop/use', onPropUse)
   wsClient.on('chaos/join/event', onJoinEvent)
+  wsClient.on('chaos/join', onJoin)
   wsClient.on('ready', onReady)
   wsClient.on('disconnect', onDisconnect)
   wsClient.connect(url)
@@ -366,6 +368,28 @@ function parseZone(mapObj: any, prefix: string): ZoneRect | null {
   if (sr === undefined || sc === undefined || er === undefined || ec === undefined)
     return null
   return { startRow: sr, startColumn: sc, endRow: er, endColumn: ec }
+}
+
+// ========== chaos/join — 加入响应, 同步道具 ==========
+function onJoin(data: any) {
+  console.warn('Joined game:', data)
+  if (data.props) {
+    for (const p of data.props) {
+      addOrUpdateProp({
+        id: p.id,
+        name: p.name,
+        icon: p.icon,
+        num: p.num,
+        active: p.active,
+        duration: p.duration,
+        type: p.type,
+        consumeCount: p.consumeCount,
+      })
+    }
+  }
+  if (data.countError !== undefined) {
+    serverErrorCount.value = data.countError
+  }
 }
 
 // ========== chaos/join/event — 玩家加入通知 ==========
