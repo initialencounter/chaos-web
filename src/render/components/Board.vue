@@ -178,6 +178,24 @@ const doubleRemaining = computed(() => {
   return e ? Math.max(0, (e.startTime + e.remainingMs - Date.now()) / 1000) : 0
 })
 
+// 棋盘自定义鼠标指针
+const boardCursor = computed(() => {
+  if (isBlocked.value)
+    return 'not-allowed'
+  if (usingPropId.value === 101)
+    return `url('/assets/prop101.png') 16 16, crosshair`
+  if (usingPropId.value === 102)
+    return `url('/assets/prop102.png') 16 16, crosshair`
+  if (effectiveFlagMode.value)
+    return `default`
+  return 'pointer'
+})
+const boardStyle = computed(() => ({
+  gridTemplateColumns: `repeat(${minefield.value.Width}, ${cellSize}px)`,
+  gridTemplateRows: `repeat(${minefield.value.Height}, ${cellSize}px)`,
+  cursor: boardCursor.value,
+}))
+
 // ========== 预计算区域/效果集合 (模板 O(1) 查找) ==========
 const noFlagZoneSet = ref<Set<number>>(new Set())
 const highScoreZoneSet = ref<Set<number>>(new Set())
@@ -1575,10 +1593,7 @@ function reset() {
       <el-scrollbar>
         <div
           v-if="minefield.Width > 0"
-          :style="{
-            gridTemplateColumns: `repeat(${minefield.Width}, ${cellSize}px)`,
-            gridTemplateRows: `repeat(${minefield.Height}, ${cellSize}px)`,
-          }"
+          :style="boardStyle"
           class="board"
         >
           <div
@@ -1892,7 +1907,6 @@ function reset() {
   height: 100%;
   background-size: cover;
   box-sizing: border-box;
-  cursor: pointer;
   image-rendering: pixelated;
   border-radius: 2px;
 }

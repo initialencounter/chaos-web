@@ -7,7 +7,8 @@
       "mcp__ide__getDiagnostics",
       "Bash(npx vue-tsc *)",
       "Bash(pnpm add *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(identify \"c:/Users/29115/dev/tapsss/fast-vite-electron/src/render/public/assets/prop101.png\")"
     ]
   }
 }
