@@ -1,5 +1,13 @@
 <script lang="ts" setup>
-import type { ActivePropEffect, Cell, ChaosUser, Minefield, Prop, ScoreBoard as ScoreBoardType, ZoneRect } from '@/types'
+import type {
+  ActivePropEffect,
+  Cell,
+  ChaosUser,
+  Minefield,
+  Prop,
+  ScoreBoard as ScoreBoardType,
+  ZoneRect,
+} from '@/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Howl } from 'howler'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
@@ -27,9 +35,13 @@ const defaultKeybinds = { flagMode: 'F', detector: 'D', xjbd: 'X' }
 function loadKeybinds() {
   try {
     const saved = localStorage.getItem(KEYBINDS_STORAGE_KEY)
-    return saved ? { ...defaultKeybinds, ...JSON.parse(saved) } : { ...defaultKeybinds }
+    return saved
+      ? { ...defaultKeybinds, ...JSON.parse(saved) }
+      : { ...defaultKeybinds }
   }
-  catch { return { ...defaultKeybinds } }
+  catch {
+    return { ...defaultKeybinds }
+  }
 }
 function saveKeybinds(binds: typeof defaultKeybinds) {
   localStorage.setItem(KEYBINDS_STORAGE_KEY, JSON.stringify(binds))
@@ -45,7 +57,9 @@ function loadTheme(): ThemeName {
     const saved = localStorage.getItem(THEME_STORAGE_KEY)
     return saved === 'chocolate' ? 'chocolate' : 'wom'
   }
-  catch { return 'wom' }
+  catch {
+    return 'wom'
+  }
 }
 function saveTheme(theme: ThemeName) {
   localStorage.setItem(THEME_STORAGE_KEY, theme)
@@ -66,7 +80,9 @@ function loadPlayerCursorMode(): PlayerCursorMode {
     const saved = localStorage.getItem(PLAYER_CURSOR_MODE_KEY)
     return saved === 'avatar' ? 'avatar' : saved === 'off' ? 'off' : 'full'
   }
-  catch { return 'full' }
+  catch {
+    return 'full'
+  }
 }
 function savePlayerCursorMode(mode: PlayerCursorMode) {
   localStorage.setItem(PLAYER_CURSOR_MODE_KEY, mode)
@@ -117,8 +133,10 @@ const flagMode = ref(false)
 // 提示系统
 const hintCount = ref(0)
 const maxHints = 5
-const remainingSafeCells = computed(() =>
-  minefield.value.Cell.filter(c => !c.IsOpen && !c.IsFlagged && !c.IsMine).length,
+const remainingSafeCells = computed(
+  () =>
+    minefield.value.Cell.filter(c => !c.IsOpen && !c.IsFlagged && !c.IsMine)
+      .length,
 )
 
 // CD 系统
@@ -128,25 +146,31 @@ const isBlocked = computed(() => cdRemaining.value > 0)
 const cdTimer = ref<number | null>(null)
 const serverErrorCount = ref(0) // 服务端累计错误次数
 const cdTotal = ref(0) // 本次冷却总时长 (用于进度条)
-const cdPercent = computed(() => cdTotal.value > 0 ? Math.max(0, (cdRemaining.value / cdTotal.value) * 100) : 0)
+const cdPercent = computed(() =>
+  cdTotal.value > 0
+    ? Math.max(0, (cdRemaining.value / cdTotal.value) * 100)
+    : 0,
+)
 
 const isJoined = ref(false)
 const currentUid = ref<string>('')
 
 // 道具系统
-const myProps = ref<Prop[]>([]) // 我的道具库存
+const myProps = ref<Record<number, Prop>>({}) // propId → 道具
+const myPropsList = computed(() => Object.values(myProps.value)) // PropBar 用
 const usingPropId = ref<number | null>(null) // 正在使用的主动道具 ID
 const activeEffects = ref<Record<number, ActivePropEffect>>({}) // propId → 激活效果
 
 // 护盾/双倍 激活标志(计算属性)
 const shieldActive = computed(() => {
-  const p = myProps.value.find(p => p.id === 1002)
+  const p = myProps.value[1002]
   return p ? p.num > 0 : false
 })
 const shieldCount = computed(() => {
-  const p = myProps.value.find(p => p.id === 1002)
+  const p = myProps.value[1002]
   return p ? p.num : 0
 })
+
 const doubleScoreActive = computed(() => !!activeEffects.value[1001])
 const doubleRemaining = computed(() => {
   const e = activeEffects.value[1001]
@@ -219,7 +243,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 function hasProp(propId: number): boolean {
-  const p = myProps.value.find(p => p.id === propId)
+  const p = myProps.value[propId]
   return !!(p && p.num > 0)
 }
 
@@ -294,7 +318,9 @@ function onDisconnect() {
     confirmButtonText: '重连',
     cancelButtonText: '取消',
     type: 'warning',
-  }).then(() => reset()).catch(() => {})
+  })
+    .then(() => reset())
+    .catch(() => {})
 }
 
 // ========== chaos/enter — 进入房间 ==========
@@ -348,7 +374,9 @@ function onEnter(data: any) {
 
 function checkIfJoined(users: ChaosUser[]) {
   if (!isJoined.value && currentUid.value) {
-    const me = users.find(u => (u.user.uid || String(u.user.id)) === currentUid.value)
+    const me = users.find(
+      u => (u.user.uid || String(u.user.id)) === currentUid.value,
+    )
     if (me) {
       handleJoin()
     }
@@ -365,8 +393,14 @@ function parseZone(mapObj: any, prefix: string): ZoneRect | null {
   const sc = mapObj[`${prefix}StartColumn`]
   const er = mapObj[`${prefix}EndRow`]
   const ec = mapObj[`${prefix}EndColumn`]
-  if (sr === undefined || sc === undefined || er === undefined || ec === undefined)
+  if (
+    sr === undefined
+    || sc === undefined
+    || er === undefined
+    || ec === undefined
+  ) {
     return null
+  }
   return { startRow: sr, startColumn: sc, endRow: er, endColumn: ec }
 }
 
@@ -395,7 +429,9 @@ function onJoin(data: any) {
 // ========== chaos/join/event — 玩家加入通知 ==========
 function onJoinEvent(data: any) {
   if (data.user) {
-    ElMessage.info(`${data.user.user?.nickName || data.user.user?.uid} 加入了游戏`)
+    ElMessage.info(
+      `${data.user.user?.nickName || data.user.user?.uid} 加入了游戏`,
+    )
     updateSinglePlayer(data.user)
   }
 }
@@ -428,7 +464,8 @@ function onAction(data: any) {
     // 同步服务端错误次数 (用于冷却计算)
     const uid = data.user.user?.uid || String(data.user.user?.id || '')
     if (uid === getMyUid()) {
-      serverErrorCount.value = data.user.countError ?? data.user.countIncorrect ?? 0
+      serverErrorCount.value
+        = data.user.countError ?? data.user.countIncorrect ?? 0
     }
   }
 }
@@ -514,7 +551,9 @@ function onRefreshUsers(data: any) {
 function syncMyErrorCount(users: any[]) {
   if (!currentUid.value)
     return
-  const me = users.find((u: any) => (u.user?.uid || String(u.user?.id)) === currentUid.value)
+  const me = users.find(
+    (u: any) => (u.user?.uid || String(u.user?.id)) === currentUid.value,
+  )
   if (me) {
     serverErrorCount.value = me.countError ?? me.countIncorrect ?? 0
   }
@@ -543,6 +582,12 @@ function onPropGain(data: any) {
   // 自动道具 (双倍): 获得即激活效果, 不等待服务端 chaos/prop/use
   // 护盾不限时间, 不需要注册定时效果
   if (!p.active && p.id === 1001) {
+    wsClient.send({
+      propId: 1001,
+      column: data.column,
+      row: data.row,
+      url: 'prop/use',
+    })
     registerAutoPropEffect(p.id, p.duration, p.name, data.column, data.row)
   }
 
@@ -558,8 +603,14 @@ function onPropGain(data: any) {
   })
 }
 
-/** 立即注册自动道具的激活效果 (护盾/双倍在获得瞬间开始计时), 已有则叠加 duration */
-function registerAutoPropEffect(propId: number, duration: number, name: string, col?: number, row?: number) {
+/** 立即注册自动道具的激活效果 (双倍在获得瞬间开始计时), 已有则叠加 duration */
+function registerAutoPropEffect(
+  propId: number,
+  duration: number,
+  name: string,
+  col?: number,
+  row?: number,
+) {
   const existing = activeEffects.value[propId]
   if (existing) {
     const elapsed = Date.now() - existing.startTime
@@ -591,23 +642,23 @@ function onPropUse(data: any) {
   if (propId !== 1001)
     return
 
-  const inventoryProp = myProps.value.find(p => p.id === 1001)
+  const inventoryProp = myProps.value[1001]
   if (inventoryProp) {
     inventoryProp.num -= 1
     if (inventoryProp.num <= 0) {
-      myProps.value = myProps.value.filter(p => p.id !== 1001)
+      delete myProps.value[1001]
     }
   }
 }
 
 // ========== prop/gain 时的本地道具更新 ==========
 function addOrUpdateProp(prop: Prop) {
-  const existing = myProps.value.find(p => p.id === prop.id)
+  const existing = myProps.value[prop.id]
   if (existing) {
     existing.num += prop.num
   }
   else {
-    myProps.value.push({ ...prop })
+    myProps.value[prop.id] = { ...prop }
   }
 }
 
@@ -683,9 +734,19 @@ function handleClick(event: MouseEvent, index: number) {
     if (!cell.IsOpen) {
       // 标记非雷会进入冷却
       if (!cell.IsMine) {
-        boomSound.play()
-        applyCooldown()
-        ElMessage({ message: '标记错误', type: 'info', duration: 800 })
+        if (shieldCount.value > 0) {
+          myProps.value[1002].num -= 1
+          wsClient.send({ propId: 1002, column: c, row: r, url: 'prop/use' }) // 同步消耗
+          if (shieldCount.value <= 0) {
+            delete myProps.value[1002]
+          }
+          ElMessage.warning(`标记错误！护盾保护 (剩余 ${shieldCount.value} 个)`)
+        }
+        else {
+          boomSound.play()
+          applyCooldown()
+          ElMessage({ message: '标记错误', type: 'info', duration: 800 })
+        }
       }
       doFlag({ a: 1, c, r })
     }
@@ -699,14 +760,12 @@ function handleClick(event: MouseEvent, index: number) {
     if (!cell.IsOpen && !cell.IsFlagged) {
       if (cell.IsMine) {
         // 护盾: 踩雷不进入冷却, 消耗一个护盾
-        if (shieldActive.value) {
-          const inv = myProps.value.find(p => p.id === 1002)
-          if (inv) {
-            inv.num -= 1
-            if (inv.num <= 0) {
-              myProps.value = myProps.value.filter(p => p.id !== 1002)
-            }
+        if (shieldCount.value > 0) {
+          myProps.value[1002].num -= 1
+          if (shieldCount.value <= 0) {
+            delete myProps.value[1002]
           }
+          wsClient.send({ propId: 1002, column: c, row: r, url: 'prop/use' }) // 同步消耗
           ElMessage.warning(`踩雷！护盾保护 (剩余 ${shieldCount.value} 个)`)
         }
         else {
@@ -725,7 +784,7 @@ function handleClick(event: MouseEvent, index: number) {
 
 // ========== 道具使用 ==========
 function handlePropUse(propId: number, row: number, col: number) {
-  const prop = myProps.value.find(p => p.id === propId)
+  const prop = myProps.value[propId]
   if (!prop || prop.num <= 0) {
     ElMessage.error('没有该道具')
     usingPropId.value = null
@@ -741,7 +800,7 @@ function handlePropUse(propId: number, row: number, col: number) {
   wsClient.send({ propId, column: col, row, url: 'prop/use' })
   prop.num -= 1
   if (prop.num <= 0) {
-    myProps.value = myProps.value.filter(p => p.id !== propId)
+    delete myProps.value[propId]
   }
   usingPropId.value = null
 
@@ -756,7 +815,10 @@ function handlePropUse(propId: number, row: number, col: number) {
 
   // 注册激活效果（服务端可能不广播 prop/use, 客户端主动登记）
   const knownDurations: Record<number, number> = { 101: 10000, 102: 1500 }
-  const knownNames: Record<number, string> = { 101: 'chaos_detector', 102: 'chaos_xjbd' }
+  const knownNames: Record<number, string> = {
+    101: 'chaos_detector',
+    102: 'chaos_xjbd',
+  }
   const dur = knownDurations[propId]
   if (dur) {
     activeEffects.value[propId] = {
@@ -816,7 +878,13 @@ function doXjbd(centerRow: number, centerCol: number) {
 }
 
 /** BFS 收集从 (r,c) 出发的连锁打开动作（0 值展开，遇非 0 安全格止步） */
-function collectChainOpen(sr: number, sc: number, w: number, h: number, visited: Set<number>): Action[] {
+function collectChainOpen(
+  sr: number,
+  sc: number,
+  w: number,
+  h: number,
+  visited: Set<number>,
+): Action[] {
   const result: Action[] = []
   const queue: [number, number][] = [[sr, sc]]
 
@@ -894,11 +962,11 @@ function startEffectUpdateLoop() {
       }
     }
     for (const propId of expiredAutoIds) {
-      const inv = myProps.value.find(p => p.id === propId)
+      const inv = myProps.value[propId]
       if (inv) {
         inv.num -= 1
         if (inv.num <= 0) {
-          myProps.value = myProps.value.filter(p => p.id !== propId)
+          delete myProps.value[propId]
         }
       }
     }
@@ -908,7 +976,8 @@ function startEffectUpdateLoop() {
 // ========== 操作 ==========
 function doOpen(action: Action) {
   const actions: Action[] = []
-  const cell = minefield.value.Cell[action.r * minefield.value.Width + action.c]
+  const cell
+    = minefield.value.Cell[action.r * minefield.value.Width + action.c]
   if (cell.Mines === 0) {
     actions.push(...reveal(action.a, action.c, action.r))
   }
@@ -927,7 +996,9 @@ function doExpand(index: number) {
 
   const nearby = getNearbyCells(index)
   const flagCount = nearby.filter(
-    n => minefield.value.Cell[n].IsFlagged || (minefield.value.Cell[n].IsOpen && minefield.value.Cell[n].IsMine),
+    n =>
+      minefield.value.Cell[n].IsFlagged
+      || (minefield.value.Cell[n].IsOpen && minefield.value.Cell[n].IsMine),
   ).length
 
   if (flagCount === cell.Mines) {
@@ -936,9 +1007,19 @@ function doExpand(index: number) {
     nearby.forEach((i) => {
       const nCell = minefield.value.Cell[i]
       if (!nCell.IsOpen && !nCell.IsFlagged) {
-        actions.push({ a: 0, c: i % minefield.value.Width, r: Math.floor(i / minefield.value.Width) })
+        actions.push({
+          a: 0,
+          c: i % minefield.value.Width,
+          r: Math.floor(i / minefield.value.Width),
+        })
         if (nCell.Mines === 0) {
-          actions.push(...reveal(0, i % minefield.value.Width, Math.floor(i / minefield.value.Width)))
+          actions.push(
+            ...reveal(
+              0,
+              i % minefield.value.Width,
+              Math.floor(i / minefield.value.Width),
+            ),
+          )
         }
       }
     })
@@ -958,8 +1039,14 @@ function reveal(a: number, c: number, r: number): Action[] {
           continue
         const nr = r + dr
         const nc = c + dc
-        if (nr < 0 || nr >= minefield.value.Height || nc < 0 || nc >= minefield.value.Width)
+        if (
+          nr < 0
+          || nr >= minefield.value.Height
+          || nc < 0
+          || nc >= minefield.value.Width
+        ) {
           continue
+        }
         const nCell = minefield.value.Cell[nr * minefield.value.Width + nc]
         if (nCell.IsOpen || nCell.IsFlagged)
           continue
@@ -1077,7 +1164,12 @@ function isInNoFlagZone(index: number): boolean {
     return false
   const r = Math.floor(index / minefield.value.Width)
   const c = index % minefield.value.Width
-  return r >= zone.startRow && r <= zone.endRow && c >= zone.startColumn && c <= zone.endColumn
+  return (
+    r >= zone.startRow
+    && r <= zone.endRow
+    && c >= zone.startColumn
+    && c <= zone.endColumn
+  )
 }
 
 function isInHighScoreZone(index: number): boolean {
@@ -1086,13 +1178,23 @@ function isInHighScoreZone(index: number): boolean {
     return false
   const r = Math.floor(index / minefield.value.Width)
   const c = index % minefield.value.Width
-  return r >= zone.startRow && r <= zone.endRow && c >= zone.startColumn && c <= zone.endColumn
+  return (
+    r >= zone.startRow
+    && r <= zone.endRow
+    && c >= zone.startColumn
+    && c <= zone.endColumn
+  )
 }
 
 function isInDetectorRange(index: number): boolean {
   const detector = activeEffects.value[101]
-  if (!detector || detector.centerCol === undefined || detector.centerRow === undefined)
+  if (
+    !detector
+    || detector.centerCol === undefined
+    || detector.centerRow === undefined
+  ) {
     return false
+  }
   const r = Math.floor(index / minefield.value.Width)
   const c = index % minefield.value.Width
   const dr = Math.abs(r - detector.centerRow)
@@ -1189,9 +1291,20 @@ function doHint() {
 
 function reset() {
   cleanup()
-  minefield.value = { Width: 0, Height: 0, Cells: 0, Mines: 0, Cell: [], First: false, StartTimeStamp: 0, highScoreZone: null, noFlagZone: null, maxTime: 3600000 }
+  minefield.value = {
+    Width: 0,
+    Height: 0,
+    Cells: 0,
+    Mines: 0,
+    Cell: [],
+    First: false,
+    StartTimeStamp: 0,
+    highScoreZone: null,
+    noFlagZone: null,
+    maxTime: 3600000,
+  }
   scoreBoard.value = {}
-  myProps.value = []
+  myProps.value = {}
   activeEffects.value = {}
   cdEndTime.value = 0
   cdRemaining.value = 0
@@ -1221,22 +1334,37 @@ function reset() {
       <div style="text-align: center; padding: 0 0 10px 0">
         <!-- 第一名 -->
         <div v-if="resultList.length > 0" style="margin-bottom: 18px">
-          <div style="display: flex; flex-direction: column; align-items: center">
+          <div
+            style="display: flex; flex-direction: column; align-items: center"
+          >
             <div style="position: relative">
               <img
                 :src="resolveImageUrl(resultList[0].user.avatar)"
-                style="width: 90px; height: 90px; border-radius: 50%; border: 4px solid gold; object-fit: cover"
+                style="
+                  width: 90px;
+                  height: 90px;
+                  border-radius: 50%;
+                  border: 4px solid gold;
+                  object-fit: cover;
+                "
               >
-              <span style="position: absolute; right: -10px; top: -10px; font-size: 2.2rem">⚡</span>
+              <span
+                style="
+                  position: absolute;
+                  right: -10px;
+                  top: -10px;
+                  font-size: 2.2rem;
+                "
+              >⚡</span>
             </div>
             <div style="font-size: 1.3rem; font-weight: bold; margin-top: 8px">
               {{ resultList[0].user.nickName }}
             </div>
             <div style="color: #888; font-size: 1rem; margin: 2px 0 6px 0">
-              正确 {{ resultList[0].countCorrect }}
-              错误 {{ resultList[0].countIncorrect ?? resultList[0].countError }}
-              分数 {{ resultList[0].score }}
-              道具 {{ resultList[0].usePropCount }}
+              正确 {{ resultList[0].countCorrect }} 错误
+              {{ resultList[0].countIncorrect ?? resultList[0].countError }}
+              分数 {{ resultList[0].score }} 道具
+              {{ resultList[0].usePropCount }}
             </div>
           </div>
         </div>
@@ -1245,10 +1373,18 @@ function reset() {
           <div
             v-for="(item, idx) in resultList"
             :key="item.user.uid"
-            style="display: flex; align-items: center; justify-content: space-between; margin: 8px 0"
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin: 8px 0;
+            "
           >
             <div style="display: flex; align-items: center">
-              <span v-if="idx < 3" style="font-size: 1.3rem; width: 2.2em; text-align: center">
+              <span
+                v-if="idx < 3"
+                style="font-size: 1.3rem; width: 2.2em; text-align: center"
+              >
                 {{ getRankIcon(idx + 1) }}
               </span>
               <img
@@ -1263,20 +1399,38 @@ function reset() {
                 }"
               >
               <span style="font-weight: 600">{{ item.user.nickName }}</span>
-              <span v-if="item.lastOpen" style="color: #e44; font-size: 0.95em; margin-left: 6px">最后一击</span>
+              <span
+                v-if="item.lastOpen"
+                style="color: #e44; font-size: 0.95em; margin-left: 6px"
+              >最后一击</span>
             </div>
             <div style="font-size: 0.98em">
               <span style="color: #0a0">{{ item.countCorrect }}</span> /
-              <span style="color: #e44">{{ item.countIncorrect ?? item.countError }}</span> /
+              <span style="color: #e44">{{
+                item.countIncorrect ?? item.countError
+              }}</span>
+              /
               <span style="color: #09c">{{ item.score }}</span>
             </div>
           </div>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-top: 18px">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            margin-top: 18px;
+          "
+        >
           <el-button type="default" @click="showResultDialog = false">
             返回
           </el-button>
-          <el-button type="primary" @click="showResultDialog = false; reset()">
+          <el-button
+            type="primary"
+            @click="
+              showResultDialog = false;
+              reset();
+            "
+          >
             再来一局
           </el-button>
         </div>
@@ -1287,7 +1441,12 @@ function reset() {
   <!-- =================== 顶部栏 =================== -->
   <div class="topPositionFixed">
     <div class="header-content">
-      <el-button class="logout-button" style="width: auto" :disabled="hintCount >= maxHints" @click="doHint">
+      <el-button
+        class="logout-button"
+        style="width: auto"
+        :disabled="hintCount >= maxHints"
+        @click="doHint"
+      >
         提示 ({{ maxHints - hintCount }})
       </el-button>
       <el-button
@@ -1295,34 +1454,41 @@ function reset() {
         class="flag-switch-button"
         @click="flagMode = !flagMode"
       >
-        {{ flagMode ? '标记' : '挖开' }}模式 <kbd class="key-hint">{{ keybinds.flagMode }}</kbd>
+        {{ flagMode ? '标记' : '挖开' }}模式
+        <kbd class="key-hint">{{ keybinds.flagMode }}</kbd>
       </el-button>
 
-      <el-button
-        class="theme-switch-button"
-        @click="toggleTheme"
-      >
+      <el-button class="theme-switch-button" @click="toggleTheme">
         {{ currentTheme === 'wom' ? 'WOM' : '巧克力' }}
       </el-button>
 
-      <el-button
-        class="cursor-mode-button"
-        @click="togglePlayerCursorMode"
-      >
-        {{ playerCursorMode === 'full' ? '👤 玩家' : playerCursorMode === 'avatar' ? '👤 仅头像' : '👤 隐藏' }}
+      <el-button class="cursor-mode-button" @click="togglePlayerCursorMode">
+        {{
+          playerCursorMode === 'full'
+            ? '👤 玩家'
+            : playerCursorMode === 'avatar'
+              ? '👤 仅头像'
+              : '👤 隐藏'
+        }}
       </el-button>
 
       <!-- 道具快捷键按钮 -->
       <el-button
         v-if="hasProp(101)"
-        :style="{ width: 'auto', background: usingPropId === 101 ? '#faad14' : '' }"
+        :style="{
+          width: 'auto',
+          background: usingPropId === 101 ? '#faad14' : '',
+        }"
         @click="startUseProp(101)"
       >
         探测仪 <kbd class="key-hint">{{ keybinds.detector }}</kbd>
       </el-button>
       <el-button
         v-if="hasProp(102)"
-        :style="{ width: 'auto', background: usingPropId === 102 ? '#faad14' : '' }"
+        :style="{
+          width: 'auto',
+          background: usingPropId === 102 ? '#faad14' : '',
+        }"
         @click="startUseProp(102)"
       >
         雷之奥义 <kbd class="key-hint">{{ keybinds.xjbd }}</kbd>
@@ -1344,7 +1510,8 @@ function reset() {
       </div>
 
       <div class="safe-cells-indicator">
-        剩余安全格子 <span class="safe-cells-count">{{ remainingSafeCells }}</span>
+        剩余安全格子
+        <span class="safe-cells-count">{{ remainingSafeCells }}</span>
       </div>
       <div class="timeWatcher">
         {{ timeWatcher }}
@@ -1368,10 +1535,7 @@ function reset() {
         <div class="cd-overlay-card">
           <span class="cd-overlay-title">冷却中</span>
           <div class="cd-progress-bar">
-            <div
-              class="cd-progress-fill"
-              :style="{ width: `${cdPercent}%` }"
-            />
+            <div class="cd-progress-fill" :style="{ width: `${cdPercent}%` }" />
           </div>
           <span class="cd-overlay-time">{{ cdRemaining.toFixed(1) }}s</span>
         </div>
@@ -1397,7 +1561,12 @@ function reset() {
           >
             <!-- 格子图片 -->
             <div
-              :style="{ backgroundImage: `url(${getImageSrc(cell)})`, width: '100%', height: '100%', backgroundSize: 'cover' }"
+              :style="{
+                backgroundImage: `url(${getImageSrc(cell)})`,
+                width: '100%',
+                height: '100%',
+                backgroundSize: 'cover',
+              }"
               class="cell"
               @mousedown="(event) => handleClick(event, index)"
             />
@@ -1406,10 +1575,7 @@ function reset() {
             <div v-if="isBlocked" class="cd-overlay" />
 
             <!-- 红区遮罩 (只能打开不能插旗) -->
-            <div
-              v-if="isInNoFlagZone(index)"
-              class="no-flag-zone-overlay"
-            />
+            <div v-if="isInNoFlagZone(index)" class="no-flag-zone-overlay" />
 
             <!-- 黄区遮罩 (高分区域) -->
             <div
@@ -1421,14 +1587,13 @@ function reset() {
             <div
               v-if="isInDetectorRange(index)"
               class="detector-highlight"
-              :class="{ 'detector-highlight-mine': cell.IsMine && !cell.IsOpen }"
+              :class="{
+                'detector-highlight-mine': cell.IsMine && !cell.IsOpen,
+              }"
             />
 
             <!-- 雷之奥义 7x7 区域闪烁 -->
-            <div
-              v-if="isInXjbdRange(index)"
-              class="xjbd-highlight"
-            />
+            <div v-if="isInXjbdRange(index)" class="xjbd-highlight" />
           </div>
 
           <!-- 其他玩家光标 (绝对定位, 带移动过渡) -->
@@ -1443,7 +1608,9 @@ function reset() {
                 :src="resolveImageUrl(cursor.avatar)"
                 class="player-cursor-avatar"
               >
-              <span v-if="showPlayerNames" class="player-cursor-name">{{ cursor.name }}</span>
+              <span v-if="showPlayerNames" class="player-cursor-name">{{
+                cursor.name
+              }}</span>
             </div>
           </template>
 
@@ -1455,10 +1622,7 @@ function reset() {
               class="trail-particle"
               :style="trailStyle(trail)"
             >
-              <img
-                :src="resolveImageUrl(trail.avatar)"
-                class="trail-avatar"
-              >
+              <img :src="resolveImageUrl(trail.avatar)" class="trail-avatar">
             </div>
           </template>
         </div>
@@ -1469,7 +1633,7 @@ function reset() {
   <!-- =================== 道具栏 (左下角固定) =================== -->
   <div class="prop-bar-fixed">
     <PropBar
-      :props="myProps"
+      :props="myPropsList"
       :using-prop-id="usingPropId"
       :cd-remaining="cdRemaining"
       :active-effects="activeEffects"
