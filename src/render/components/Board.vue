@@ -350,7 +350,7 @@ function checkIfJoined(users: ChaosUser[]) {
   if (!isJoined.value && currentUid.value) {
     const me = users.find(u => (u.user.uid || String(u.user.id)) === currentUid.value)
     if (me) {
-      isJoined.value = true
+      handleJoin()
     }
   }
 }
