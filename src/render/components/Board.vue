@@ -746,26 +746,11 @@ function registerAutoPropEffect(
   }
 }
 
-// ========== chaos/prop/use — 道具使用广播 (自动道具: 护盾/双倍) ==========
-function onPropUse(data: any) {
-  const propId = data.propId
-  if (!propId)
-    return
-
-  // 自动道具 (双倍 1001): onPropGain 已激活效果, 这里只扣减库存
-  // 护盾 (1002) 不限时间, 踩雷时消耗, 此处不扣减
-  // 主动道具 (101, 102): handlePropUse 已处理全部, 此处跳过
-  if (propId !== 1001)
-    return
-
-  const inventoryProp = myProps.value[1001]
-  if (inventoryProp) {
-    inventoryProp.num -= 1
-    if (inventoryProp.num <= 0) {
-      delete myProps.value[1001]
-    }
-  }
-}
+// ========== chaos/prop/use — 道具使用广播 ==========
+// 自动道具 (双倍 1001): 库存由倒计时到期时扣减, 此处不处理避免提前删除
+// 护盾 (1002): 不限时间, 踩雷时消耗, 此处不扣减
+// 主动道具 (101, 102): handlePropUse 已处理全部, 此处跳过
+function onPropUse(_data: any) {}
 
 // ========== prop/gain 时的本地道具更新 ==========
 function addOrUpdateProp(prop: Prop) {
