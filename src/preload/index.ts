@@ -33,4 +33,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Logout
   logout: () => ipcRenderer.invoke('login:logout'),
+
+  // Register
+  registerSendCode: (mail: string) => ipcRenderer.invoke('register:send-code', mail),
+  registerSubmit: (mail: string, code: string, password: string) => ipcRenderer.invoke('register:submit', mail, code, password),
+
+  // Password reset
+  passwordSendCode: (mail: string) => ipcRenderer.invoke('password:send-code', mail),
+  passwordReset: (mail: string, code: string, password: string) => ipcRenderer.invoke('password:reset', mail, code, password),
 })

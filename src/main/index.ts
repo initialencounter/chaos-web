@@ -275,6 +275,48 @@ function setupIPC(): void {
     deleteCredentials()
     return true
   })
+
+  // Register
+  ipcMain.handle('register:send-code', async (_event, mail: string) => {
+    try {
+      const resp: any = await executeRequest('/Minesweeper/code/register/mail', 'POST', { mail })
+      return { success: resp.code === 200, code: resp.code, msg: resp.msg }
+    }
+    catch (e: any) {
+      return { success: false, msg: e.message }
+    }
+  })
+
+  ipcMain.handle('register:submit', async (_event, mail: string, code: string, password: string) => {
+    try {
+      const resp: any = await executeRequest('/Minesweeper/user/register/mail', 'POST', { mail, code, password, platform: '0' })
+      return { success: resp.code === 200, code: resp.code, msg: resp.msg, data: resp.data }
+    }
+    catch (e: any) {
+      return { success: false, msg: e.message }
+    }
+  })
+
+  // Password reset
+  ipcMain.handle('password:send-code', async (_event, mail: string) => {
+    try {
+      const resp: any = await executeRequest('/Minesweeper/code/password/reset/mail', 'POST', { mail })
+      return { success: resp.code === 200, code: resp.code, msg: resp.msg }
+    }
+    catch (e: any) {
+      return { success: false, msg: e.message }
+    }
+  })
+
+  ipcMain.handle('password:reset', async (_event, mail: string, code: string, password: string) => {
+    try {
+      const resp: any = await executeRequest('/Minesweeper/user/password/reset/mail', 'POST', { mail, code, password })
+      return { success: resp.code === 200, code: resp.code, msg: resp.msg }
+    }
+    catch (e: any) {
+      return { success: false, msg: e.message }
+    }
+  })
 }
 
 // ==================== App Lifecycle ====================

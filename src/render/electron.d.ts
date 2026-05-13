@@ -31,6 +31,10 @@ declare global {
       sendJoinBrawlResponse: (join: boolean) => Promise<boolean>
       onStartGame: (callback: () => void) => void
       logout: () => Promise<boolean>
+      registerSendCode: (mail: string) => Promise<{ success: boolean, code?: number, msg?: string }>
+      registerSubmit: (mail: string, code: string, password: string) => Promise<{ success: boolean, code?: number, msg?: string, data?: any }>
+      passwordSendCode: (mail: string) => Promise<{ success: boolean, code?: number, msg?: string }>
+      passwordReset: (mail: string, code: string, password: string) => Promise<{ success: boolean, code?: number, msg?: string }>
     }
   }
 }

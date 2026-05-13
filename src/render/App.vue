@@ -1,14 +1,17 @@
 <script lang="ts" setup>
-import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import Board from '@/components/Board.vue'
 import Footer from '@/components/Footer.vue'
+import ForgotPasswordDialog from '@/components/ForgotPasswordDialog.vue'
+import LoginDialog from '@/components/LoginDialog.vue'
+import RegisterDialog from '@/components/RegisterDialog.vue'
 
 const showLogin = ref(false)
+const showRegister = ref(false)
+const showForgotPassword = ref(false)
 const gameStarted = ref(false)
-const loginLoading = ref(false)
-const loginForm = ref({ id: '', password: '' })
-const loginError = ref('')
+const loginInitialError = ref('')
+const prefillId = ref('')
 
 onMounted(async () => {
   try {
@@ -17,10 +20,10 @@ onMounted(async () => {
       gameStarted.value = true
     }
     else {
-      showLogin.value = true
       if (status.msg) {
-        loginError.value = status.msg
+        loginInitialError.value = status.msg
       }
+      showLogin.value = true
     }
   }
   catch {
@@ -28,63 +31,68 @@ onMounted(async () => {
   }
 })
 
-async function handleLogin() {
-  loginLoading.value = true
-  loginError.value = ''
-  try {
-    const result = await window.electronAPI.login(loginForm.value.id, loginForm.value.password)
-    if (result.success) {
-      showLogin.value = false
-      gameStarted.value = true
-    }
-    else {
-      loginError.value = result.code === 10316 ? 'uid或密码错误' : (result.msg || '登录失败')
-      ElMessage.error(loginError.value)
-    }
-  }
-  catch (e: any) {
-    loginError.value = e.message
-  }
-  finally {
-    loginLoading.value = false
-  }
+function onLoginSuccess() {
+  showLogin.value = false
+  loginInitialError.value = ''
+  gameStarted.value = true
+}
+
+function onRegisterSuccess(uid: string) {
+  showRegister.value = false
+  prefillId.value = uid
+  showLogin.value = true
+}
+
+function onForgotPasswordSuccess(email: string) {
+  showForgotPassword.value = false
+  prefillId.value = email
+  showLogin.value = true
+}
+
+function navigateToRegister() {
+  showLogin.value = false
+  showRegister.value = true
+}
+
+function navigateToForgotPassword() {
+  showLogin.value = false
+  showForgotPassword.value = true
+}
+
+function navigateToLogin() {
+  showRegister.value = false
+  showForgotPassword.value = false
+  showLogin.value = true
 }
 
 async function handleLogout() {
   await window.electronAPI.logout()
   gameStarted.value = false
   showLogin.value = true
-  loginForm.value = { id: '', password: '' }
-  loginError.value = ''
 }
 </script>
 
 <template>
-  <!-- Login dialog -->
-  <el-dialog
+  <LoginDialog
     v-model="showLogin"
-    title="登录"
-    width="360px"
-    :close-on-click-modal="false"
-    :close-on-press-escape="false"
-    :show-close="false"
-    center
-  >
-    <el-form @submit.prevent="handleLogin">
-      <el-form-item label="UID">
-        <el-input v-model="loginForm.id" placeholder="UID" />
-      </el-form-item>
-      <el-form-item label="密码">
-        <el-input v-model="loginForm.password" type="password" placeholder="密码" show-password />
-      </el-form-item>
-      <div v-if="loginError" style="color: #e44; margin-bottom: 12px; font-size: 13px">
-        {{ loginError }}
-      </div>
-      <el-button type="primary" :loading="loginLoading" style="width: 100%" @click="handleLogin">
-        登录
-      </el-button>
-    </el-form>
-  </el-dialog>
+    :initial-error="loginInitialError"
+    :prefill-id="prefillId"
+    @success="onLoginSuccess"
+    @navigate-to-register="navigateToRegister"
+    @navigate-to-forgot-password="navigateToForgotPassword"
+  />
+
+  <RegisterDialog
+    v-model="showRegister"
+    @success="onRegisterSuccess"
+    @navigate-to-login="navigateToLogin"
+  />
+
+  <ForgotPasswordDialog
+    v-model="showForgotPassword"
+    @success="onForgotPasswordSuccess"
+    @navigate-to-login="navigateToLogin"
+  />
 
   <!-- Game shell -->
   <div v-if="gameStarted" class="app-shell">
