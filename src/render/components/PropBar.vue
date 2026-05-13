@@ -76,6 +76,13 @@ function getPropDesc(prop: Prop): string {
   }
   return descs[prop.name] || ''
 }
+
+const iconMap: Record<number, string> = {
+  101: '@/assets/prop101.png',
+  102: '@/assets/prop102.png',
+  1001: '@/assets/prop1001.png',
+  1002: '@/assets/prop1002.png',
+}
 </script>
 
 <template>
@@ -98,7 +105,7 @@ function getPropDesc(prop: Prop): string {
         @click="prop.active ? $emit('useProp', prop.id) : null"
       >
         <el-badge :value="getBadgeValue(prop)" :offset="[-4, 0]" :class="{ 'countdown-badge': isAutoActive(prop.id) }">
-          <img :src="resolveImageUrl(prop.icon)" class="prop-icon" :class="{ 'prop-icon-pulse': isAutoActive(prop.id) }">
+          <img :src="resolveImageUrl(iconMap[prop.id])" class="prop-icon" :class="{ 'prop-icon-pulse': isAutoActive(prop.id) }">
         </el-badge>
         <div class="prop-name">
           {{ getPropDisplayName(prop.name) }}

@@ -146,6 +146,7 @@ const cdRemaining = ref(0) // 剩余冷却秒数
 const isBlocked = computed(() => cdRemaining.value > 0)
 const cdTimer = ref<number | null>(null)
 const serverErrorCount = ref(0) // 服务端累计错误次数
+const puddingCount = ref(0) // 布丁数量 (每个减少冷却时间 1%)
 const cdTotal = ref(0) // 本次冷却总时长 (用于进度条)
 const cdPercent = computed(() =>
   cdTotal.value > 0
@@ -183,9 +184,9 @@ const boardCursor = computed(() => {
   if (isBlocked.value)
     return 'not-allowed'
   if (usingPropId.value === 101)
-    return `url('/assets/prop101.png') 16 16, crosshair`
+    return `url('/assets/prop101.png') 64 64, crosshair`
   if (usingPropId.value === 102)
-    return `url('/assets/prop102.png') 16 16, crosshair`
+    return `url('/assets/prop102.png') 64 64, crosshair`
   if (effectiveFlagMode.value)
     return `default`
   return 'pointer'
@@ -558,6 +559,9 @@ function onJoin(data: any) {
   if (data.countError !== undefined) {
     serverErrorCount.value = data.countError
   }
+  if (data.cd !== undefined) {
+    puddingCount.value = data.cd
+  }
 }
 
 // ========== chaos/join/event — 玩家加入通知 ==========
@@ -783,6 +787,7 @@ function addOrUpdateProp(prop: Prop) {
 
 // ========== 道具使用流程 ==========
 function startUseProp(propId: number) {
+  console.warn('Start using prop', propId, 'Blocked:', isBlocked.value, 'Current using:', usingPropId.value)
   if (isBlocked.value) {
     ElMessage.warning('冷却中，请等待')
     return
@@ -1048,7 +1053,9 @@ function collectChainOpen(
 // ========== 冷却系统 ==========
 function applyCooldown() {
   const now = Date.now()
-  const penalty = 2.5 + (serverErrorCount.value + 1) * COOLDOWN_PER_ERROR
+  const reduction = Math.min(puddingCount.value * 0.01, 0.99)
+  const basePenalty = 2.5 + (serverErrorCount.value + 1) * COOLDOWN_PER_ERROR
+  const penalty = basePenalty * (1 - reduction)
   cdTotal.value = penalty
   cdEndTime.value = Math.max(cdEndTime.value, now) + penalty * 1000
   cdRemaining.value = (cdEndTime.value - now) / 1000
@@ -1366,6 +1373,7 @@ function reset() {
   cdRemaining.value = 0
   cdTotal.value = 0
   serverErrorCount.value = 0
+  puddingCount.value = 0
   hintCount.value = 0
   usingPropId.value = null
   timeWatcher.value = '00:000'
@@ -1556,13 +1564,19 @@ function reset() {
         ⏳ CD {{ cdRemaining.toFixed(1) }}s
       </div>
 
-      <!-- 双倍/护盾激活指示器 -->
+      <!-- 布丁 / 双倍 / 护盾激活指示器 -->
       <div style="display: flex; gap: 8px; align-items: center">
+        <span v-if="puddingCount > 0" class="buff-indicator buff-pudding">
+          <img :src="resolveImageUrl('@/assets/pudding.png')" style="width: 16px; height: 16px; vertical-align: middle">
+          布丁 x{{ puddingCount / 2 }}
+        </span>
         <span v-if="shieldActive" class="buff-indicator buff-shield">
-          🛡 护盾 x{{ shieldCount }}
+          <img :src="resolveImageUrl('@/assets/prop1002.png')" style="width: 16px; height: 16px; vertical-align: middle">
+          护盾 x{{ shieldCount }}
         </span>
         <span v-if="doubleScoreActive" class="buff-indicator buff-double">
-          ⚡ 双倍 {{ doubleRemaining.toFixed(1) }}s
+          <img :src="resolveImageUrl('@/assets/prop1001.png')" style="width: 16px; height: 16px; vertical-align: middle">
+          双倍 {{ doubleRemaining.toFixed(1) }}s
         </span>
       </div>
 
@@ -1745,6 +1759,11 @@ function reset() {
   color: #60a5fa;
   background: rgba(96, 165, 250, 0.12);
   border: 1px solid rgba(96, 165, 250, 0.2);
+}
+.buff-pudding {
+  color: #f8b4c8;
+  background: rgba(248, 180, 200, 0.12);
+  border: 1px solid rgba(248, 180, 200, 0.2);
 }
 .buff-double {
   color: #fbbf24;

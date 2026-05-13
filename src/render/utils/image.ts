@@ -8,6 +8,9 @@ const OSS_BASE = `https://${OSS_HOST}`
 export function resolveImageUrl(url: string | undefined | null): string {
   if (!url)
     return './assets/Z7.png' // 默认头像
+  if (url.startsWith('@/assets/')) {
+    return url.replace('@/assets/', './assets/')
+  }
   if (url.startsWith(OSS_BASE)) {
     // @ts-expect-error Vite env types
     if (import.meta.env.DEV) {
