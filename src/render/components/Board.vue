@@ -1838,11 +1838,12 @@ function reset() {
 /* ===== 主体 ===== */
 .main-layout {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 16px;
   height: calc(100vh - 112px);
   max-width: 100vw;
   padding: 10px 12px;
+  overflow-x: auto;
 }
 .left-panel {
   width: 235px;
@@ -1912,6 +1913,7 @@ function reset() {
   --cell-size: 24px;
   position: relative;
   display: grid;
+  margin: 0 auto;
   padding: 8px;
   background: rgba(0, 0, 0, 0.35);
   border-radius: 12px;

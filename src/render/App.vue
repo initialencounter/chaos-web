@@ -217,7 +217,6 @@ body {
   backdrop-filter: blur(12px);
 }
 .el-scrollbar__wrap {
-  display: flex;
-  justify-content: center;
+  overflow: auto;
 }
 </style>
