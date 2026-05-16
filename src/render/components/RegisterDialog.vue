@@ -31,7 +31,7 @@ function startCountdown(countdown: { value: number }) {
 async function handleSendCode() {
   codeLoading.value = true
   try {
-    const result = await window.electronAPI.registerSendCode(form.value.mail)
+    const result = await window.electronAPI.apiRequest('/Minesweeper/code/register/mail', 'POST', { mail: form.value.mail })
     if (result.success) {
       ElMessage.success('验证码已发送')
       startCountdown(codeCountdown)
@@ -53,11 +53,7 @@ async function handleSubmit() {
   loading.value = true
   error.value = ''
   try {
-    const result = await window.electronAPI.registerSubmit(
-      form.value.mail,
-      form.value.code,
-      form.value.password,
-    )
+    const result = await window.electronAPI.apiRequest('/Minesweeper/user/register/mail', 'POST', { mail: form.value.mail, code: form.value.code, password: form.value.password, platform: '0' })
     if (result.success) {
       ElMessage.success('注册成功，请登录')
       emit('success', result.data?.uid)

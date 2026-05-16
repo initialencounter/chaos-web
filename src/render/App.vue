@@ -1,22 +1,28 @@
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue'
 import Board from '@/components/Board.vue'
+import CareerDialog from '@/components/CareerDialog.vue'
 import Footer from '@/components/Footer.vue'
 import ForgotPasswordDialog from '@/components/ForgotPasswordDialog.vue'
 import LoginDialog from '@/components/LoginDialog.vue'
+import RankBoard from '@/components/RankBoard.vue'
 import RegisterDialog from '@/components/RegisterDialog.vue'
 
 const showLogin = ref(false)
 const showRegister = ref(false)
 const showForgotPassword = ref(false)
+const showRankBoard = ref(false)
+const showCareer = ref(false)
 const gameStarted = ref(false)
 const loginInitialError = ref('')
 const prefillId = ref('')
+const currentUid = ref('')
 
 onMounted(async () => {
   try {
     const status = await window.electronAPI.getLoginStatus()
     if (status.loggedIn) {
+      currentUid.value = status.uid || ''
       gameStarted.value = true
     }
     else {
@@ -94,13 +100,31 @@ async function handleLogout() {
     @navigate-to-login="navigateToLogin"
   />
 
+  <RankBoard
+    v-model="showRankBoard"
+    :current-uid="currentUid"
+  />
+
+  <CareerDialog
+    v-model="showCareer"
+    :uid="currentUid"
+  />
+
   <!-- Game shell -->
   <div v-if="gameStarted" class="app-shell">
     <div class="app-header">
       <span class="app-title">Mines Client Lite</span>
-      <el-button type="danger" size="small" plain @click="handleLogout">
-        退出登录
-      </el-button>
+      <div class="header-actions">
+        <el-button size="small" plain @click="showRankBoard = true">
+          排行榜
+        </el-button>
+        <el-button size="small" plain @click="showCareer = true">
+          生涯
+        </el-button>
+        <el-button type="danger" size="small" plain @click="handleLogout">
+          退出登录
+        </el-button>
+      </div>
     </div>
     <el-container>
       <el-main>
@@ -162,6 +186,11 @@ html.dark body {
   font-weight: 600;
   color: rgba(255, 255, 255, 0.6);
   letter-spacing: 0.5px;
+}
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 .el-container {
   flex: 1;

@@ -1,7 +1,9 @@
+import { Buffer } from 'node:buffer'
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import { app, BrowserWindow, globalShortcut, ipcMain, session } from 'electron'
 
+import { app, BrowserWindow, globalShortcut, ipcMain, net, session } from 'electron'
 import { WebSocket } from 'ws'
 import {
   computeMD5,
@@ -19,6 +21,60 @@ export const TARGET_BASE_URL = `http://${TARGET_HOST}`
 
 let mainWindow: BrowserWindow | null = null
 let chaosWs: WebSocket | null = null
+
+// ==================== Image Cache ====================
+
+function getImgCacheDir(): string {
+  const dir = path.join(app.getPath('userData'), 'img-cache')
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true })
+  }
+  return dir
+}
+
+function getImgCachePath(url: string): string {
+  const hash = createHash('md5').update(url).digest('hex')
+  return path.join(getImgCacheDir(), hash)
+}
+
+function detectMimeType(buf: Buffer): string {
+  if (buf[0] === 0x89 && buf[1] === 0x50) {
+    return 'image/png'
+  }
+  if (buf[0] === 0xFF && buf[1] === 0xD8) {
+    return 'image/jpeg'
+  }
+  if (buf[0] === 0x47 && buf[1] === 0x49) {
+    return 'image/gif'
+  }
+  if (buf[0] === 0x52 && buf[1] === 0x49) {
+    return 'image/webp'
+  }
+  return 'image/png'
+}
+
+async function downloadAndCache(url: string): Promise<string> {
+  const cachePath = getImgCachePath(url)
+
+  if (fs.existsSync(cachePath)) {
+    const buf = fs.readFileSync(cachePath)
+    return `data:${detectMimeType(buf)};base64,${buf.toString('base64')}`
+  }
+
+  try {
+    const resp = await net.fetch(url)
+    if (resp.ok) {
+      const buf = Buffer.from(await resp.arrayBuffer())
+      fs.writeFileSync(cachePath, buf)
+      const mime = resp.headers.get('content-type') || detectMimeType(buf)
+      return `data:${mime};base64,${buf.toString('base64')}`
+    }
+  }
+  catch (e) {
+    console.error('[imgcache] download failed:', url, e)
+  }
+  return url // fallback to original URL
+}
 
 // ==================== Credential Storage ====================
 
@@ -276,20 +332,10 @@ function setupIPC(): void {
     return true
   })
 
-  // Register
-  ipcMain.handle('register:send-code', async (_event, mail: string) => {
+  // Generic API request — no need to register a new IPC handler per endpoint
+  ipcMain.handle('api:request', async (_event, path: string, method: string, params: Record<string, any>) => {
     try {
-      const resp: any = await executeRequest('/Minesweeper/code/register/mail', 'POST', { mail })
-      return { success: resp.code === 200, code: resp.code, msg: resp.msg }
-    }
-    catch (e: any) {
-      return { success: false, msg: e.message }
-    }
-  })
-
-  ipcMain.handle('register:submit', async (_event, mail: string, code: string, password: string) => {
-    try {
-      const resp: any = await executeRequest('/Minesweeper/user/register/mail', 'POST', { mail, code, password, platform: '0' })
+      const resp: any = await executeRequest(path, method, params)
       return { success: resp.code === 200, code: resp.code, msg: resp.msg, data: resp.data }
     }
     catch (e: any) {
@@ -297,25 +343,9 @@ function setupIPC(): void {
     }
   })
 
-  // Password reset
-  ipcMain.handle('password:send-code', async (_event, mail: string) => {
-    try {
-      const resp: any = await executeRequest('/Minesweeper/code/password/reset/mail', 'POST', { mail })
-      return { success: resp.code === 200, code: resp.code, msg: resp.msg }
-    }
-    catch (e: any) {
-      return { success: false, msg: e.message }
-    }
-  })
-
-  ipcMain.handle('password:reset', async (_event, mail: string, code: string, password: string) => {
-    try {
-      const resp: any = await executeRequest('/Minesweeper/user/password/reset/mail', 'POST', { mail, code, password })
-      return { success: resp.code === 200, code: resp.code, msg: resp.msg }
-    }
-    catch (e: any) {
-      return { success: false, msg: e.message }
-    }
+  // Image cache
+  ipcMain.handle('cache:image', async (_event, url: string) => {
+    return downloadAndCache(url)
   })
 }
 

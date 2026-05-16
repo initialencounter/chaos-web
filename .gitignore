@@ -6,3 +6,4 @@ dist-ssr
 .env
 release
 api_docs
+legacy

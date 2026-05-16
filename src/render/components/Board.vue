@@ -10,12 +10,27 @@ import type {
 } from '@/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Howl } from 'howler'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { wsClient } from '@/api/websocket'
 import PropBar from '@/components/PropBar.vue'
 import ScoreBoard from '@/components/ScoreBoard.vue'
 import ScoreTip from '@/components/ScoreTip.vue'
 import { resolveImageUrl } from '@/utils/image'
+
+const avatarCache = reactive(new Map<string, string>())
+
+function getCachedAvatar(url: string | undefined | null): string {
+  const raw = resolveImageUrl(url)
+  if (!raw.startsWith('https://'))
+    return raw
+  if (!avatarCache.has(raw)) {
+    avatarCache.set(raw, raw)
+    window.electronAPI.cacheImage(raw).then((cached) => {
+      avatarCache.set(raw, cached)
+    })
+  }
+  return avatarCache.get(raw) || raw
+}
 
 // ========== 动作接口 ==========
 interface Action {
@@ -1403,7 +1418,7 @@ function reset() {
           >
             <div style="position: relative">
               <img
-                :src="resolveImageUrl(resultList[0].user.avatar)"
+                :src="getCachedAvatar(resultList[0].user.avatar)"
                 style="
                   width: 90px;
                   height: 90px;
@@ -1452,7 +1467,7 @@ function reset() {
                 {{ getRankIcon(idx + 1) }}
               </span>
               <img
-                :src="resolveImageUrl(item.user.avatar)"
+                :src="getCachedAvatar(item.user.avatar)"
                 :style="{
                   width: '38px',
                   height: '38px',
@@ -1649,7 +1664,7 @@ function reset() {
               :style="playerCursorStyle(cursor)"
             >
               <img
-                :src="resolveImageUrl(cursor.avatar)"
+                :src="getCachedAvatar(cursor.avatar)"
                 class="player-cursor-avatar"
               >
               <span v-if="showPlayerNames" class="player-cursor-name">{{
@@ -1666,7 +1681,7 @@ function reset() {
               class="trail-particle"
               :style="trailStyle(trail)"
             >
-              <img :src="resolveImageUrl(trail.avatar)" class="trail-avatar">
+              <img :src="getCachedAvatar(trail.avatar)" class="trail-avatar">
             </div>
           </template>
         </div>

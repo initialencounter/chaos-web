@@ -34,11 +34,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Logout
   logout: () => ipcRenderer.invoke('login:logout'),
 
-  // Register
-  registerSendCode: (mail: string) => ipcRenderer.invoke('register:send-code', mail),
-  registerSubmit: (mail: string, code: string, password: string) => ipcRenderer.invoke('register:submit', mail, code, password),
+  // Generic API request
+  apiRequest: (path: string, method: string, params: Record<string, any>) => ipcRenderer.invoke('api:request', path, method, params),
 
-  // Password reset
-  passwordSendCode: (mail: string) => ipcRenderer.invoke('password:send-code', mail),
-  passwordReset: (mail: string, code: string, password: string) => ipcRenderer.invoke('password:reset', mail, code, password),
+  // Image cache
+  cacheImage: (url: string) => ipcRenderer.invoke('cache:image', url),
 })

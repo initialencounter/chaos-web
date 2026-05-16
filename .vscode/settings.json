@@ -36,6 +36,6 @@
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   },
   "[markdown]": {
-    "editor.defaultFormatter": "denoland.vscode-deno"
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   }
 }

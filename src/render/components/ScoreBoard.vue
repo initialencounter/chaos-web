@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ScoreBoard as ScoreBoardType, ScoreEntry } from '@/types'
-import { computed } from 'vue'
+import { computed, reactive } from 'vue'
 import { resolveImageUrl } from '@/utils/image'
 
 const props = defineProps<{
@@ -11,6 +11,21 @@ const sortedEntries = computed<ScoreEntry[]>(() => {
   return Object.values(props.scoreBoard)
     .sort((a, b) => b.score - a.score)
 })
+
+const avatarCache = reactive(new Map<string, string>())
+
+function getCachedAvatar(url: string | undefined | null): string {
+  const raw = resolveImageUrl(url)
+  if (!raw.startsWith('https://'))
+    return raw
+  if (!avatarCache.has(raw)) {
+    avatarCache.set(raw, raw)
+    window.electronAPI.cacheImage(raw).then((cached) => {
+      avatarCache.set(raw, cached)
+    })
+  }
+  return avatarCache.get(raw) || raw
+}
 
 function getRankClass(idx: number): string {
   if (idx === 0)
@@ -48,7 +63,7 @@ function getRankIcon(idx: number): string {
         {{ getRankIcon(idx) }}
       </div>
       <img
-        :src="resolveImageUrl(entry.avatar)"
+        :src="getCachedAvatar(entry.avatar)"
         class="avatar"
         @error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
       >
