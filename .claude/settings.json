@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la c:/Users/29115/dev/tapsss/)",
+      "Read(//c/Users/29115/dev/tapsss/**)",
+      "Bash(ls -la c:/Users/29115/dev/tapsss/legacy/tapsss-forum/ 2>/dev/null || echo \"NOT FOUND\")",
+      "Read(//c/Users/29115/dev/tapsss/legacy/**)",
+      "Bash(find /c/Users/29115/dev/tapsss -maxdepth 3 -type d -name \"*forum*\" 2>/dev/null; find /c/Users/29115/dev -maxdepth 3 -type d -name \"*forum*\" 2>/dev/null)",
+      "Read(//c/Users/29115/dev/**)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(pnpm install *)",
+      "Bash(npx tsc *)",
+      "Bash(mkdir -p c:/Users/29115/dev/tapsss/fast-vite-electron/src/render/public/icon && cp c:/Users/29115/dev/tapsss/fast-vite-electron/legacy/tapsss-forum/public/icon/*.png c:/Users/29115/dev/tapsss/fast-vite-electron/src/render/public/icon/ && echo \"copied\")",
+      "Bash(node -e \"console.log\\(require\\('@tapsss/server'\\)\\)\")",
+      "Bash(node -e \"import\\('@tapsss/server'\\).then\\(m => console.log\\(Object.keys\\(m\\)\\)\\)\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\29115\\dev\\tapsss\\fast-vite-electron\\legacy\\tapsss-forum\\public\\icon"
+    ]
+  }
+}

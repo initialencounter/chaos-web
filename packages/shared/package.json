@@ -1,0 +1,35 @@
+{
+  "name": "@tapsss/shared",
+  "type": "module",
+  "version": "0.1.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
+    },
+    "./api": {
+      "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "pako": "^2.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  }
+}

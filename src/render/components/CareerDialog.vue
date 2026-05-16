@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { ChaosUserRecordDatum, MinesweeperChaosCareer } from '@tapsss/shared'
 import { ElMessage } from 'element-plus'
 import { computed, ref, watch } from 'vue'
 
@@ -13,17 +14,8 @@ const emit = defineEmits<{
 
 const PAGE_SIZE = 20
 
-interface RecordItem {
-  id: number
-  correct: number
-  incorrect: number
-  score: number
-  rank: number
-  createTime: number
-}
-
-const career = ref({ win: 0, lose: 0, rank: 0 })
-const records = ref<RecordItem[]>([])
+const career = ref<MinesweeperChaosCareer['data']>({ win: 0, lose: 0, rank: 0 })
+const records = ref<ChaosUserRecordDatum[]>([])
 const recordPage = ref(1)
 const recordTotalPage = ref(1)
 const loadingCareer = ref(false)
@@ -68,8 +60,8 @@ async function fetchCareer() {
       ElMessage.error(result.msg || '加载生涯数据失败')
     }
   }
-  catch (e: any) {
-    ElMessage.error(e.message || '加载生涯数据失败')
+  catch (e: unknown) {
+    ElMessage.error((e as Error).message || '加载生涯数据失败')
   }
   finally {
     loadingCareer.value = false
@@ -83,15 +75,15 @@ async function fetchRecords() {
   try {
     const result = await window.electronAPI.apiRequest('/Minesweeper/minesweeper/chaos/list/user/record', 'POST', { uid: props.uid, page: recordPage.value - 1, count: PAGE_SIZE })
     if (result.success && result.data) {
-      records.value = result.data as RecordItem[]
+      records.value = result.data as ChaosUserRecordDatum[]
       recordTotalPage.value = result.data.length < PAGE_SIZE ? recordPage.value : recordPage.value + 1
     }
     else {
       ElMessage.error(result.msg || '加载对局记录失败')
     }
   }
-  catch (e: any) {
-    ElMessage.error(e.message || '加载对局记录失败')
+  catch (e: unknown) {
+    ElMessage.error((e as Error).message || '加载对局记录失败')
   }
   finally {
     loadingRecords.value = false

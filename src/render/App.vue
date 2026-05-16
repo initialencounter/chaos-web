@@ -1,18 +1,15 @@
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue'
-import Board from '@/components/Board.vue'
-import CareerDialog from '@/components/CareerDialog.vue'
-import Footer from '@/components/Footer.vue'
+import { useRouter } from 'vue-router'
 import ForgotPasswordDialog from '@/components/ForgotPasswordDialog.vue'
 import LoginDialog from '@/components/LoginDialog.vue'
-import RankBoard from '@/components/RankBoard.vue'
 import RegisterDialog from '@/components/RegisterDialog.vue'
+
+const router = useRouter()
 
 const showLogin = ref(false)
 const showRegister = ref(false)
 const showForgotPassword = ref(false)
-const showRankBoard = ref(false)
-const showCareer = ref(false)
 const gameStarted = ref(false)
 const loginInitialError = ref('')
 const prefillId = ref('')
@@ -24,6 +21,7 @@ onMounted(async () => {
     if (status.loggedIn) {
       currentUid.value = status.uid || ''
       gameStarted.value = true
+      router.push({ name: 'game' })
     }
     else {
       if (status.msg) {
@@ -41,6 +39,7 @@ function onLoginSuccess() {
   showLogin.value = false
   loginInitialError.value = ''
   gameStarted.value = true
+  router.push({ name: 'game' })
 }
 
 function onRegisterSuccess(uid: string) {
@@ -75,6 +74,7 @@ async function handleLogout() {
   await window.electronAPI.logout()
   gameStarted.value = false
   showLogin.value = true
+  router.push({ name: 'home' })
 }
 </script>
 
@@ -100,40 +100,21 @@ async function handleLogout() {
     @navigate-to-login="navigateToLogin"
   />
 
-  <RankBoard
-    v-model="showRankBoard"
-    :current-uid="currentUid"
-  />
+  <router-view
+    v-if="gameStarted"
+    v-slot="{ Component }"
+  >
+    <keep-alive exclude="GameView,ReplayDetailView">
+      <component
+        :is="Component"
+        :current-uid="currentUid"
+        @logout="handleLogout"
+      />
+    </keep-alive>
+  </router-view>
 
-  <CareerDialog
-    v-model="showCareer"
-    :uid="currentUid"
-  />
-
-  <!-- Game shell -->
-  <div v-if="gameStarted" class="app-shell">
-    <div class="app-header">
-      <span class="app-title">Mines Client Lite</span>
-      <div class="header-actions">
-        <el-button size="small" plain @click="showRankBoard = true">
-          排行榜
-        </el-button>
-        <el-button size="small" plain @click="showCareer = true">
-          生涯
-        </el-button>
-        <el-button type="danger" size="small" plain @click="handleLogout">
-          退出登录
-        </el-button>
-      </div>
-    </div>
-    <el-container>
-      <el-main>
-        <Board />
-      </el-main>
-      <el-footer>
-        <Footer />
-      </el-footer>
-    </el-container>
+  <div v-else class="loading-placeholder">
+    <span class="loading-text">Mines Client Lite</span>
   </div>
 </template>
 
@@ -148,7 +129,6 @@ html,
 body,
 #app {
   height: 100%;
-  overflow: hidden;
   font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
 }
 body {
@@ -261,5 +241,19 @@ html.dark .el-divider {
 }
 .el-scrollbar__wrap {
   overflow: auto;
+}
+
+.loading-placeholder {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1px;
 }
 </style>

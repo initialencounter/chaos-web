@@ -3,8 +3,6 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { app, BrowserWindow, globalShortcut, ipcMain, net, session } from 'electron'
-import { WebSocket } from 'ws'
 import {
   computeMD5,
   CONFIG,
@@ -13,7 +11,9 @@ import {
   executeRequest,
   LOGIN_CONFIG,
   randomBase64String,
-} from './encrypt'
+} from '@tapsss/server'
+import { app, BrowserWindow, globalShortcut, ipcMain, net, session } from 'electron'
+import { WebSocket } from 'ws'
 
 const VITE_DEV_SERVER_URL = process.env.DS_RENDERER_URL
 const TARGET_HOST = 'minesweeper.natapp1.cc'

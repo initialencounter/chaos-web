@@ -6,9 +6,8 @@
       "esnext",
       "dom"
     ],
-    "module": "NodeNext",
-    "moduleResolution": "nodenext",
-    "ignoreDeprecations": "6.0",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "paths": {
       "@/*": [
         "./src/render/*"
@@ -21,6 +20,15 @@
       ],
       "@common/*": [
         "./src/common/*"
+      ],
+      "@tapsss/shared": [
+        "./packages/shared/src"
+      ],
+      "@tapsss/shared/*": [
+        "./packages/shared/src/*"
+      ],
+      "@tapsss/server": [
+        "./packages/server/src"
       ]
     },
     "resolveJsonModule": true,

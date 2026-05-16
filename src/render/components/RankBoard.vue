@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { RankDatum } from '@tapsss/shared'
 import { ElMessage } from 'element-plus'
 import { computed, reactive, ref } from 'vue'
 import { resolveAndCache } from '@/utils/image'
@@ -16,21 +17,8 @@ const PAGE_SIZE = 20
 
 type TabName = 'medal' | 'score' | 'coin'
 
-interface RankItem {
-  uid: string
-  rank: number
-  score: number
-  win: number
-  lose: number
-  stage: number
-  user: {
-    avatar: string
-    nickName: string
-  }
-}
-
 interface TabState {
-  list: RankItem[]
+  list: RankDatum[]
   page: number
   totalPage: number
   loaded: boolean
@@ -111,7 +99,7 @@ function getRankIcon(rank: number): string {
   return ''
 }
 
-function getWinRate(item: RankItem): string {
+function getWinRate(item: RankDatum): string {
   const total = item.win + item.lose
   if (total === 0)
     return '-'
@@ -127,7 +115,7 @@ async function fetchData(isRefresh = false) {
     loading.value = true
   }
   try {
-    let result: { success: boolean, data?: any[], msg?: string }
+    let result: { success: boolean, data?: RankDatum[], msg?: string }
     const apiPage = page.value - 1
     switch (activeTab.value) {
       case 'medal':
@@ -143,7 +131,7 @@ async function fetchData(isRefresh = false) {
         return
     }
     if (result.success && result.data) {
-      current.value.list = result.data as RankItem[]
+      current.value.list = result.data
       totalPage.value = result.data.length < PAGE_SIZE ? page.value : page.value + 1
       current.value.loaded = true
       // resolve avatar URLs to cached file:// paths
@@ -159,8 +147,8 @@ async function fetchData(isRefresh = false) {
       ElMessage.error(result.msg || '加载失败')
     }
   }
-  catch (e: any) {
-    ElMessage.error(e.message || '加载失败')
+  catch (e: unknown) {
+    ElMessage.error((e as Error).message || '加载失败')
   }
   finally {
     loading.value = false

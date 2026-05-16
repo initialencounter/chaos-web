@@ -15,6 +15,7 @@ export default defineConfig({
       entry: 'src/main/index.ts',
       outDir: 'dist/main',
       external: ['electron', 'ws'],
+      noExternal: ['@tapsss/server', '@tapsss/shared'],
       electron: {
         build: {
           config: './electron-builder.config.js',
@@ -32,6 +33,8 @@ export default defineConfig({
       '@render': join(__dirname, 'src/render'),
       '@main': join(__dirname, 'src/main'),
       '@common': join(__dirname, 'src/common'),
+      '@tapsss/shared': join(__dirname, 'packages/shared/src'),
+      '@tapsss/server': join(__dirname, 'packages/server/src'),
     },
   },
   server: {

@@ -1,6 +1,6 @@
 {
   "name": "tapsss.initialencounter.chaos",
-  "version": "0.0.9",
+  "version": "0.1.0",
   "packageManager": "pnpm@11.0.9",
   "description": "Vite + Electron with esbuild, so fast! ⚡",
   "main": "dist/main/index.js",
@@ -18,9 +18,14 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
+    "@tapsss/server": "workspace:*",
+    "@tapsss/shared": "workspace:*",
     "@vueuse/core": "^13.8.0",
     "element-plus": "^2.7.6",
     "howler": "^2.2.4",
+    "markdown-it": "^14.1.0",
+    "pako": "^2.1.0",
+    "pinia": "^3.0.4",
     "sass": "~1.77.6",
     "vue": "^3.5.34",
     "vue-router": "^4.4.0",

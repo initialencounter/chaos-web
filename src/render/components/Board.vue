@@ -39,6 +39,51 @@ interface Action {
   c: number // column
 }
 
+// ========== WebSocket 消息接口 ==========
+interface EnterData {
+  map: {
+    map: string
+    mapStatus: string
+    mine: number
+    maxTime: number
+    createTime: number
+    highScoreStartRow?: number
+    highScoreStartColumn?: number
+    highScoreEndRow?: number
+    highScoreEndColumn?: number
+    nfStartRow?: number
+    nfStartColumn?: number
+    nfEndRow?: number
+    nfEndColumn?: number
+  }
+  users: ChaosUser[]
+}
+
+interface JoinData {
+  props: Prop[]
+  countError: number
+  cd: number
+}
+
+interface ActionData {
+  actions: Action[]
+  user: ChaosUser
+}
+
+interface RefreshUsersData {
+  users: ChaosUser[]
+}
+
+interface FinishData {
+  users: ChaosUser[]
+}
+
+interface PropGainData {
+  prop: Prop
+  column: number
+  row: number
+}
+
 // ========== 常量 ==========
 const cellSize = 24
 const COOLDOWN_PER_ERROR = 0.5
@@ -312,7 +357,7 @@ function buildNearbyCache() {
 
 // 结算
 const showResultDialog = ref(false)
-const resultList = ref<any[]>([])
+const resultList = ref<ChaosUser[]>([])
 
 // 计时器
 let startTimeStamp = 0
@@ -472,7 +517,7 @@ function onDisconnect() {
 }
 
 // ========== chaos/enter — 进入房间 ==========
-function onEnter(data: any) {
+function onEnter(data: EnterData) {
   console.warn('Entered room:', data)
   if (!data.map)
     return
@@ -538,7 +583,7 @@ function handleJoin() {
   isJoined.value = true
 }
 
-function parseZone(mapObj: any, prefix: string): ZoneRect | null {
+function parseZone(mapObj: EnterData['map'], prefix: string): ZoneRect | null {
   const sr = mapObj[`${prefix}StartRow`]
   const sc = mapObj[`${prefix}StartColumn`]
   const er = mapObj[`${prefix}EndRow`]
@@ -555,7 +600,7 @@ function parseZone(mapObj: any, prefix: string): ZoneRect | null {
 }
 
 // ========== chaos/join — 加入响应, 同步道具 ==========
-function onJoin(data: any) {
+function onJoin(data: JoinData) {
   console.warn('Joined game:', data)
   if (data.props) {
     for (const p of data.props) {
@@ -580,7 +625,7 @@ function onJoin(data: any) {
 }
 
 // ========== chaos/join/event — 玩家加入通知 ==========
-function onJoinEvent(data: any) {
+function onJoinEvent(data: { user: ChaosUser }) {
   if (data.user) {
     ElMessage.info(
       `${data.user.user?.nickName || data.user.user?.uid} 加入了游戏`,
@@ -590,7 +635,7 @@ function onJoinEvent(data: any) {
 }
 
 // ========== chaos/action — 玩家操作广播 ==========
-function onAction(data: any) {
+function onAction(data: ActionData) {
   if (data.actions) {
     for (const action of data.actions) {
       const idx = action.r * minefield.value.Width + action.c
@@ -624,7 +669,7 @@ function onAction(data: any) {
 }
 
 // ========== 玩家光标追踪 ==========
-function trackPlayerCursor(data: any) {
+function trackPlayerCursor(data: ActionData) {
   if (!data.actions?.length)
     return
   const uid = data.user?.user?.uid || String(data.user?.user?.id || '')
@@ -692,7 +737,7 @@ function trailStyle(trail: TrailParticle) {
 }
 
 // ========== chaos/refresh/users — 刷新玩家 ==========
-function onRefreshUsers(data: any) {
+function onRefreshUsers(data: RefreshUsersData) {
   if (data.users) {
     updateScoreboard(data.users)
     checkIfJoined(data.users)
@@ -701,11 +746,11 @@ function onRefreshUsers(data: any) {
 }
 
 // ========== 同步服务端错误次数 ==========
-function syncMyErrorCount(users: any[]) {
+function syncMyErrorCount(users: ChaosUser[]) {
   if (!currentUid.value)
     return
   const me = users.find(
-    (u: any) => (u.user?.uid || String(u.user?.id)) === currentUid.value,
+    (u: ChaosUser) => (u.user.uid || String(u.user.id)) === currentUid.value,
   )
   if (me) {
     serverErrorCount.value = me.countError ?? me.countIncorrect ?? 0
@@ -713,9 +758,9 @@ function syncMyErrorCount(users: any[]) {
 }
 
 // ========== chaos/finish — 结算 ==========
-function onFinish(data: any) {
+function onFinish(data: FinishData) {
   if (data?.users) {
-    const sorted = [...data.users].sort((a: any, b: any) => b.score - a.score)
+    const sorted = [...data.users].sort((a, b) => b.score - a.score)
     resultList.value = sorted
     showResultDialog.value = true
   }
@@ -726,7 +771,7 @@ function onFinish(data: any) {
 }
 
 // ========== chaos/prop/gain — 获得道具 ==========
-function onPropGain(data: any) {
+function onPropGain(data: PropGainData) {
   if (!data.prop)
     return
   const p = data.prop
@@ -787,7 +832,7 @@ function registerAutoPropEffect(
 // 自动道具 (双倍 1001): 库存由倒计时到期时扣减, 此处不处理避免提前删除
 // 护盾 (1002): 不限时间, 踩雷时消耗, 此处不扣减
 // 主动道具 (101, 102): handlePropUse 已处理全部, 此处跳过
-function onPropUse(_data: any) {}
+function onPropUse(_data: { propId: number, column: number, row: number }) {}
 
 // ========== prop/gain 时的本地道具更新 ==========
 function addOrUpdateProp(prop: Prop) {
