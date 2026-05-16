@@ -18,7 +18,7 @@ const toggleDark = useToggle(isDark)
     </div>
     <a
       class="icon-btn"
-      href="https://github.com/initialencounter/mines"
+      href="https://github.com/initialencounter/chaos-web"
       title="GitHub"
     ><svg
       xmlns="http://www.w3.org/2000/svg"
@@ -60,5 +60,11 @@ const toggleDark = useToggle(isDark)
 .icon-btn:hover {
   color: #d0d0d0;
   transform: scale(1.15);
+}
+html:not(.dark) .icon-btn {
+  color: #64748b;
+}
+html:not(.dark) .icon-btn:hover {
+  color: #334155;
 }
 </style>

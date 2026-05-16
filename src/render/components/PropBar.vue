@@ -133,6 +133,13 @@ const iconMap: Record<number, string> = {
   padding: 6px 20px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.07);
+  transition:
+    background 0.3s,
+    border-color 0.3s;
+}
+html:not(.dark) .prop-bar-inner {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 .prop-label {
   font-size: 12px;
@@ -141,6 +148,9 @@ const iconMap: Record<number, string> = {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
+}
+html:not(.dark) .prop-label {
+  color: #64748b;
 }
 .prop-item {
   display: flex;
@@ -157,6 +167,10 @@ const iconMap: Record<number, string> = {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
+html:not(.dark) .prop-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
 .prop-active {
   border-color: #fbbf24;
   background: rgba(251, 191, 36, 0.15);
@@ -169,6 +183,9 @@ const iconMap: Record<number, string> = {
 .prop-auto {
   border-style: dashed;
   border-color: rgba(255, 255, 255, 0.1);
+}
+html:not(.dark) .prop-auto {
+  border-color: rgba(0, 0, 0, 0.15);
 }
 .prop-icon {
   width: 40px;
@@ -183,11 +200,17 @@ const iconMap: Record<number, string> = {
   white-space: nowrap;
   font-weight: 500;
 }
+html:not(.dark) .prop-name {
+  color: #475569;
+}
 .prop-empty {
   font-size: 12px;
   color: #666;
   padding: 0 10px;
   font-style: italic;
+}
+html:not(.dark) .prop-empty {
+  color: #94a3b8;
 }
 
 /* 自动道具倒计时样式 */
@@ -214,6 +237,9 @@ const iconMap: Record<number, string> = {
   border-radius: 2px;
   margin-top: 4px;
   overflow: hidden;
+}
+html:not(.dark) .prop-timer-bar {
+  background: rgba(0, 0, 0, 0.1);
 }
 .prop-timer-fill {
   height: 100%;

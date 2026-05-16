@@ -128,8 +128,16 @@ body,
   font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
 }
 body {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 50%, #bcccdc 100%);
   background-attachment: fixed;
+  color: #334155;
+  transition:
+    background 0.3s,
+    color 0.3s;
+}
+html.dark body {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color: #e0e0e0;
 }
 
 /* ===== 外壳 ===== */
@@ -183,33 +191,39 @@ body {
   font-weight: 600;
   font-size: 13px;
   transition: all 0.2s;
+}
+.el-button:active {
+  transform: translateY(0);
+}
+
+html.dark .el-button {
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.08);
   color: #e0e0e0;
 }
-.el-button:hover {
+html.dark .el-button:hover {
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
-.el-button:active {
-  transform: translateY(0);
-}
+
 .el-dialog {
   border-radius: 16px;
-  background: rgba(30, 30, 50, 0.95) !important;
   backdrop-filter: blur(20px);
+}
+html.dark .el-dialog {
+  background: rgba(30, 30, 50, 0.95) !important;
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
 }
 .el-dialog__header {
   display: none;
 }
-.el-dialog__body {
+html.dark .el-dialog__body {
   color: #d0d0d0;
 }
-.el-divider {
+html.dark .el-divider {
   border-color: rgba(255, 255, 255, 0.08);
 }
 .el-message {

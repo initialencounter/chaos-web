@@ -8,7 +8,12 @@
       "Bash(npx vue-tsc *)",
       "Bash(pnpm add *)",
       "Bash(npx vite *)",
-      "Bash(identify \"c:/Users/29115/dev/tapsss/fast-vite-electron/src/render/public/assets/prop101.png\")"
+      "Bash(identify \"c:/Users/29115/dev/tapsss/fast-vite-electron/src/render/public/assets/prop101.png\")",
+      "Bash(node -e \"const icons = require\\('@element-plus/icons-vue'\\); const names = Object.keys\\(icons\\).filter\\(k => /moon|sun/i.test\\(k\\)\\); console.log\\('Matching icons:', names.join\\(', '\\)\\)\")",
+      "Bash(npx prettier *)",
+      "Bash(npx --yes prettier --check \"src/render/components/ScoreBoard.vue\")",
+      "Bash(node -e \"require\\('prettier'\\)\")",
+      "Bash(ls node_modules/.bin/prettier*)"
     ]
   }
 }

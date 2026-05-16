@@ -1704,6 +1704,13 @@ function reset() {
   background: rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  transition:
+    background 0.3s,
+    border-color 0.3s;
+}
+html:not(.dark) .topPositionFixed {
+  background: rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 .header-content {
   display: flex;
@@ -1781,11 +1788,23 @@ function reset() {
   border-radius: 6px;
   border: 1px solid rgba(165, 214, 167, 0.15);
   white-space: nowrap;
+  transition:
+    color 0.3s,
+    background 0.3s,
+    border-color 0.3s;
+}
+html:not(.dark) .safe-cells-indicator {
+  color: #2d6a4f;
+  background: rgba(45, 106, 79, 0.08);
+  border: 1px solid rgba(45, 106, 79, 0.15);
 }
 .safe-cells-count {
   color: #66bb6a;
   font-size: 18px;
   font-weight: 800;
+}
+html:not(.dark) .safe-cells-count {
+  color: #1b7a3d;
 }
 .timeWatcher {
   font-size: 28px;
@@ -1798,6 +1817,13 @@ function reset() {
   width: 110px;
   text-align: center;
   flex-shrink: 0;
+  transition:
+    color 0.3s,
+    text-shadow 0.3s;
+}
+html:not(.dark) .timeWatcher {
+  color: #0d9488;
+  text-shadow: 0 0 12px rgba(13, 148, 136, 0.15);
 }
 .scoreTipParent {
   height: 0;
@@ -1921,6 +1947,17 @@ function reset() {
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition:
+    background 0.3s,
+    border-color 0.3s,
+    box-shadow 0.3s;
+}
+html:not(.dark) .board {
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(0, 0, 0, 0.03);
 }
 .cell-wrapper {
   position: relative;
@@ -2041,6 +2078,11 @@ function reset() {
   color: #aaa;
   line-height: 1.5;
   vertical-align: middle;
+}
+html:not(.dark) .key-hint {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.05);
+  color: #64748b;
 }
 
 /* ===== 遮罩层 ===== */
