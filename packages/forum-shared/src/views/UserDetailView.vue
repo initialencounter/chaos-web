@@ -142,7 +142,7 @@ const zodiac = computed(() => {
 
         <!-- 头像和基本信息 -->
         <div class="user-info-section">
-          <UserAvatar :user="user" size="90px" class-name="avatar-large" />
+          <UserAvatar :user="user" size="90px" class-name="avatar-large" :disable-click="true" />
           <div class="basic-info">
             <h2>
               {{ user.nickName }}

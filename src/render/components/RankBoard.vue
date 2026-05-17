@@ -2,6 +2,7 @@
 import type { RankDatum } from '@tapsss/shared'
 import { ElMessage } from 'element-plus'
 import { computed, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { resolveAndCache } from '@/utils/image'
 
 defineProps<{
@@ -24,6 +25,7 @@ interface TabState {
   loaded: boolean
 }
 
+const router = useRouter()
 const activeTab = ref<TabName>('medal')
 const loading = ref(false)
 const refreshing = ref(false)
@@ -78,6 +80,12 @@ const columns = computed(() => {
     { prop: 'stage', label: '财富', width: 100 },
   ]
 })
+
+function goToUser(uid: string | number | undefined | null) {
+  if (!uid)
+    return
+  router.push({ name: 'user', params: { uid: String(uid) } })
+}
 
 function getRankClass(rank: number): string {
   if (rank === 1)
@@ -276,6 +284,8 @@ function onOpen() {
                 <img
                   :src="item.user.avatar || './assets/Z7.png'"
                   class="avatar"
+                  style="cursor: pointer;"
+                  @click.stop="goToUser(item.uid)"
                   @error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
                 >
               </td>

@@ -2,14 +2,19 @@
 import type { ImMessage, ImRecentUser } from '@tapsss/shared'
 import { formatTime } from '@tapsss/shared/utils'
 import { computed, nextTick, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useMessageStore } from '../stores/im'
 
 defineOptions({ name: 'MessageView' })
 
 const props = defineProps<{
   currentUid?: string
+  toUid?: string
+  avatarUrl?: string
+  nickName?: string
 }>()
 
+const router = useRouter()
 const store = useMessageStore()
 
 const inputText = ref('')
@@ -19,11 +24,64 @@ const loadingMore = ref(false)
 
 const currentUid = computed(() => props.currentUid)
 
+function buildMinimalRecentUser(toUid: string): ImRecentUser {
+  return {
+    id: 0,
+    uid: '',
+    toUid,
+    lastMessageId: 0,
+    lastMessageTime: 0,
+    unReadCount: 0,
+    stick: false,
+    user: {
+      id: Number(toUid),
+      uid: toUid,
+      avatar: '',
+      background: null,
+      chaosInGame: false,
+      chaosInView: false,
+      country: null,
+      mark: null,
+      nickName: toUid,
+      online: false,
+      puzzleRank: 0,
+      pvpInGame: false,
+      pvpInWait: false,
+      relation: 2,
+      sex: 0,
+      sign: null,
+      timingLevel: 0,
+      timingRank: 0,
+      vip: false,
+    },
+    lastMessage: null,
+  }
+}
+
+function goToUser(uid: string | number | undefined | null) {
+  if (!uid)
+    return
+  router.push({ name: 'user', params: { uid: String(uid) } })
+}
+
 onMounted(async () => {
   if (!store.recentUsersLoaded) {
     await store.fetchRecentUsers()
   }
   await store.fetchTotalUnread()
+
+  if (props.toUid) {
+    const existing = store.recentUsers.find(u => String(u.toUid) === String(props.toUid))
+    if (existing) {
+      await handleSelectChat(existing)
+    }
+    else {
+      const minimal = buildMinimalRecentUser(props.toUid)
+      await store.selectChat(minimal)
+      await nextTick()
+      scrollToBottom()
+    }
+  }
 })
 
 function scrollToBottom() {
@@ -143,6 +201,7 @@ function formatMsgTime(timeMs: number): string {
             :src="user.user?.avatar"
             class="conv-avatar"
             alt="avatar"
+            @click.stop="goToUser(user.toUid)"
           >
 
           <div class="conv-content">
@@ -177,12 +236,13 @@ function formatMsgTime(timeMs: number): string {
       <template v-else>
         <div class="chat-header">
           <img
-            :src="store.currentChatUser.user?.avatar"
+            :src="store.currentChatUser.user?.avatar || props.avatarUrl || './assets/Z7.png'"
             class="chat-header-avatar"
             alt="avatar"
+            @click.stop="goToUser(store.currentChatUser?.toUid)"
           >
           <span class="chat-header-name">
-            {{ store.currentChatUser.user?.nickName || store.currentChatUser.toUid }}
+            {{ props.nickName || store.currentChatUser.user?.nickName || store.currentChatUser.toUid }}
           </span>
         </div>
 
@@ -205,6 +265,7 @@ function formatMsgTime(timeMs: number): string {
               :src="msg.sender?.avatar"
               class="msg-avatar"
               alt="avatar"
+              @click.stop="goToUser(msg.fromId)"
             >
 
             <div class="msg-bubble-wrapper">
@@ -239,6 +300,7 @@ function formatMsgTime(timeMs: number): string {
               :src="msg.sender?.avatar"
               class="msg-avatar"
               alt="avatar"
+              @click.stop="goToUser(msg.fromId)"
             >
           </div>
         </div>
@@ -344,6 +406,7 @@ function formatMsgTime(timeMs: number): string {
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .conv-content {
@@ -434,6 +497,7 @@ function formatMsgTime(timeMs: number): string {
   height: 36px;
   border-radius: 50%;
   object-fit: cover;
+  cursor: pointer;
 }
 
 .chat-header-name {
@@ -481,6 +545,7 @@ function formatMsgTime(timeMs: number): string {
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .msg-bubble-wrapper {

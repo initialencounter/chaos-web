@@ -11,13 +11,21 @@ import type {
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Howl } from 'howler'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { wsClient } from '@/api/websocket'
 import PropBar from '@/components/PropBar.vue'
 import ScoreBoard from '@/components/ScoreBoard.vue'
 import ScoreTip from '@/components/ScoreTip.vue'
 import { resolveImageUrl } from '@/utils/image'
 
+const router = useRouter()
 const avatarCache = reactive(new Map<string, string>())
+
+function goToUser(uid: string | number | undefined | null) {
+  if (!uid)
+    return
+  router.push({ name: 'user', params: { uid: String(uid) } })
+}
 
 function getCachedAvatar(url: string | undefined | null): string {
   const raw = resolveImageUrl(url)
@@ -1470,7 +1478,9 @@ function reset() {
                   border-radius: 50%;
                   border: 4px solid gold;
                   object-fit: cover;
+                  cursor: pointer;
                 "
+                @click.stop="goToUser(resultList[0].user.uid)"
               >
               <span
                 style="
@@ -1520,7 +1530,9 @@ function reset() {
                   border: getRankBorder(idx + 1),
                   objectFit: 'cover',
                   marginRight: '8px',
+                  cursor: 'pointer',
                 }"
+                @click.stop="goToUser(item.user.uid)"
               >
               <span style="font-weight: 600">{{ item.user.nickName }}</span>
               <span

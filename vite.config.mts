@@ -28,6 +28,7 @@ export default defineConfig({
     }),
   ],
   resolve: {
+    dedupe: ['pinia', 'vue', 'vue-router'],
     alias: {
       '@': join(__dirname, 'src/render'),
       '@render': join(__dirname, 'src/render'),

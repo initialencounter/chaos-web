@@ -2,6 +2,7 @@
 import type { HomeUser, SaoleiOauth, UserMatchMedal } from '@tapsss/shared'
 import { formatTime } from '@tapsss/shared/utils'
 import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useResolveAsset } from '../inject'
 import { useUserStore } from '../stores/user'
 
@@ -15,6 +16,7 @@ const emit = defineEmits<{
   (e: 'relationChange', relation: number): void
 }>()
 
+const router = useRouter()
 const resolveAsset = useResolveAsset()
 const userStore = useUserStore()
 
@@ -76,6 +78,13 @@ async function toggleBlock() {
     togglingBlock.value = false
   }
 }
+
+function goMessage() {
+  router.push({
+    name: 'message',
+    query: { toUid: props.user.id, nickName: props.user.nickName, avatarUrl: props.user.avatar },
+  })
+}
 </script>
 
 <template>
@@ -96,6 +105,12 @@ async function toggleBlock() {
         @click="toggleBlock"
       >
         {{ user.relation === 3 ? '已拉黑' : '拉黑' }}
+      </button>
+      <button
+        class="relation-btn message-btn"
+        @click="goMessage"
+      >
+        私信
       </button>
     </div>
 
@@ -223,6 +238,11 @@ async function toggleBlock() {
   background: #f44336;
   border-color: #f44336;
   color: #fff;
+}
+
+.relation-btn.message-btn:hover {
+  border-color: #4fc3f7;
+  color: #4fc3f7;
 }
 
 .relation-btn:disabled {

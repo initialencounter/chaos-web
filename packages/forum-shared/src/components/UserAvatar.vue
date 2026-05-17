@@ -11,9 +11,11 @@ const props = withDefaults(defineProps<{
   } | null
   size?: number | string
   className?: string
+  disableClick?: boolean
 }>(), {
   size: 50,
   className: '',
+  disableClick: false,
 })
 
 const router = useRouter()
@@ -35,7 +37,7 @@ const style = computed(() => {
     height: s,
     borderRadius: '50%',
     objectFit: 'cover' as const,
-    cursor: 'pointer',
+    cursor: props.disableClick ? 'default' : 'pointer',
   }
 })
 
@@ -53,6 +55,6 @@ function goToUser() {
     :src="cachedSrc"
     :style="style"
     alt="avatar"
-    @click.stop="goToUser"
+    @click.stop="!disableClick && goToUser()"
   >
 </template>

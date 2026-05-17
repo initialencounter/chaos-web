@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ScoreBoard as ScoreBoardType, ScoreEntry } from '@/types'
 import { computed, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { resolveImageUrl } from '@/utils/image'
 
 const props = defineProps<{
@@ -12,6 +13,7 @@ const sortedEntries = computed<ScoreEntry[]>(() => {
     .sort((a, b) => b.score - a.score)
 })
 
+const router = useRouter()
 const avatarCache = reactive(new Map<string, string>())
 
 function getCachedAvatar(url: string | undefined | null): string {
@@ -25,6 +27,12 @@ function getCachedAvatar(url: string | undefined | null): string {
     })
   }
   return avatarCache.get(raw) || raw
+}
+
+function goToUser(uid: string | number | undefined | null) {
+  if (!uid)
+    return
+  router.push({ name: 'user', params: { uid: String(uid) } })
 }
 
 function getRankClass(idx: number): string {
@@ -65,6 +73,8 @@ function getRankIcon(idx: number): string {
       <img
         :src="getCachedAvatar(entry.avatar)"
         class="avatar"
+        style="cursor: pointer;"
+        @click.stop="goToUser(entry.uid)"
         @error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
       >
       <div class="player-info">
