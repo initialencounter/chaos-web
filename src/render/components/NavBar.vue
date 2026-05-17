@@ -13,7 +13,7 @@ function goToHome() {
   <nav class="navbar">
     <div class="nav-container">
       <div class="nav-left">
-        <router-link to="/game" class="back-link">
+        <router-link :to="{ name: 'game' }" class="back-link">
           ← 返回游戏
         </router-link>
         <span class="nav-divider" />
@@ -22,14 +22,14 @@ function goToHome() {
 
       <div class="nav-links">
         <router-link
-          to="/forum"
+          :to="{ name: 'forum-home' }"
           class="nav-link"
           :class="{ active: route.path === '/forum' }"
         >
           首页
         </router-link>
         <router-link
-          to="/forum/search"
+          :to="{ name: 'search' }"
           class="nav-link"
           :class="{ active: route.path === '/forum/search' }"
         >

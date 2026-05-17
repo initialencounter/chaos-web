@@ -13,7 +13,8 @@
       "Bash(npx prettier *)",
       "Bash(npx --yes prettier --check \"src/render/components/ScoreBoard.vue\")",
       "Bash(node -e \"require\\('prettier'\\)\")",
-      "Bash(ls node_modules/.bin/prettier*)"
+      "Bash(ls node_modules/.bin/prettier*)",
+      "Bash(bun run *)"
     ]
   }
 }

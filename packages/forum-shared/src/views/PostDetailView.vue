@@ -285,7 +285,7 @@ onMounted(async () => {
 
     <div v-else-if="post" class="post-content">
       <!-- 返回按钮 -->
-      <router-link to="/forum" class="back-btn">
+      <router-link :to="{ name: 'forum-home' }" class="back-btn">
         ← 返回列表
       </router-link>
 

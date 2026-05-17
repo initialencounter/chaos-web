@@ -1,6 +1,7 @@
 packages:
   - .
   - 'packages/*'
+  - 'tapsss-forum'
 
 allowBuilds:
   electron: true
@@ -10,3 +11,5 @@ allowBuilds:
 
 shellEmulator: true
 trustPolicy: no-downgrade
+trustPolicyExclude:
+  - 'semver@6.3.1'
