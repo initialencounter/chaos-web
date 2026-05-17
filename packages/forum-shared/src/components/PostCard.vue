@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PostListDatum } from '@tapsss/shared'
+import { Star, StarFilled } from '@element-plus/icons-vue'
 import {
   computeType,
   extractImageLinksFromMarkdown,
@@ -16,11 +17,38 @@ import {
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResolveAsset } from '../inject'
+import { usePostStore } from '../stores/post'
 import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps<{ post: PostListDatum }>()
 const router = useRouter()
 const resolveAsset = useResolveAsset()
+const postStore = usePostStore()
+const togglingLike = ref(false)
+
+async function togglePostLike(e: MouseEvent) {
+  e.stopPropagation()
+  if (togglingLike.value)
+    return
+  togglingLike.value = true
+  try {
+    const newHasGood = !props.post.hasGood
+    const res = await postStore.togglePostGood(props.post.id, newHasGood)
+    if (res.code === 200 && postStore.postList?.data) {
+      const item = postStore.postList.data.find(p => p.id === props.post.id)
+      if (item) {
+        item.hasGood = newHasGood
+        item.goodCount += newHasGood ? 1 : -1
+      }
+    }
+  }
+  catch (err) {
+    console.error('点赞失败:', err)
+  }
+  finally {
+    togglingLike.value = false
+  }
+}
 
 function goToPostDetail() {
   router.push({ name: 'post', params: { id: props.post.id } })
@@ -236,14 +264,16 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
             : post.commentCount
         }}
       </div>
-      <div class="interaction">
-        <span class="icon">👍</span>
+      <button class="like-btn" :class="{ liked: post.hasGood }" :disabled="togglingLike" @click="togglePostLike">
+        <el-icon class="like-icon">
+          <component :is="post.hasGood ? StarFilled : Star" />
+        </el-icon>
         {{
           post.goodCount > 1000
             ? `${(post.goodCount / 1000).toFixed(1)}k`
             : post.goodCount
         }}
-      </div>
+      </button>
     </div>
   </div>
 </template>
@@ -402,6 +432,37 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
   color: #9ea1a6;
   font-size: 1.1rem;
 }
+.like-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #9ea1a6;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.like-btn:hover:not(:disabled) {
+  background-color: rgba(250, 114, 153, 0.1);
+}
+
+.like-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.like-btn.liked {
+  color: #fa7299;
+}
+
+.like-btn .like-icon {
+  font-size: 1.1rem;
+}
+
 .interaction {
   display: flex;
   align-items: center;

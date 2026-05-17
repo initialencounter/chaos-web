@@ -1,4 +1,4 @@
-import type { PostCommentListResponse, PostGetResponse, PostList, PostListGoodUserResponse, PostListReplyResponse } from '@tapsss/shared'
+import type { PostCommentListResponse, PostGetResponse, PostList, PostListGoodUserResponse, PostListReplyResponse, PostResponse } from '@tapsss/shared'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useForumApi } from '../inject'
@@ -74,6 +74,22 @@ export const usePostStore = defineStore('forum-post', () => {
     }
   }
 
+  async function togglePostGood(postId: number, isGood: boolean): Promise<PostResponse> {
+    return api.postGood(postId, isGood)
+  }
+
+  async function toggleCommentGood(commentId: number, isGood: boolean): Promise<PostResponse> {
+    return api.commentGood(commentId, isGood)
+  }
+
+  async function addComment(postId: number, parentId: number, replyId: number, comment: string): Promise<PostResponse> {
+    return api.commentAdd(postId, parentId, replyId, comment)
+  }
+
+  async function deleteComment(commentId: number): Promise<PostResponse> {
+    return api.commentDelete(commentId)
+  }
+
   return {
     postList,
     currentPost,
@@ -88,5 +104,9 @@ export const usePostStore = defineStore('forum-post', () => {
     searchPosts,
     fetchGoodUsers,
     fetchCommentReplies,
+    togglePostGood,
+    toggleCommentGood,
+    addComment,
+    deleteComment,
   }
 })

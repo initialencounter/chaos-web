@@ -12,5 +12,5 @@ defineEmits<{ logout: [] }>()
 
 <template>
   <NavBar />
-  <PostDetailView :id="props.id" />
+  <PostDetailView :id="props.id" :current-uid="props.currentUid" />
 </template>

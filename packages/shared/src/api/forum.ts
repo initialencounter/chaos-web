@@ -12,6 +12,7 @@ import type {
   PostList,
   PostListGoodUserResponse,
   PostListReplyResponse,
+  PostResponse,
 } from '../types/post'
 import type {
   MinesweeperRecordListResponse,
@@ -55,6 +56,22 @@ export function createForumApi(fetchFn: FetchFn) {
 
     postListGoodUser(postId: number, page = 0, count = 20): Promise<PostListGoodUserResponse> {
       return fetchFn<PostListGoodUserResponse>('/post/list/good/user', { postId, page, count })
+    },
+
+    postGood(postId: number, isGood: boolean): Promise<PostResponse> {
+      return fetchFn<PostResponse>('/post/good', { postId, isGood })
+    },
+
+    commentGood(commentId: number, isGood: boolean): Promise<PostResponse> {
+      return fetchFn<PostResponse>('/post/comment/good', { commentId, isGood })
+    },
+
+    commentAdd(postId: number, parentId: number, replyId: number, comment: string): Promise<PostResponse> {
+      return fetchFn<PostResponse>('/post/comment/add', { postId, parentId, replyId, comment })
+    },
+
+    commentDelete(commentId: number): Promise<PostResponse> {
+      return fetchFn<PostResponse>('/post/comment/delete', { commentId })
     },
 
     // ========== 用户 ==========

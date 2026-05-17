@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { BaseUser, CommentDatum, PostGetResponse } from '@tapsss/shared'
+import { Star, StarFilled } from '@element-plus/icons-vue'
 import {
   computeType,
   extractImageLinksFromMarkdown,
@@ -22,6 +23,7 @@ defineOptions({ name: 'PostDetailView' })
 
 const props = defineProps<{
   id: string
+  currentUid?: string
 }>()
 
 const resolveAsset = useResolveAsset()
@@ -41,6 +43,10 @@ const commentsPerPage = 20
 const likesPerPage = 20
 const sortType = ref(0) // 0: 最新, 1: 热门
 const showTab = ref<'comments' | 'likes'>('comments')
+
+const commentText = ref('')
+const submittingComment = ref(false)
+const togglingPostLike = ref(false)
 
 const postId = computed(() => Number.parseInt(props.id))
 
@@ -168,6 +174,78 @@ function loadMoreComments() {
 function loadMoreLikes() {
   currentLikePage.value++
   loadLikes(currentLikePage.value)
+}
+
+async function togglePostLike() {
+  if (!post.value || togglingPostLike.value)
+    return
+  togglingPostLike.value = true
+  try {
+    const newHasGood = !post.value.hasGood
+    const res = await postStore.togglePostGood(postId.value, newHasGood)
+    if (res.code === 200) {
+      post.value.hasGood = newHasGood
+      post.value.goodCount += newHasGood ? 1 : -1
+    }
+  }
+  catch (e) {
+    console.error('点赞操作失败:', e)
+  }
+  finally {
+    togglingPostLike.value = false
+  }
+}
+
+async function toggleCommentLike(comment: { id: number, hasGood: boolean, goodCount: number }) {
+  try {
+    const newHasGood = !comment.hasGood
+    const res = await postStore.toggleCommentGood(comment.id, newHasGood)
+    if (res.code === 200) {
+      comment.hasGood = newHasGood
+      comment.goodCount += newHasGood ? 1 : -1
+    }
+  }
+  catch (e) {
+    console.error('评论点赞失败:', e)
+  }
+}
+
+async function submitComment() {
+  const text = commentText.value.trim()
+  if (!text || submittingComment.value)
+    return
+  submittingComment.value = true
+  try {
+    const res = await postStore.addComment(postId.value, 0, 0, text)
+    if (res.code === 200) {
+      commentText.value = ''
+      await loadComments(sortType.value, 0)
+      if (post.value) {
+        post.value.commentCount++
+      }
+    }
+  }
+  catch (e) {
+    console.error('评论发送失败:', e)
+  }
+  finally {
+    submittingComment.value = false
+  }
+}
+
+async function handleDeleteComment(commentId: number) {
+  try {
+    const res = await postStore.deleteComment(commentId)
+    if (res.code === 200) {
+      comments.value = comments.value.filter(c => c.id !== commentId)
+      if (post.value && post.value.commentCount > 0) {
+        post.value.commentCount--
+      }
+    }
+  }
+  catch (e) {
+    console.error('删除评论失败:', e)
+  }
 }
 
 function openReplies(commentId: number) {
@@ -357,7 +435,16 @@ onMounted(async () => {
           <span class="stat-label">评论</span>
         </div>
         <div class="stat">
-          <span class="stat-icon">👍</span>
+          <button
+            class="like-btn"
+            :class="{ liked: post.hasGood }"
+            :disabled="togglingPostLike"
+            @click="togglePostLike"
+          >
+            <el-icon>
+              <component :is="post.hasGood ? StarFilled : Star" />
+            </el-icon>
+          </button>
           <span class="stat-count">{{ post.goodCount }}</span>
           <span class="stat-label">点赞</span>
         </div>
@@ -403,6 +490,27 @@ onMounted(async () => {
         </div>
       </div>
 
+      <!-- 评论输入框 -->
+      <div v-if="showTab === 'comments'" class="comment-form">
+        <textarea
+          v-model="commentText"
+          class="comment-input"
+          placeholder="写下你的评论..."
+          rows="3"
+          maxlength="500"
+        />
+        <div class="comment-form-footer">
+          <span class="char-count">{{ commentText.length }}/500</span>
+          <button
+            class="submit-comment-btn"
+            :disabled="!commentText.trim() || submittingComment"
+            @click="submitComment"
+          >
+            {{ submittingComment ? '发送中...' : '发送评论' }}
+          </button>
+        </div>
+      </div>
+
       <template v-if="showTab === 'comments'">
         <div v-if="commentLoading && comments.length === 0" class="loading">
           加载评论中...
@@ -433,7 +541,23 @@ onMounted(async () => {
                 </div>
               </div>
               <div class="comment-stats">
-                <span class="comment-good">👍 {{ comment.goodCount }}</span>
+                <button
+                  class="comment-like-btn"
+                  :class="{ liked: comment.hasGood }"
+                  @click="toggleCommentLike(comment)"
+                >
+                  <el-icon>
+                    <component :is="comment.hasGood ? StarFilled : Star" />
+                  </el-icon>
+                  {{ comment.goodCount }}
+                </button>
+                <button
+                  v-if="currentUid && comment.uid === currentUid"
+                  class="comment-delete-btn"
+                  @click="handleDeleteComment(comment.id)"
+                >
+                  删除
+                </button>
               </div>
             </div>
             <div class="comment-content">
@@ -1036,5 +1160,123 @@ onMounted(async () => {
 
 .view-more-replies a:hover {
   text-decoration: underline;
+}
+
+.like-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.2s;
+}
+
+.like-btn:hover:not(:disabled) {
+  transform: scale(1.15);
+}
+
+.like-btn.liked {
+  color: #fa7299;
+}
+
+.like-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.comment-form {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #333;
+}
+
+.comment-input {
+  width: 100%;
+  padding: 12px;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 0.95rem;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.comment-input:focus {
+  outline: none;
+  border-color: #fa7299;
+}
+
+.comment-form-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.char-count {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.submit-comment-btn {
+  padding: 8px 20px;
+  background-color: #fa7299;
+  color: #ffffff;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s;
+}
+
+.submit-comment-btn:hover:not(:disabled) {
+  background-color: #e85d82;
+}
+
+.submit-comment-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.comment-like-btn {
+  background: none;
+  border: none;
+  color: #9ea1a6;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.comment-like-btn:hover {
+  background-color: #333;
+}
+
+.comment-like-btn.liked {
+  color: #fa7299;
+}
+
+.comment-delete-btn {
+  background: none;
+  border: 1px solid #555;
+  color: #999;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 8px;
+  transition: all 0.2s;
+}
+
+.comment-delete-btn:hover {
+  color: #ff4444;
+  border-color: #ff4444;
+}
+
+.comment-stats {
+  display: flex;
+  align-items: center;
 }
 </style>
