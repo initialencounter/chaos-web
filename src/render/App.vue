@@ -104,7 +104,7 @@ async function handleLogout() {
     v-if="gameStarted"
     v-slot="{ Component }"
   >
-    <keep-alive exclude="GameView,ReplayDetailView,UserDetailView">
+    <keep-alive exclude="GameView,ReplayDetailView,UserDetailView,ForumPostDetailView">
       <component
         :is="Component"
         :current-uid="currentUid"
