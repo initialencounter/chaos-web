@@ -1,6 +1,7 @@
 export * from './career'
 export * from './common'
 export * from './game'
+export * from './im'
 export * from './post'
 export * from './rank'
 export * from './record'

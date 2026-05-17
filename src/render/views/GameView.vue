@@ -28,6 +28,9 @@ const showCareer = ref(false)
         <el-button size="small" plain @click="showCareer = true">
           生涯
         </el-button>
+        <el-button size="small" plain @click="$router.push({ name: 'message' })">
+          消息
+        </el-button>
         <el-button size="small" plain @click="$router.push({ name: 'forum-home' })">
           论坛
         </el-button>

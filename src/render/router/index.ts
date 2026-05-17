@@ -43,6 +43,11 @@ const router = createRouter({
       props: true,
     },
     {
+      path: '/forum/message',
+      name: 'message',
+      component: () => import('../views/ForumMessageView.vue'),
+    },
+    {
       path: '/forum/user/:uid',
       name: 'user',
       component: () => import('@tapsss/forum-shared/views/UserDetailView.vue'),

@@ -13,6 +13,7 @@ export default lightwing(
       'local-data',
       'release',
       'api_docs',
+      'scripts',
     ],
   },
   {

@@ -1,4 +1,5 @@
 export { useCareerStore } from './career'
+export { useMessageStore } from './im'
 export { usePostStore } from './post'
 export { useRecordStore } from './record'
 export { useUserStore } from './user'

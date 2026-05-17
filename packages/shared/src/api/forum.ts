@@ -6,6 +6,13 @@ import type {
   SudokuCareerResponse,
   TzfeCareerResponse,
 } from '../types/career'
+import type { ApiResponse } from '../types/common'
+import type {
+  ImMessage,
+  ImMessageCountData,
+  ImRecentUser,
+  ImUserGetData,
+} from '../types/im'
 import type {
   PostCommentListResponse,
   PostGetResponse,
@@ -153,6 +160,31 @@ export function createForumApi(fetchFn: FetchFn) {
 
     schulteCareer(targetUid: number): Promise<SchulteCareerResponse> {
       return fetchFn<SchulteCareerResponse>('/schulte/career', { targetUid, level: 5, type: 0, blind: false })
+    },
+
+    // ========== IM 消息 ==========
+    messageCount(): Promise<ApiResponse<ImMessageCountData>> {
+      return fetchFn<ApiResponse<ImMessageCountData>>('/user/message/count', {})
+    },
+
+    imUserGet(): Promise<ApiResponse<ImUserGetData>> {
+      return fetchFn<ApiResponse<ImUserGetData>>('/im/user/get', {})
+    },
+
+    imUserRecentList(messageTime = 0, count = 40): Promise<ApiResponse<ImRecentUser[]>> {
+      return fetchFn<ApiResponse<ImRecentUser[]>>('/im/user/recent/list', { messageTime, count })
+    },
+
+    imUserRecentUnreadCount(toUid: number, unReadCount = 0): Promise<ApiResponse<null>> {
+      return fetchFn<ApiResponse<null>>('/im/user/recent/unread/count', { toUid, unReadCount })
+    },
+
+    imMessageList(toUid: number, minId = 0, maxId = 0, count = 20): Promise<ApiResponse<ImMessage[]>> {
+      return fetchFn<ApiResponse<ImMessage[]>>('/im/message/list', { toUid, minId, maxId, count })
+    },
+
+    imMessageSend(toUid: number, messageType: number, message: string): Promise<ApiResponse<ImMessage>> {
+      return fetchFn<ApiResponse<ImMessage>>('/im/message/send', { toUid, messageType, message })
     },
   }
 }
