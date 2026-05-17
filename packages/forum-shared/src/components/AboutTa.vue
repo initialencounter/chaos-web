@@ -3,6 +3,7 @@ import type { HomeUser, SaoleiOauth, UserMatchMedal } from '@tapsss/shared'
 import { formatTime } from '@tapsss/shared/utils'
 import { ref, watch } from 'vue'
 import { useResolveAsset } from '../inject'
+import { useUserStore } from '../stores/user'
 
 const props = defineProps<{
   user: HomeUser
@@ -10,10 +11,17 @@ const props = defineProps<{
   userMatchMedals?: UserMatchMedal[]
 }>()
 
+const emit = defineEmits<{
+  (e: 'relationChange', relation: number): void
+}>()
+
 const resolveAsset = useResolveAsset()
+const userStore = useUserStore()
 
 const cachedSaoleiAvatar = ref('')
 const cachedMedalIcons = ref<Record<number, string>>({})
+const togglingFollow = ref(false)
+const togglingBlock = ref(false)
 
 watch(() => props.saolei?.avatar, async (url) => {
   cachedSaoleiAvatar.value = await resolveAsset(url)
@@ -30,10 +38,67 @@ watch(() => props.userMatchMedals, async (medals) => {
   }))
   cachedMedalIcons.value = map
 }, { immediate: true })
+
+async function toggleFollow() {
+  if (togglingFollow.value)
+    return
+  togglingFollow.value = true
+  try {
+    const newRelation = props.user.relation === 1 ? 2 : 1
+    const res = await userStore.setRelation(props.user.id, newRelation)
+    if (res.code === 200) {
+      emit('relationChange', newRelation)
+    }
+  }
+  catch (e) {
+    console.error('关注操作失败:', e)
+  }
+  finally {
+    togglingFollow.value = false
+  }
+}
+
+async function toggleBlock() {
+  if (togglingBlock.value)
+    return
+  togglingBlock.value = true
+  try {
+    const newRelation = props.user.relation === 3 ? 2 : 3
+    const res = await userStore.setRelation(props.user.id, newRelation)
+    if (res.code === 200) {
+      emit('relationChange', newRelation)
+    }
+  }
+  catch (e) {
+    console.error('拉黑操作失败:', e)
+  }
+  finally {
+    togglingBlock.value = false
+  }
+}
 </script>
 
 <template>
   <div class="about-ta">
+    <div class="relation-actions">
+      <button
+        class="relation-btn"
+        :class="{ active: user.relation === 1 }"
+        :disabled="togglingFollow"
+        @click="toggleFollow"
+      >
+        {{ user.relation === 1 ? '已关注' : '关注' }}
+      </button>
+      <button
+        class="relation-btn block-btn"
+        :class="{ active: user.relation === 3 }"
+        :disabled="togglingBlock"
+        @click="toggleBlock"
+      >
+        {{ user.relation === 3 ? '已拉黑' : '拉黑' }}
+      </button>
+    </div>
+
     <div class="details-section">
       <h3>基本资料</h3>
       <div class="detail-grid">
@@ -121,6 +186,50 @@ watch(() => props.userMatchMedals, async (medals) => {
 </template>
 
 <style scoped>
+.relation-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.relation-btn {
+  padding: 8px 24px;
+  border: 1px solid #555;
+  border-radius: 20px;
+  background: transparent;
+  color: #ccc;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.relation-btn:hover:not(:disabled) {
+  border-color: #fa7299;
+  color: #fa7299;
+}
+
+.relation-btn.active {
+  background: #fa7299;
+  border-color: #fa7299;
+  color: #fff;
+}
+
+.relation-btn.block-btn:hover:not(:disabled) {
+  border-color: #f44336;
+  color: #f44336;
+}
+
+.relation-btn.block-btn.active {
+  background: #f44336;
+  border-color: #f44336;
+  color: #fff;
+}
+
+.relation-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 h3 {
   border-bottom: 1px solid #444;
   padding-bottom: 8px;

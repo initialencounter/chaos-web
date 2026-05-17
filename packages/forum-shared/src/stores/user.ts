@@ -41,6 +41,10 @@ export const useUserStore = defineStore('forum-user', () => {
     }
   }
 
+  async function setRelation(targetUid: number, relation: number) {
+    return api.relationSet(targetUid, relation)
+  }
+
   return {
     userHome,
     searchResults,
@@ -49,5 +53,6 @@ export const useUserStore = defineStore('forum-user', () => {
     fetchUserHome,
     searchUser,
     fetchUserConfig,
+    setRelation,
   }
 })

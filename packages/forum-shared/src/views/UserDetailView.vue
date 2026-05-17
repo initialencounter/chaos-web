@@ -215,6 +215,7 @@ const zodiac = computed(() => {
             :user="user"
             :saolei="saolei"
             :user-match-medals="userData?.userMatchMedals"
+            @relation-change="(rel: number) => { if (user) user.relation = rel }"
           />
         </KeepAlive>
       </div>

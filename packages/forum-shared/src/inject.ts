@@ -14,6 +14,7 @@ export interface ForumApi {
   userHome: (...args: any[]) => Promise<any>
   userSearch: (...args: any[]) => Promise<any>
   userConfigGet: (...args: any[]) => Promise<any>
+  relationSet: (...args: any[]) => Promise<any>
   minesweeperRecordGet: (...args: any[]) => Promise<any>
   puzzleRecordGetResponse: (...args: any[]) => Promise<any>
   schulteRecordGet: (...args: any[]) => Promise<any>

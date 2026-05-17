@@ -87,6 +87,10 @@ export function createForumApi(fetchFn: FetchFn) {
       return fetchFn<UserConfigGetResponse>('/user/config/get', { uid })
     },
 
+    relationSet(targetUid: number, relation: number): Promise<{ code: number, msg: string }> {
+      return fetchFn<{ code: number, msg: string }>('/relation/set', { targetUid, relation })
+    },
+
     // ========== 记录详情 ==========
     minesweeperRecordGet(recordId: number): Promise<RecordGetResponse> {
       return fetchFn<RecordGetResponse>('/minesweeper/record/get', { recordId })
