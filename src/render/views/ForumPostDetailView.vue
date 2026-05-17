@@ -4,7 +4,10 @@ import NavBar from '@/components/NavBar.vue'
 
 const props = defineProps<{
   id: string
+  currentUid?: string
 }>()
+
+defineEmits<{ logout: [] }>()
 </script>
 
 <template>
