@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { resolveAndCache } from '@/utils/image'
+import { useResolveAsset } from '../inject'
 
 const props = withDefaults(defineProps<{
   user?: {
@@ -17,11 +17,12 @@ const props = withDefaults(defineProps<{
 })
 
 const router = useRouter()
+const resolveAsset = useResolveAsset()
 
-const cachedSrc = ref('./assets/Z7.png')
+const cachedSrc = ref('')
 
 async function loadAvatar() {
-  cachedSrc.value = await resolveAndCache(props.user?.avatar)
+  cachedSrc.value = await resolveAsset(props.user?.avatar)
 }
 
 onMounted(loadAvatar)

@@ -15,15 +15,15 @@ import {
 } from '@tapsss/shared/utils'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-
-import { resolveAndCache } from '@/utils/image'
+import { useResolveAsset } from '../inject'
 import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps<{ post: PostListDatum }>()
 const router = useRouter()
+const resolveAsset = useResolveAsset()
 
 function goToPostDetail() {
-  router.push({ name: 'post', params: { id: props.post.id.toString() } })
+  router.push({ name: 'post', params: { id: props.post.id } })
 }
 
 function openReplay(recordId?: number) {
@@ -69,11 +69,11 @@ const images = computed(() =>
 
 const cachedImages = ref<string[]>([])
 watch(images, async (urls) => {
-  cachedImages.value = await Promise.all(urls.map(url => resolveAndCache(url)))
+  cachedImages.value = await Promise.all(urls.map(url => resolveAsset(url)))
 }, { immediate: true })
 
 const hasRecord = computed(() => !!props.post.recordId)
-const recordGameType = computed(() => props.post.recordType) // 0=Minesweeper, 1=Puzzle, 2=2048, 3=Schulte, 4=Nono
+const recordGameType = computed(() => props.post.recordType)
 
 const recordBg = computed(() => recordBgColor[recordGameType.value])
 const recordColor = computed(() => recordTextColor[recordGameType.value])
@@ -101,24 +101,20 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
       </div>
     </div>
 
-    <!-- Title -->
     <h2 v-if="post.title" class="post-title">
       <span v-if="post.stick === 1" class="stick-badge">置顶</span>
       {{ post.title }}
     </h2>
 
     <template v-if="post.stick !== 1">
-      <!-- Tags -->
       <div v-if="tags.length > 0" class="post-tags">
         <span v-for="tag in tags" :key="tag" class="tag">{{ tag }}</span>
       </div>
 
-      <!-- Content -->
       <p v-if="plainText" class="post-content">
         {{ plainText.slice(0, 100) + (plainText.length > 100 ? "..." : "") }}
       </p>
 
-      <!-- Images -->
       <div v-if="cachedImages.length > 0" class="post-images">
         <img
           v-for="(img, idx) in cachedImages.slice(0, 3)"
@@ -128,7 +124,6 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
         >
       </div>
 
-      <!-- Record Box -->
       <div
         v-if="hasRecord"
         class="record-box"
@@ -205,7 +200,6 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
       </div>
     </template>
 
-    <!-- Last Comment Box inside card -->
     <div v-if="post.lastComment" class="last-comment">
       <div class="lc-title">
         最新评论
@@ -233,7 +227,6 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
       </div>
     </div>
 
-    <!-- Footer -->
     <div class="post-footer">
       <div class="interaction">
         <span class="icon">💬</span>

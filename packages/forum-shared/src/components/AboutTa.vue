@@ -2,7 +2,7 @@
 import type { HomeUser, SaoleiOauth, UserMatchMedal } from '@tapsss/shared'
 import { formatTime } from '@tapsss/shared/utils'
 import { ref, watch } from 'vue'
-import { resolveAndCache } from '@/utils/image'
+import { useResolveAsset } from '../inject'
 
 const props = defineProps<{
   user: HomeUser
@@ -10,11 +10,13 @@ const props = defineProps<{
   userMatchMedals?: UserMatchMedal[]
 }>()
 
-const cachedSaoleiAvatar = ref('./assets/Z7.png')
+const resolveAsset = useResolveAsset()
+
+const cachedSaoleiAvatar = ref('')
 const cachedMedalIcons = ref<Record<number, string>>({})
 
 watch(() => props.saolei?.avatar, async (url) => {
-  cachedSaoleiAvatar.value = await resolveAndCache(url)
+  cachedSaoleiAvatar.value = await resolveAsset(url)
 }, { immediate: true })
 
 watch(() => props.userMatchMedals, async (medals) => {
@@ -23,7 +25,7 @@ watch(() => props.userMatchMedals, async (medals) => {
   const map: Record<number, string> = {}
   await Promise.all(medals.map(async (medal, idx) => {
     if (medal.icon) {
-      map[idx] = await resolveAndCache(medal.icon)
+      map[idx] = await resolveAsset(medal.icon)
     }
   }))
   cachedMedalIcons.value = map
@@ -32,7 +34,6 @@ watch(() => props.userMatchMedals, async (medals) => {
 
 <template>
   <div class="about-ta">
-    <!-- 详细信息区 -->
     <div class="details-section">
       <h3>基本资料</h3>
       <div class="detail-grid">
@@ -76,7 +77,6 @@ watch(() => props.userMatchMedals, async (medals) => {
       </div>
     </div>
 
-    <!-- 绑定的扫雷网账号 -->
     <div v-if="saolei" class="saolei-section">
       <h3>扫雷网绑定</h3>
       <div class="saolei-card">
@@ -96,7 +96,6 @@ watch(() => props.userMatchMedals, async (medals) => {
       </div>
     </div>
 
-    <!-- 比赛奖牌 -->
     <div v-if="userMatchMedals?.length" class="medals-section">
       <h3>比赛奖牌</h3>
       <div class="medals">

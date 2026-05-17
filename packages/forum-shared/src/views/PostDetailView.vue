@@ -14,16 +14,17 @@ import MarkdownIt from 'markdown-it'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import UserAvatar from '@/components/UserAvatar.vue'
-import { usePostStore } from '@/stores/post'
-import { resolveAndCache } from '@/utils/image'
-import NavBar from '../components/NavBar.vue'
+import UserAvatar from '../components/UserAvatar.vue'
+import { useResolveAsset } from '../inject'
+import { usePostStore } from '../stores/post'
 
 defineOptions({ name: 'PostDetailView' })
 
 const props = defineProps<{
   id: string
 }>()
+
+const resolveAsset = useResolveAsset()
 
 const router = useRouter()
 const postStore = usePostStore()
@@ -70,7 +71,7 @@ const images = computed(() => {
 
 const cachedImages = ref<string[]>([])
 watch(images, async (urls) => {
-  cachedImages.value = await Promise.all(urls.map(url => resolveAndCache(url)))
+  cachedImages.value = await Promise.all(urls.map(url => resolveAsset(url)))
 }, { immediate: true })
 
 const hasRecord = computed(() => !!post.value?.recordId)
@@ -200,7 +201,6 @@ onMounted(async () => {
 
 <template>
   <div class="post-detail">
-    <NavBar />
     <div v-if="loading" class="loading">
       加载帖子中...
     </div>
@@ -268,7 +268,7 @@ onMounted(async () => {
             :key="idx"
             :src="img"
             class="post-img"
-            @click="openImage(images[idx])"
+            @click="openImage(images[idx]!)"
           >
         </div>
 

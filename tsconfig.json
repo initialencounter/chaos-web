@@ -29,6 +29,12 @@
       ],
       "@tapsss/server": [
         "./packages/server/src"
+      ],
+      "@tapsss/forum-shared": [
+        "./packages/forum-shared/src"
+      ],
+      "@tapsss/forum-shared/*": [
+        "./packages/forum-shared/src/*"
       ]
     },
     "resolveJsonModule": true,

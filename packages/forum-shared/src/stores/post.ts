@@ -1,9 +1,11 @@
 import type { PostCommentListResponse, PostGetResponse, PostList, PostListGoodUserResponse, PostListReplyResponse } from '@tapsss/shared'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { forumApi } from '@/api'
+import { useForumApi } from '../inject'
 
-export const usePostStore = defineStore('post', () => {
+export const usePostStore = defineStore('forum-post', () => {
+  const api = useForumApi()
+
   const postList = ref<PostList | null>(null)
   const currentPost = ref<PostGetResponse | null>(null)
   const currentComments = ref<PostCommentListResponse | null>(null)
@@ -15,7 +17,7 @@ export const usePostStore = defineStore('post', () => {
   async function fetchPostList(type = 0, page = 0, count = 20) {
     isLoading.value = true
     try {
-      postList.value = await forumApi.fetchPostList(type, page, count)
+      postList.value = await api.fetchPostList(type, page, count)
     }
     finally {
       isLoading.value = false
@@ -25,7 +27,7 @@ export const usePostStore = defineStore('post', () => {
   async function fetchPost(postId: number) {
     isLoading.value = true
     try {
-      currentPost.value = await forumApi.postGet(postId)
+      currentPost.value = await api.postGet(postId)
     }
     finally {
       isLoading.value = false
@@ -35,7 +37,7 @@ export const usePostStore = defineStore('post', () => {
   async function fetchComments(postId: number, sort = 0, page = 0, count = 20) {
     isLoading.value = true
     try {
-      currentComments.value = await forumApi.commentList(postId, sort, page, count)
+      currentComments.value = await api.commentList(postId, sort, page, count)
     }
     finally {
       isLoading.value = false
@@ -45,7 +47,7 @@ export const usePostStore = defineStore('post', () => {
   async function searchPosts(keyword: string, page = 0, count = 20) {
     isLoading.value = true
     try {
-      searchResults.value = await forumApi.postListSearch(keyword, page, count)
+      searchResults.value = await api.postListSearch(keyword, page, count)
     }
     finally {
       isLoading.value = false
@@ -55,7 +57,7 @@ export const usePostStore = defineStore('post', () => {
   async function fetchGoodUsers(postId: number, page = 0, count = 20) {
     isLoading.value = true
     try {
-      goodUsers.value = await forumApi.postListGoodUser(postId, page, count)
+      goodUsers.value = await api.postListGoodUser(postId, page, count)
     }
     finally {
       isLoading.value = false
@@ -65,7 +67,7 @@ export const usePostStore = defineStore('post', () => {
   async function fetchCommentReplies(commentId: number, page = 0, count = 20) {
     isLoading.value = true
     try {
-      commentReplies.value = await forumApi.commentReplyList(commentId, page, count)
+      commentReplies.value = await api.commentReplyList(commentId, page, count)
     }
     finally {
       isLoading.value = false

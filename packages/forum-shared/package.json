@@ -1,0 +1,29 @@
+{
+  "name": "@tapsss/forum-shared",
+  "type": "module",
+  "version": "0.1.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./*": "./dist/*"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "peerDependencies": {
+    "pinia": "^3.0.0",
+    "vue": "^3.0.0",
+    "vue-router": "^4.0.0 || ^5.0.0"
+  },
+  "dependencies": {
+    "@tapsss/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  }
+}

@@ -7,11 +7,11 @@ import {
 } from '@tapsss/shared/utils'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import AboutTa from '@/components/AboutTa.vue'
-import UserAvatar from '@/components/UserAvatar.vue'
-import { useUserStore } from '@/stores/user'
-import RecordList from '@/views/RecordList.vue'
-import UserCareer from '@/views/UserCareer.vue'
+import AboutTa from '../components/AboutTa.vue'
+import UserAvatar from '../components/UserAvatar.vue'
+import { useUserStore } from '../stores/user'
+import RecordList from './RecordList.vue'
+import UserCareer from './UserCareer.vue'
 
 defineOptions({ name: 'UserDetailView' })
 
@@ -32,7 +32,7 @@ onMounted(async () => {
       userData.value = userStore.userHome.data
     }
     else {
-      error.value = userStore.userHome?.msg as string || '获取用户信息失败'
+      error.value = (userStore.userHome?.msg as string | undefined) || '获取用户信息失败'
     }
   }
   catch (err) {

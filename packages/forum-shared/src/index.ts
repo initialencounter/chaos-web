@@ -1,0 +1,5 @@
+export * from './inject'
+export { useCareerStore } from './stores/career'
+export { usePostStore } from './stores/post'
+export { useRecordStore } from './stores/record'
+export { useUserStore } from './stores/user'

@@ -14,8 +14,14 @@ import {
   shallowRef,
   watch,
 } from 'vue'
-import { forumApi } from '@/api'
+import { useAssetBase, useForumApi } from '../inject'
 import UserAvatar from './UserAvatar.vue'
+
+const props = defineProps<{
+  recordId: string
+}>()
+const api = useForumApi()
+const assetBase = useAssetBase()
 
 interface Cell {
   id: number
@@ -32,10 +38,6 @@ interface Minefeild {
   mines: number
   cell: Cell[]
 }
-
-const props = defineProps<{
-  recordId: string
-}>()
 
 const replayData = shallowRef<ReplyData | null>(null)
 const totalTime = ref(0)
@@ -55,8 +57,8 @@ let audioNodeOffset = 0
 async function initAudio() {
   audioCtx = new AudioContext()
   const [openResp, flagResp] = await Promise.all([
-    fetch('./assets/audio/open.mp3'),
-    fetch('./assets/audio/flag.mp3'),
+    fetch(`${assetBase}/audio/open.mp3`),
+    fetch(`${assetBase}/audio/flag.mp3`),
   ])
   const [openData, flagData] = await Promise.all([
     openResp.arrayBuffer(),
@@ -140,19 +142,19 @@ let rafId: number | null = null
 
 // Image resources
 const skinUrls = [
-  './assets/themes/wom/type0.png',
-  './assets/themes/wom/type1.png',
-  './assets/themes/wom/type2.png',
-  './assets/themes/wom/type3.png',
-  './assets/themes/wom/type4.png',
-  './assets/themes/wom/type5.png',
-  './assets/themes/wom/type6.png',
-  './assets/themes/wom/type7.png',
-  './assets/themes/wom/type8.png',
-  './assets/themes/wom/type9.png',
-  './assets/themes/wom/closed.png', // 10
-  './assets/themes/wom/flag.png', // 11
-  './assets/themes/wom/cursor-arrow.png', // 12
+  `${assetBase}/themes/wom/type0.png`,
+  `${assetBase}/themes/wom/type1.png`,
+  `${assetBase}/themes/wom/type2.png`,
+  `${assetBase}/themes/wom/type3.png`,
+  `${assetBase}/themes/wom/type4.png`,
+  `${assetBase}/themes/wom/type5.png`,
+  `${assetBase}/themes/wom/type6.png`,
+  `${assetBase}/themes/wom/type7.png`,
+  `${assetBase}/themes/wom/type8.png`,
+  `${assetBase}/themes/wom/type9.png`,
+  `${assetBase}/themes/wom/closed.png`, // 10
+  `${assetBase}/themes/wom/flag.png`, // 11
+  `${assetBase}/themes/wom/cursor-arrow.png`, // 12
 ]
 const loadedImages: Record<number, HTMLImageElement> = {}
 
@@ -190,7 +192,7 @@ async function loadReplay() {
     errorMsg.value = ''
     const recordIdNum = Number(props.recordId)
     const cached = await getCachedRecord<RecordGetResponse>('minesweeper', recordIdNum)
-    const res: RecordGetResponse = cached ?? await forumApi.minesweeperRecordGet(recordIdNum)
+    const res: RecordGetResponse = cached ?? await api.minesweeperRecordGet(recordIdNum)
     if (!cached && res.code === 200) {
       cacheRecord('minesweeper', recordIdNum, res)
     }
@@ -310,7 +312,7 @@ function precomputeStates() {
           const nidx = nr * cols + nc
           if (nr < 0 || nr >= rows || nc < 0 || nc >= cols)
             continue
-          if (minefeild.cell[nidx].isFlagged)
+          if (minefeild.cell[nidx]?.isFlagged)
             flaggedAround++
         }
       }

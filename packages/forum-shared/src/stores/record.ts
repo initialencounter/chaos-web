@@ -11,9 +11,11 @@ import type {
 import { cacheRecord, getCachedRecord } from '@tapsss/shared/utils'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { forumApi } from '@/api'
+import { useForumApi } from '../inject'
 
-export const useRecordStore = defineStore('record', () => {
+export const useRecordStore = defineStore('forum-record', () => {
+  const api = useForumApi()
+
   const currentRecord = ref<RecordGetResponse | PuzzleRecordGetResponse | SchulteRecordGetResponse | null>(null)
 
   const minesweeperRecordList = ref<MinesweeperRecordListResponse | null>(null)
@@ -31,7 +33,7 @@ export const useRecordStore = defineStore('record', () => {
         currentRecord.value = cached
         return
       }
-      const data = await forumApi.minesweeperRecordGet(recordId)
+      const data = await api.minesweeperRecordGet(recordId)
       currentRecord.value = data
       if (data.code === 200) {
         cacheRecord('minesweeper', recordId, data)
@@ -50,7 +52,7 @@ export const useRecordStore = defineStore('record', () => {
         currentRecord.value = cached
         return
       }
-      const data = await forumApi.puzzleRecordGetResponse(recordId)
+      const data = await api.puzzleRecordGetResponse(recordId)
       currentRecord.value = data
       if (data.code === 200) {
         cacheRecord('puzzle', recordId, data)
@@ -69,7 +71,7 @@ export const useRecordStore = defineStore('record', () => {
         currentRecord.value = cached
         return
       }
-      const data = await forumApi.schulteRecordGet(recordId)
+      const data = await api.schulteRecordGet(recordId)
       currentRecord.value = data
       if (data.code === 200) {
         cacheRecord('schulte', recordId, data)
@@ -83,7 +85,7 @@ export const useRecordStore = defineStore('record', () => {
   async function fetchMinesweeperRecordList(userId: string, page: number, count: number) {
     isLoading.value = true
     try {
-      minesweeperRecordList.value = await forumApi.minesweeperRecordList(userId, page, count)
+      minesweeperRecordList.value = await api.minesweeperRecordList(userId, page, count)
     }
     finally {
       isLoading.value = false
@@ -93,7 +95,7 @@ export const useRecordStore = defineStore('record', () => {
   async function fetchSchulteRecordList(userId: string, page: number, count: number) {
     isLoading.value = true
     try {
-      schulteRecordList.value = await forumApi.schulteRecordListFilter(userId, page, count)
+      schulteRecordList.value = await api.schulteRecordListFilter(userId, page, count)
     }
     finally {
       isLoading.value = false
@@ -103,7 +105,7 @@ export const useRecordStore = defineStore('record', () => {
   async function fetchPuzzleRecordList(userId: string, page: number, count: number) {
     isLoading.value = true
     try {
-      puzzleRecordList.value = await forumApi.puzzleRecordListFilter(userId, page, count)
+      puzzleRecordList.value = await api.puzzleRecordListFilter(userId, page, count)
     }
     finally {
       isLoading.value = false
@@ -113,7 +115,7 @@ export const useRecordStore = defineStore('record', () => {
   async function fetchTzfeRecordList(userId: string, page: number, count: number) {
     isLoading.value = true
     try {
-      tzfeRecordList.value = await forumApi.tzfeRecordListFilter(userId, page, count)
+      tzfeRecordList.value = await api.tzfeRecordListFilter(userId, page, count)
     }
     finally {
       isLoading.value = false
@@ -123,7 +125,7 @@ export const useRecordStore = defineStore('record', () => {
   async function fetchNonoRecordList(userId: string, page: number, count: number) {
     isLoading.value = true
     try {
-      nonoRecordList.value = await forumApi.nonoRecordListFilter(userId, page, count)
+      nonoRecordList.value = await api.nonoRecordListFilter(userId, page, count)
     }
     finally {
       isLoading.value = false

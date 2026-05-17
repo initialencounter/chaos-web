@@ -2,9 +2,8 @@
 import type { PostListDatum } from '@tapsss/shared'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePostStore } from '@/stores'
-import NavBar from '../components/NavBar.vue'
 import PostCard from '../components/PostCard.vue'
+import { usePostStore } from '../stores'
 
 defineOptions({ name: 'HomeView' })
 
@@ -68,7 +67,6 @@ onMounted(async () => {
 
 <template>
   <div class="home">
-    <NavBar />
     <div class="filter-tabs">
       <button
         class="tab-btn" :class="[{ active: postType === 0 }]"

@@ -8,8 +8,8 @@ import type {
 } from '@tapsss/shared'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import UserAvatar from '@/components/UserAvatar.vue'
-import { useRecordStore } from '@/stores/record'
+import UserAvatar from '../components/UserAvatar.vue'
+import { useRecordStore } from '../stores/record'
 
 const props = defineProps<{
   uid: string

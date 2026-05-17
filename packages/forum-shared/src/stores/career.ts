@@ -8,9 +8,11 @@ import type {
 } from '@tapsss/shared'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { forumApi } from '@/api'
+import { useForumApi } from '../inject'
 
-export const useCareerStore = defineStore('career', () => {
+export const useCareerStore = defineStore('forum-career', () => {
+  const api = useForumApi()
+
   const minesweeper = ref<MinesweeperCareerResponse | null>(null)
   const sudoku = ref<SudokuCareerResponse | null>(null)
   const puzzle = ref<PuzzleCareerResponse | null>(null)
@@ -22,7 +24,7 @@ export const useCareerStore = defineStore('career', () => {
   async function fetchMinesweeperCareer(uid: number) {
     isLoading.value = true
     try {
-      minesweeper.value = await forumApi.minesweeperCareer(uid)
+      minesweeper.value = await api.minesweeperCareer(uid)
     }
     finally {
       isLoading.value = false
@@ -32,7 +34,7 @@ export const useCareerStore = defineStore('career', () => {
   async function fetchSudokuCareer(targetUid: number) {
     isLoading.value = true
     try {
-      sudoku.value = await forumApi.sudokuCareer(targetUid)
+      sudoku.value = await api.sudokuCareer(targetUid)
     }
     finally {
       isLoading.value = false
@@ -42,7 +44,7 @@ export const useCareerStore = defineStore('career', () => {
   async function fetchPuzzleCareer(uid: number) {
     isLoading.value = true
     try {
-      puzzle.value = await forumApi.puzzleCareer(uid)
+      puzzle.value = await api.puzzleCareer(uid)
     }
     finally {
       isLoading.value = false
@@ -52,7 +54,7 @@ export const useCareerStore = defineStore('career', () => {
   async function fetchNonoCareer(uid: number) {
     isLoading.value = true
     try {
-      nono.value = await forumApi.nonoCareer(uid)
+      nono.value = await api.nonoCareer(uid)
     }
     finally {
       isLoading.value = false
@@ -62,7 +64,7 @@ export const useCareerStore = defineStore('career', () => {
   async function fetchTzfeCareer(targetUid: number) {
     isLoading.value = true
     try {
-      tzfe.value = await forumApi.tzfeCareer(targetUid)
+      tzfe.value = await api.tzfeCareer(targetUid)
     }
     finally {
       isLoading.value = false
@@ -72,7 +74,7 @@ export const useCareerStore = defineStore('career', () => {
   async function fetchSchulteCareer(targetUid: number) {
     isLoading.value = true
     try {
-      schulte.value = await forumApi.schulteCareer(targetUid)
+      schulte.value = await api.schulteCareer(targetUid)
     }
     finally {
       isLoading.value = false

@@ -1,4 +1,1 @@
-export * from './career'
-export * from './post'
-export * from './record'
-export * from './user'
+export { useCareerStore, usePostStore, useRecordStore, useUserStore } from '@tapsss/forum-shared'

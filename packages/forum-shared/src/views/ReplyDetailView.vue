@@ -3,8 +3,8 @@ import type { ReplyListDatum } from '@tapsss/shared'
 import { formatTime } from '@tapsss/shared/utils'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePostStore } from '@/stores'
 import UserAvatar from '../components/UserAvatar.vue'
+import { usePostStore } from '../stores'
 
 defineOptions({ name: 'ReplyDetailView' })
 

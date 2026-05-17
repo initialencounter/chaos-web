@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type {
-  SchulteActionRecord,
-  SchulteRecordGetResponse,
+  PuzzleActionRecord,
+  PuzzleRecordGetResponse,
 } from '@tapsss/shared'
-import { cacheRecord, getCachedRecord, parseSchulteReplayHandle } from '@tapsss/shared/utils'
+import { cacheRecord, getCachedRecord, parsePuzzleReplayHandle } from '@tapsss/shared/utils'
 import {
   computed,
   nextTick,
@@ -13,23 +13,60 @@ import {
   shallowRef,
   watch,
 } from 'vue'
-import { forumApi } from '@/api'
+import { useForumApi } from '../inject'
 import UserAvatar from './UserAvatar.vue'
-
-type SchulteData = SchulteRecordGetResponse['data']
-
-// Extend the data type with parsed replay data
-interface PlayData extends SchulteData {
-  parsedActions: SchulteActionRecord[]
-  parsedMaps?: {
-    board: number[][]
-    numberMap: Map<number, { r: number, c: number }>
-  }[]
-}
 
 const props = defineProps<{
   recordId: string
 }>()
+
+const api = useForumApi()
+
+type PuzzleData = PuzzleRecordGetResponse['data']
+
+const BG_COLOR = [
+  ['#707070', '#707070', '#707070', '#707070', '#707070', '#707070', '#707070', '#707070', '#707070', '#707070'],
+  ['#444444', '#00C91A', '#00C91A', '#00C91A', '#00C91A', '#00C91A', '#00C91A', '#00C91A', '#00C91A', '#00C91A'],
+  ['#444444', '#038317', '#006FFF', '#006FFF', '#006FFF', '#006FFF', '#006FFF', '#006FFF', '#006FFF', '#006FFF'],
+  ['#444444', '#038317', '#001EE1', '#FF0000', '#FF0000', '#FF0000', '#FF0000', '#FF0000', '#FF0000', '#FF0000'],
+  ['#444444', '#038317', '#001EE1', '#BA0100', '#FFA400', '#FFA400', '#FFA400', '#FFA400', '#FFA400', '#FFA400'],
+  ['#444444', '#038317', '#001EE1', '#BA0100', '#CF8800', '#FFFB00', '#FFFB00', '#FFFB00', '#FFFB00', '#FFFB00'],
+  ['#444444', '#038317', '#001EE1', '#BA0100', '#CF8800', '#B2AF00', '#06BB00', '#06BB00', '#06BB00', '#06BB00'],
+  ['#444444', '#038317', '#001EE1', '#BA0100', '#CF8800', '#B2AF00', '#06BB00', '#34CCFF', '#34CCFF', '#34CCFF'],
+  ['#444444', '#038317', '#001EE1', '#BA0100', '#CF8800', '#B2AF00', '#06BB00', '#34CCFF', '#6C2E8F', '#6C2E8F'],
+  ['#444444', '#038317', '#001EE1', '#BA0100', '#CF8800', '#B2AF00', '#06BB00', '#34CCFF', '#6C2E8F', '#000000'],
+]
+
+const FONT_COLOR = [
+  ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF'],
+  ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF'],
+  ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF'],
+  ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000'],
+  ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000'],
+  ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000'],
+  ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000'],
+  ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000'],
+  ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000'],
+  ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000'],
+]
+
+interface TileMove {
+  num: number
+  fromR: number
+  fromC: number
+  toR: number
+  toC: number
+}
+
+interface MoveInfo {
+  tiles: TileMove[]
+}
+
+interface PlayData extends PuzzleData {
+  parsedActions: PuzzleActionRecord[]
+  boardSnapshots: number[][][]
+  moveInfos: MoveInfo[]
+}
 
 const loading = ref(true)
 const errorMsg = ref('')
@@ -43,29 +80,12 @@ const currentTime = ref(0)
 const playbackSpeed = ref(1.0)
 const totalTime = ref(0)
 
-const cellSize = 60
+let cellSize = 80
+const cellPadding = 3
+const borderRadius = 8
+
 let rafId: number | null = null
 let lastRenderedTime = -1
-
-const currentFrameIndex = computed(() => {
-  if (!replayData.value)
-    return 0
-  const actions = replayData.value.parsedActions
-  let lo = 0
-  let hi = actions.length - 1
-  let result = 0
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1
-    if (actions[mid]!.time <= currentTime.value) {
-      result = mid + 1
-      lo = mid + 1
-    }
-    else {
-      hi = mid - 1
-    }
-  }
-  return result
-})
 
 // Web Audio API
 let audioCtx: AudioContext | null = null
@@ -99,16 +119,13 @@ async function renderAudioTrack() {
   )
   for (let i = 0; i < actions.length; i++) {
     const act = actions[i]!
-    if (act.right === 1) {
-      // Only play sound for correct taps
-      const source = offlineCtx.createBufferSource()
-      source.buffer = flagBuffer
-      const gain = offlineCtx.createGain()
-      gain.gain.value = 0.5
-      source.connect(gain)
-      gain.connect(offlineCtx.destination)
-      source.start(act.time)
-    }
+    const source = offlineCtx.createBufferSource()
+    source.buffer = flagBuffer
+    const gain = offlineCtx.createGain()
+    gain.gain.value = 0.5
+    source.connect(gain)
+    gain.connect(offlineCtx.destination)
+    source.start(act.time)
   }
   mixedAudioBuffer = await offlineCtx.startRendering()
 }
@@ -137,57 +154,187 @@ function stopAudioPlayback() {
   }
 }
 
+const currentFrameIndex = computed(() => {
+  if (!replayData.value)
+    return 0
+
+  if (currentTime.value <= 0)
+    return 0
+
+  const actions = replayData.value.parsedActions
+  let lo = 0
+  let hi = actions.length - 1
+  let result = 0
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1
+    if (actions[mid]!.time <= currentTime.value) {
+      result = mid + 1
+      lo = mid + 1
+    }
+    else {
+      hi = mid - 1
+    }
+  }
+  return result
+})
+
+function parseMap(mapStr: string): number[][] {
+  return mapStr.split('-').map(row => row.split(':').map(Number))
+}
+
+function getTileColor(
+  n: number,
+  cols: number,
+): { bg: string, fg: string } {
+  if (n === 0)
+    return { bg: '#1a1a1a', fg: '#fff' }
+  const targetR = Math.floor((n - 1) / cols)
+  const targetC = (n - 1) % cols
+  return {
+    bg: BG_COLOR[targetR]?.[targetC] ?? '#444',
+    fg: FONT_COLOR[targetR]?.[targetC] ?? '#fff',
+  }
+}
+
+function computeSnapshots(
+  initialBoard: number[][],
+  actions: PuzzleActionRecord[],
+  rows: number,
+  cols: number,
+) {
+  const boardSnapshots: number[][][] = []
+  const moveInfos: MoveInfo[] = []
+
+  const board = initialBoard.map(row => [...row])
+  boardSnapshots.push(board.map(row => [...row]))
+
+  let blankR = -1
+  let blankC = -1
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (board[r]![c] === 0) {
+        blankR = r
+        blankC = c
+      }
+    }
+  }
+
+  for (const act of actions) {
+    const targetR = act.row
+    const targetC = act.column
+    const tiles: TileMove[] = []
+
+    if (blankR === targetR && blankC !== targetC) {
+      // Horizontal slide
+      const dir = targetC > blankC ? 1 : -1
+      for (
+        let c = blankC + dir;
+        dir > 0 ? c <= targetC : c >= targetC;
+        c += dir
+      ) {
+        tiles.push({
+          num: board[blankR]![c]!,
+          fromR: blankR,
+          fromC: c,
+          toR: blankR,
+          toC: c - dir,
+        })
+      }
+      if (dir > 0) {
+        for (let c = blankC; c < targetC; c++) {
+          board[blankR]![c] = board[blankR]![c + 1]!
+        }
+      }
+      else {
+        for (let c = blankC; c > targetC; c--) {
+          board[blankR]![c] = board[blankR]![c - 1]!
+        }
+      }
+      board[blankR]![targetC] = 0
+    }
+    else if (blankC === targetC && blankR !== targetR) {
+      // Vertical slide
+      const dir = targetR > blankR ? 1 : -1
+      for (
+        let r = blankR + dir;
+        dir > 0 ? r <= targetR : r >= targetR;
+        r += dir
+      ) {
+        tiles.push({
+          num: board[r]![blankC]!,
+          fromR: r,
+          fromC: blankC,
+          toR: r - dir,
+          toC: blankC,
+        })
+      }
+      if (dir > 0) {
+        for (let r = blankR; r < targetR; r++) {
+          board[r]![blankC] = board[r + 1]![blankC]!
+        }
+      }
+      else {
+        for (let r = blankR; r > targetR; r--) {
+          board[r]![blankC] = board[r - 1]![blankC]!
+        }
+      }
+      board[targetR]![blankC] = 0
+    }
+
+    blankR = targetR
+    blankC = targetC
+    moveInfos.push({ tiles })
+    boardSnapshots.push(board.map(row => [...row]))
+  }
+
+  return { boardSnapshots, moveInfos }
+}
+
 async function loadReplay() {
   try {
     loading.value = true
     errorMsg.value = ''
     const recordIdNum = Number(props.recordId)
-    const cached = await getCachedRecord<SchulteRecordGetResponse>('schulte', recordIdNum)
-    const res: SchulteRecordGetResponse = cached ?? await forumApi.schulteRecordGet(recordIdNum)
+    const cached = await getCachedRecord<PuzzleRecordGetResponse>('puzzle', recordIdNum)
+    const res: PuzzleRecordGetResponse = cached ?? await api.puzzleRecordGetResponse(recordIdNum)
     if (!cached && res.code === 200) {
-      cacheRecord('schulte', recordIdNum, res)
+      cacheRecord('puzzle', recordIdNum, res)
     }
 
     if (res.code === 200 && res.data) {
-      if (res.data.actions) {
-        const rawActions = parseSchulteReplayHandle(res.data.actions)
-        const parsedActions = rawActions.map(a => ({
-          ...a,
-          time: a.time / 1000,
-        }))
+      const data = res.data
+      const rawActions = parsePuzzleReplayHandle(data.action)
+      const parsedActions = rawActions.map(a => ({
+        ...a,
+        time: a.time / 1000,
+      }))
 
-        const parsedMaps = []
-        const mapsSource = (res.data as any).maps
-          ? (res.data as any).maps.split('|')
-          : [res.data.map]
-        for (const mapStr of mapsSource) {
-          const rowsStr = mapStr.split('-')
-          const b = rowsStr.map((r: string) => r.split(':').map(Number))
-          const nm = new Map<number, { r: number, c: number }>()
-          for (let r = 0; r < b.length; r++) {
-            for (let c = 0; c < b[r]!.length; c++) {
-              nm.set(b[r]![c]!, { r, c })
-            }
-          }
-          parsedMaps.push({ board: b, numberMap: nm })
-        }
+      const initialBoard = parseMap(data.map)
+      const { boardSnapshots, moveInfos } = computeSnapshots(
+        initialBoard,
+        parsedActions,
+        data.row,
+        data.column,
+      )
 
-        replayData.value = {
-          ...res.data,
-          parsedActions,
-          parsedMaps,
-        }
-        totalTime.value = res.data.time / 1000
-
-        loading.value = false
-        await initAudio()
-        await renderAudioTrack()
-        await nextTick()
-        initCanvas()
+      replayData.value = {
+        ...data,
+        parsedActions,
+        boardSnapshots,
+        moveInfos,
       }
-      else {
-        errorMsg.value = '录像内容为空'
-      }
+
+      totalTime.value = data.time / 1000
+      cellSize = Math.min(
+        100,
+        Math.floor(500 / Math.max(data.row, data.column)),
+      )
+
+      loading.value = false
+      await initAudio()
+      await renderAudioTrack()
+      await nextTick()
+      initCanvas()
     }
     else {
       errorMsg.value = res.msg || '无法获取录像数据'
@@ -211,8 +358,57 @@ function initCanvas() {
   ctx.value = canvas.getContext('2d')
   canvas.width = data.column * cellSize
   canvas.height = data.row * cellSize
-
   drawFrame()
+}
+
+function drawRoundRect(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  g.beginPath()
+  g.moveTo(x + r, y)
+  g.lineTo(x + w - r, y)
+  g.arcTo(x + w, y, x + w, y + r, r)
+  g.lineTo(x + w, y + h - r)
+  g.arcTo(x + w, y + h, x + w - r, y + h, r)
+  g.lineTo(x + r, y + h)
+  g.arcTo(x, y + h, x, y + h - r, r)
+  g.lineTo(x, y + r)
+  g.arcTo(x, y, x + r, y, r)
+  g.closePath()
+}
+
+function drawTile(
+  g: CanvasRenderingContext2D,
+  num: number,
+  x: number,
+  y: number,
+  cols: number,
+) {
+  const p = cellPadding
+  const { bg, fg } = getTileColor(num, cols)
+
+  g.fillStyle = bg
+  drawRoundRect(
+    g,
+    x + p,
+    y + p,
+    cellSize - p * 2,
+    cellSize - p * 2,
+    borderRadius,
+  )
+  g.fill()
+
+  g.fillStyle = fg
+  const fontSize = num >= 10 ? cellSize * 0.32 : cellSize * 0.4
+  g.font = `bold ${fontSize}px Arial`
+  g.textAlign = 'center'
+  g.textBaseline = 'middle'
+  g.fillText(num.toString(), x + cellSize / 2, y + cellSize / 2)
 }
 
 function drawFrame() {
@@ -230,140 +426,30 @@ function drawFrame() {
   const cols = data.column
   const rows = data.row
   const fi = currentFrameIndex.value
-  const actions = data.parsedActions
 
-  // Determine safely clicked numbers till current frame
-  let currentTarget = 1
+  // Clear
+  g.fillStyle = '#1a1a1a'
+  g.fillRect(0, 0, cols * cellSize, rows * cellSize)
 
-  for (let i = 0; i < fi; i++) {
-    const act = actions[i]!
-    if (act.right === 1) {
-      currentTarget++
-    }
-  }
-
-  // Current map depends on how many correct taps we had
-  const mapIndex = Math.min(
-    currentTarget - 1,
-    (data.parsedMaps?.length || 1) - 1,
-  )
-  const currentMapObj = data.parsedMaps?.[mapIndex]
-  if (!currentMapObj)
+  const board = data.boardSnapshots[fi]
+  if (!board)
     return
 
-  const { board: currentBoard, numberMap: currentNm } = currentMapObj
-
-  const wrongCells = new Set<string>()
-  if (fi > 0) {
-    const lastAct = actions[fi - 1]
-    if (lastAct && lastAct.right === 0) {
-      const pos = currentNm.get(lastAct.idx)
-      if (pos) {
-        wrongCells.add(`${pos.r},${pos.c}`)
-      }
-    }
-  }
-
-  // Draw board
+  // Draw static tiles
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const val = currentBoard[r]?.[c]
-      const isClicked = val !== undefined && val < currentTarget
-      const isWrongInfo = wrongCells.has(`${r},${c}`)
-
-      if (isWrongInfo) {
-        g.fillStyle = '#ff4d4d' // Red for wrong clicks
-      }
-      else {
-        g.fillStyle = isClicked ? '#cc7000' : '#ff8c00'
-      }
-      g.fillRect(c * cellSize, r * cellSize, cellSize, cellSize)
-
-      g.strokeStyle = '#fff'
-      g.lineWidth = 2
-      g.strokeRect(c * cellSize, r * cellSize, cellSize, cellSize)
-
-      if (val !== undefined && (data.type !== 1 || !isClicked)) {
-        g.fillStyle = '#fff'
-        g.font = `bold ${cellSize * 0.4}px Arial`
-        g.textAlign = 'center'
-        g.textBaseline = 'middle'
-        g.fillText(
-          val.toString(),
-          c * cellSize + cellSize / 2,
-          r * cellSize + cellSize / 2,
-        )
-      }
+      const val = board[r]![c]!
+      if (val === 0)
+        continue
+      drawTile(g, val, c * cellSize, r * cellSize, cols)
     }
   }
-
-  drawMotions()
-}
-
-function drawMotions() {
-  const data = replayData.value
-  if (!ctx.value || !data)
-    return
-
-  const fi = currentFrameIndex.value
-  if (fi === 0)
-    return
-
-  const currentAction = data.parsedActions[fi - 1]
-  if (!currentAction)
-    return
-
-  let tapsSoFar = 0
-  for (let i = 0; i < fi - 1; i++) {
-    if (data.parsedActions[i]?.right)
-      tapsSoFar++
-  }
-  const curMapIndex = Math.min(tapsSoFar, (data.parsedMaps?.length ?? 1) - 1)
-  const curNm = data.parsedMaps![curMapIndex]?.numberMap
-
-  const pos = curNm?.get(currentAction.idx)
-  if (!pos)
-    return
-
-  let x = pos.c * cellSize + cellSize / 2
-  let y = pos.r * cellSize + cellSize / 2
-
-  if (fi < data.parsedActions.length) {
-    const nextAction = data.parsedActions[fi]
-    if (nextAction) {
-      const nextMapIndex = Math.min(
-        tapsSoFar + (currentAction.right ? 1 : 0),
-        (data.parsedMaps?.length ?? 1) - 1,
-      )
-      const nextNm = data?.parsedMaps![nextMapIndex]?.numberMap
-      if (nextNm?.has(nextAction.idx)) {
-        const nextPos = nextNm.get(nextAction.idx)!
-        const timeDiff = nextAction.time - currentAction.time
-        if (timeDiff > 0) {
-          let progress = (currentTime.value - currentAction.time) / timeDiff
-          progress = Math.max(0, Math.min(1, progress))
-          const nextX = nextPos.c * cellSize + cellSize / 2
-          const nextY = nextPos.r * cellSize + cellSize / 2
-          x = x + (nextX - x) * progress
-          y = y + (nextY - y) * progress
-        }
-      }
-    }
-  }
-
-  ctx.value.fillStyle = 'rgba(255, 255, 255, 0.8)'
-  ctx.value.beginPath()
-  ctx.value.arc(x, y, 8, 0, Math.PI * 2)
-  ctx.value.fill()
-  ctx.value.strokeStyle = '#333'
-  ctx.value.stroke()
 }
 
 function tick() {
   if (!isPlaying.value || !audioCtx)
     return
 
-  // Derive game time from audio clock
   const audioElapsed = audioCtx.currentTime - audioNodeStartedAt
   currentTime.value = audioNodeOffset + audioElapsed * playbackSpeed.value
 
@@ -473,47 +559,32 @@ const currentFrameActionInfo = computed(() => {
     return ''
   const fi = currentFrameIndex.value
   if (fi === 0)
-    return '无操作'
+    return '等待操作'
   const act = replayData.value.parsedActions[fi - 1]
   if (!act)
     return ''
 
-  let tapsSoFar = 0
-  for (let i = 0; i < fi - 1; i++) {
-    if (replayData.value.parsedActions[i]?.right)
-      tapsSoFar++
-  }
-  const curMapIndex = Math.min(
-    tapsSoFar,
-    (replayData.value.parsedMaps?.length ?? 1) - 1,
-  )
-  const nm = replayData?.value?.parsedMaps![curMapIndex]?.numberMap
+  const moveInfo = replayData.value.moveInfos[fi - 1]
+  const tileNums = moveInfo?.tiles.map(t => t.num).join(', ') ?? ''
 
-  const pos = nm?.get(act.idx)
-  const c = pos ? pos.c + 1 : '?'
-  const r = pos ? pos.r + 1 : '?'
-
-  return `帧: ${fi}/${replayData.value.parsedActions.length} | 时间: ${act.time.toFixed(3)}s | 坐标: (${c}, ${r}) | 目标: ${act.idx} | ${act.right ? '正确' : '错误'}`
+  return `帧: ${fi}/${replayData.value.parsedActions.length} | 时间: ${act.time.toFixed(3)}s | 空白→(${act.column + 1}, ${act.row + 1}) | 移动: [${tileNums}]`
 })
 
-function getActionPos(idx: number) {
+function getActionDesc(idx: number) {
   const data = replayData.value
   if (!data)
-    return { c: '?', r: '?' }
-  let tapsSoFar = 0
-  for (let i = 0; i < idx; i++) {
-    if (data.parsedActions[i]?.right)
-      tapsSoFar++
-  }
-  const curMapIndex = Math.min(tapsSoFar, (data.parsedMaps?.length ?? 1) - 1)
-  const nm = data.parsedMaps![curMapIndex]?.numberMap
-  const pos = nm?.get(data?.parsedActions[idx].idx)
-  return pos ? { c: pos.c + 1, r: pos.r + 1 } : { c: '?', r: '?' }
+    return ''
+  const act = data.parsedActions[idx]
+  if (!act)
+    return ''
+  const moveInfo = data.moveInfos[idx]
+  const tiles = moveInfo?.tiles.map(t => t.num).join(',') ?? ''
+  return `[${act.time.toFixed(3)}s] 空白→(${act.column + 1}, ${act.row + 1}) 移动: [${tiles}]`
 }
 </script>
 
 <template>
-  <div class="schulte-player">
+  <div class="puzzle-player">
     <div v-if="loading" class="loading">
       加载录像中...
     </div>
@@ -529,21 +600,25 @@ function getActionPos(idx: number) {
       <div class="info-panel">
         <div class="stat-item">
           <span>难度: </span>{{ replayData.row }} x {{ replayData.column }}
-          {{ replayData.type === 1 ? "简单" : "普通" }}
-          {{ replayData.maps ? "打乱" : "" }}
-          {{ replayData.blind ? "盲玩" : "" }}
+          {{ replayData.swipe ? "滑动" : "点击" }}
+          {{ replayData.blind ? "盲拼" : "" }}
         </div>
         <div class="stat-item">
           <span>时长: </span>{{ (replayData.time / 1000).toFixed(3) }}s
         </div>
         <div class="stat-item">
-          <span>点击: </span>{{ replayData.tapCorrect }}/{{ replayData.tap }}
+          <span>步数: </span>{{ replayData.step }}
         </div>
         <div class="stat-item">
-          <span>反应时间: </span>{{ replayData.reactionTime }}ms
+          <span>观察时间: </span>{{ replayData.observeTime }}ms
         </div>
         <div class="stat-item">
-          <span>创建时间: </span>{{ new Date(replayData.createTime).toISOString() }}
+          <span>排名: </span>#{{ replayData.rank }} ({{
+            (replayData.rankPercent * 100).toFixed(1)
+          }}%)
+        </div>
+        <div class="stat-item">
+          <span>创建时间: </span>{{ new Date(replayData.createTime).toLocaleString() }}
         </div>
       </div>
 
@@ -574,6 +649,9 @@ function getActionPos(idx: number) {
           <span>{{ totalTime.toFixed(3) }}</span>
         </div>
         <select v-model="playbackSpeed" class="speed-select">
+          <option :value="0.25">
+            0.25x
+          </option>
           <option :value="0.5">
             0.5x
           </option>
@@ -605,11 +683,7 @@ function getActionPos(idx: number) {
             ]"
             @click="jumpToAction(Number(idx))"
           >
-            {{ Number(idx) + 1 }}. [{{ act.time.toFixed(3) }}s] 目标:
-            {{ act.idx }} 坐标: ({{ getActionPos(Number(idx)).c }},
-            {{ getActionPos(Number(idx)).r }}) [{{
-              act.right ? "正确" : "错误"
-            }}]
+            {{ Number(idx) + 1 }}. {{ getActionDesc(Number(idx)) }}
           </div>
         </div>
       </div>
@@ -618,7 +692,7 @@ function getActionPos(idx: number) {
 </template>
 
 <style scoped>
-.schulte-player {
+.puzzle-player {
   background: #1b1b1b;
   border-radius: 12px;
   padding: 20px;

@@ -8,7 +8,7 @@ import type {
   TzfeCareerResponse,
 } from '@tapsss/shared'
 import { onMounted, ref } from 'vue'
-import { useCareerStore } from '@/stores/career'
+import { useCareerStore } from '../stores/career'
 
 const props = defineProps<{
   uid: string
@@ -71,7 +71,7 @@ function formatTime(ms: number) {
   return (ms / 1000).toFixed(3)
 }
 
-function getRank(rank: number) {
+function getRank(rank?: number) {
   return rank ? `#${rank}` : '-'
 }
 
@@ -108,7 +108,7 @@ function getScore(score: number) {
               {{ formatTime(minesweeperData.begTimeRank?.time) }}
             </router-link>
             <span v-else class="value">{{
-              formatTime(minesweeperData.begTimeRank?.time)
+              formatTime(minesweeperData.begTimeRank?.time ?? 0)
             }}</span>
             <span class="rank">{{
               getRank(minesweeperData.begTimeRank?.rank)
@@ -124,7 +124,7 @@ function getScore(score: number) {
               {{ formatTime(minesweeperData.intTimeRank?.time) }}
             </router-link>
             <span v-else class="value">{{
-              formatTime(minesweeperData.intTimeRank?.time)
+              formatTime(minesweeperData.intTimeRank?.time ?? 0)
             }}</span>
             <span class="rank">{{
               getRank(minesweeperData.intTimeRank?.rank)
@@ -140,7 +140,7 @@ function getScore(score: number) {
               {{ formatTime(minesweeperData.expTimeRank?.time) }}
             </router-link>
             <span v-else class="value">{{
-              formatTime(minesweeperData.expTimeRank?.time)
+              formatTime(minesweeperData.expTimeRank?.time ?? 0)
             }}</span>
             <span class="rank">{{
               getRank(minesweeperData.expTimeRank?.rank)
@@ -156,7 +156,7 @@ function getScore(score: number) {
               {{ formatTime(minesweeperData.totalTimeRank?.time) }}
             </router-link>
             <span v-else class="value">{{
-              formatTime(minesweeperData.totalTimeRank?.time)
+              formatTime(minesweeperData.totalTimeRank?.time ?? 0)
             }}</span>
             <span class="rank">{{
               getRank(minesweeperData.totalTimeRank?.rank)

@@ -2,10 +2,9 @@
 import type { PostListDatum, SearchUser } from '@tapsss/shared'
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { usePostStore, useUserStore } from '@/stores'
-import NavBar from '../components/NavBar.vue'
 import PostCard from '../components/PostCard.vue'
 import UserCard from '../components/UserCard.vue'
+import { usePostStore, useUserStore } from '../stores'
 
 defineOptions({ name: 'SearchView' })
 
@@ -107,7 +106,6 @@ function switchTab(type: 'post' | 'user') {
 
 <template>
   <div class="search">
-    <NavBar />
     <header class="search-header">
       <router-link to="/forum" class="back-btn">
         ← 返回列表
