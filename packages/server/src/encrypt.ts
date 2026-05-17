@@ -1,28 +1,6 @@
 import { Buffer } from 'node:buffer'
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
-
-// 加载 .env 文件 (不依赖 dotenv 包)
-{
-  const envPath = join(__dirname, '../../.env')
-  if (existsSync(envPath)) {
-    const content = readFileSync(envPath, 'utf-8')
-    for (const line of content.split('\n')) {
-      const trimmed = line.trim()
-      if (!trimmed || trimmed.startsWith('#'))
-        continue
-      const eqIdx = trimmed.indexOf('=')
-      if (eqIdx === -1)
-        continue
-      const key = trimmed.slice(0, eqIdx).trim()
-      const val = trimmed.slice(eqIdx + 1).trim()
-      if (!process.env[key]) {
-        process.env[key] = val
-      }
-    }
-  }
-}
+import { DECRYPT_SECRET_KEY, ENCRYPT_KEY, ENCRYPT_SALT, ENCRYPT_SECRET_KEY } from './secrets'
 
 export function computeMD5(str: string, salt = ''): string {
   if (!str)
@@ -82,8 +60,8 @@ export const CONFIG = {
   uid: '',
   token: '',
   host: 'minesweeper.natapp1.cc',
-  key: process.env.ENCRYPT_KEY || '',
-  salt: process.env.ENCRYPT_SALT || '',
+  key: ENCRYPT_KEY,
+  salt: ENCRYPT_SALT,
 }
 
 export function decryptAESECB(encryptedData: string): string {
@@ -99,8 +77,8 @@ export const LOGIN_CONFIG = {
   password: '',
   uid: '',
   token: '',
-  encryptSecretKey: process.env.ENCRYPT_SECRET_KEY || '',
-  decryptSecretKey: process.env.DECRYPT_SECRET_KEY || '',
+  encryptSecretKey: ENCRYPT_SECRET_KEY,
+  decryptSecretKey: DECRYPT_SECRET_KEY,
   host: 'minesweeper.natapp1.cc',
 }
 
