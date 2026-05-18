@@ -1,4 +1,5 @@
 import type { ImMessage, ImRecentUser } from '@tapsss/shared'
+import { cacheMessages, clearMessageCache, getCachedMessages } from '@tapsss/shared/utils'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useForumApi } from '../inject'
@@ -45,6 +46,7 @@ export const useMessageStore = defineStore('im-message', () => {
           const newMessages = res.data.filter(m => !existingIds.has(m.id))
           messages.value = [...newMessages, ...messages.value].sort((a, b) => a.createTime - b.createTime)
         }
+        cacheMessages(String(toUid), messages.value)
       }
     }
     finally {
@@ -58,6 +60,7 @@ export const useMessageStore = defineStore('im-message', () => {
       if (res.code === 200 && res.data) {
         const msg = res.data
         messages.value.push(msg)
+        cacheMessages(String(toUid), messages.value)
         const idx = recentUsers.value.findIndex(u => String(u.toUid) === String(toUid))
         if (idx >= 0) {
           const user = recentUsers.value[idx]!
@@ -92,9 +95,21 @@ export const useMessageStore = defineStore('im-message', () => {
     }
   }
 
-  function selectChat(user: ImRecentUser) {
+  async function selectChat(user: ImRecentUser) {
     currentChatUser.value = user
     messages.value = []
+
+    if (user.unReadCount > 0) {
+      api.imUserRecentUnreadCount(Number(user.toUid), 0)
+      totalUnreadCount.value = Math.max(0, totalUnreadCount.value - user.unReadCount)
+      user.unReadCount = 0
+    }
+
+    const cached = await getCachedMessages(String(user.toUid))
+    if (cached.length > 0) {
+      messages.value = cached
+    }
+
     return fetchMessages(Number(user.toUid), 0, 0, 20)
   }
 
@@ -119,6 +134,7 @@ export const useMessageStore = defineStore('im-message', () => {
         currentChatUser.value = null
         messages.value = []
       }
+      clearMessageCache(String(toUid))
     }
   }
 
