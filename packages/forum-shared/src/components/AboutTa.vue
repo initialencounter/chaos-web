@@ -46,7 +46,7 @@ async function toggleFollow() {
     return
   togglingFollow.value = true
   try {
-    const newRelation = props.user.relation === 1 ? 2 : 1
+    const newRelation = props.user.relation === 1 ? 0 : 1
     const res = await userStore.setRelation(props.user.id, newRelation)
     if (res.code === 200) {
       emit('relationChange', newRelation)
@@ -65,7 +65,7 @@ async function toggleBlock() {
     return
   togglingBlock.value = true
   try {
-    const newRelation = props.user.relation === 3 ? 2 : 3
+    const newRelation = props.user.relation === 0 ? 2 : 0
     const res = await userStore.setRelation(props.user.id, newRelation)
     if (res.code === 200) {
       emit('relationChange', newRelation)
@@ -104,7 +104,7 @@ function goMessage() {
         :disabled="togglingBlock"
         @click="toggleBlock"
       >
-        {{ user.relation === 3 ? '已拉黑' : '拉黑' }}
+        {{ user.relation === 2 ? '已拉黑' : '拉黑' }}
       </button>
       <button
         class="relation-btn message-btn"
