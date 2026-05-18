@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ImMessage, ImRecentUser } from '@tapsss/shared'
-import { formatTime } from '@tapsss/shared/utils'
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computeNonoType, computeType, formatTime, recordBgColor, recordTextColor } from '@tapsss/shared/utils'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessageStore } from '../stores/im'
 
@@ -44,6 +44,14 @@ const sortedRecentUsers = computed(() => {
     return 0
   })
 })
+
+const recordTypeConvertMap: Record<number, number> = {
+  2: 0,
+  3: 1,
+  4: 2,
+  5: 3,
+  6: 4,
+}
 
 function showContextMenu(e: MouseEvent, user: ImRecentUser) {
   contextMenu.value = {
@@ -234,6 +242,91 @@ function getImageUrl(message: string): string {
   }
 }
 
+interface RecordData {
+  type: number
+  mode: number
+  row: number
+  column: number
+  time: number
+  id: number
+  mine?: number
+  bvs?: number
+  bv?: number
+  tap?: number
+  effectiveTap?: number
+  solvedBv?: number
+  step?: number
+  score?: number
+  reactionTime?: number
+  user: {
+    avatar: string
+    nickName: string
+    uid: string
+  }
+}
+
+const recordCache = new Map<string, RecordData | null>()
+
+function getRecordData(message: string): RecordData | null {
+  const cached = recordCache.get(message)
+  if (cached !== undefined)
+    return cached
+  try {
+    const data = JSON.parse(message) as RecordData
+    recordCache.set(message, data)
+    return data
+  }
+  catch {
+    recordCache.set(message, null)
+    return null
+  }
+}
+
+function getRecordStats(data: RecordData, messageType: number): Array<{ value: string, label: string }> {
+  switch (messageType) {
+    case 2:
+      return [
+        { value: computeType(data.row, data.column, data.mine ?? 0), label: '难度' },
+        { value: (data.time / 1000).toFixed(3), label: '时间' },
+        { value: String(data.bvs ?? ''), label: '3BV/s' },
+      ]
+    case 3:
+      return [
+        { value: `${data.row}x${data.column}`, label: '难度' },
+        { value: (data.time / 1000).toFixed(3), label: '时间' },
+        { value: String(data.step ?? ''), label: '步数' },
+      ]
+    case 4:
+      return [
+        { value: String(data.score ?? ''), label: '分数' },
+        { value: (data.time / 1000).toFixed(3), label: '时间' },
+      ]
+    case 5:
+      return [
+        { value: `${data.row}x${data.column}`, label: '难度' },
+        { value: (data.time / 1000).toFixed(3), label: '时间' },
+        { value: String(data.tap ?? ''), label: '点击' },
+      ]
+    case 6:
+      return [
+        { value: computeNonoType(data.mine ?? 0), label: '难度' },
+        { value: (data.time / 1000).toFixed(3), label: '时间' },
+      ]
+    default:
+      return []
+  }
+}
+
+function openReplay(recordId: number, recordType: number) {
+  router.push({
+    name: 'replay',
+    params: {
+      recordId: recordId.toString(),
+      recordType: recordType.toString(),
+    },
+  })
+}
+
 function isMyMessage(msg: ImMessage): boolean {
   return String(msg.fromId) !== String(store.currentChatUser?.toUid)
 }
@@ -245,6 +338,35 @@ function formatMsgTime(timeMs: number): string {
     return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
   }
   return formatTime(timeMs)
+}
+
+const OSS_BASE = 'https://minesweeper.oss-cn-hongkong.aliyuncs.com'
+
+function resolveImageUrl(url: string | undefined | null): string {
+  if (!url)
+    return './assets/Z7.png'
+  if (url.startsWith('@/assets/'))
+    return url.replace('@/assets/', './assets/')
+  if (url.startsWith('http://') || url.startsWith('https://'))
+    return url
+  if (url.startsWith('/'))
+    return OSS_BASE + url
+  return `${OSS_BASE}/${url}`
+}
+
+const imageCache = reactive(new Map<string, string>())
+
+function getCachedImage(url: string | undefined | null): string {
+  const raw = resolveImageUrl(url)
+  if (!raw.startsWith('https://'))
+    return raw
+  if (!imageCache.has(raw)) {
+    imageCache.set(raw, raw)
+    ;(window as any).electronAPI.cacheImage(raw).then((cached: string) => {
+      imageCache.set(raw, cached)
+    })
+  }
+  return imageCache.get(raw) || raw
 }
 
 const TIME_GAP = 5 * 60 * 1000
@@ -295,7 +417,7 @@ const displayItems = computed(() => {
           @contextmenu.prevent="showContextMenu($event, user)"
         >
           <img
-            :src="user.user?.avatar"
+            :src="getCachedImage(user.user?.avatar)"
             class="conv-avatar"
             alt="avatar"
             @click.stop="goToUser(user.toUid)"
@@ -352,7 +474,7 @@ const displayItems = computed(() => {
       <template v-else>
         <div class="chat-header">
           <img
-            :src="store.currentChatUser.user?.avatar || props.avatarUrl || './assets/Z7.png'"
+            :src="getCachedImage(store.currentChatUser.user?.avatar || props.avatarUrl)"
             class="chat-header-avatar"
             alt="avatar"
             @click.stop="goToUser(store.currentChatUser?.toUid)"
@@ -385,7 +507,7 @@ const displayItems = computed(() => {
             >
               <img
                 v-if="!isMyMessage(item.msg)"
-                :src="item.msg.sender?.avatar"
+                :src="getCachedImage(item.msg.sender?.avatar)"
                 class="msg-avatar"
                 alt="avatar"
                 @click.stop="goToUser(item.msg.fromId)"
@@ -408,17 +530,61 @@ const displayItems = computed(() => {
                   :class="isMyMessage(item.msg) ? 'bubble-mine' : 'bubble-other'"
                 >
                   <img
-                    :src="getImageUrl(item.msg.messageBody.message)"
+                    :src="getCachedImage(getImageUrl(item.msg.messageBody.message))"
                     class="msg-image"
                     alt="shared image"
                     loading="lazy"
                   >
                 </div>
+
+                <!-- 纪录消息 -->
+                <div
+                  v-else-if="item.msg.messageBody.messageType >= 2 && getRecordData(item.msg.messageBody.message)"
+                  class="msg-record-wrapper"
+                >
+                  <div class="record-player-header">
+                    <img
+                      :src="getCachedImage(getRecordData(item.msg.messageBody.message)!.user.avatar)"
+                      class="record-player-avatar"
+                      alt="avatar"
+                      @click.stop="goToUser(getRecordData(item.msg.messageBody.message)!.user.uid)"
+                    >
+                    <span class="record-player-name">{{ getRecordData(item.msg.messageBody.message)!.user.nickName }}</span>
+                  </div>
+                  <div
+                    class="record-card"
+                    :style="{
+                      backgroundColor: recordBgColor[recordTypeConvertMap[item.msg.messageBody.messageType]] || '#252525',
+                      color: recordTextColor[recordTypeConvertMap[item.msg.messageBody.messageType]] || '#FFF',
+                    }"
+                    @click.stop="openReplay(getRecordData(item.msg.messageBody.message)!.id, recordTypeConvertMap[item.msg.messageBody.messageType])"
+                  >
+                    <img
+                      :src="`./icon/${recordTypeConvertMap[item.msg.messageBody.messageType]}.png`"
+                      class="record-card-icon"
+                      alt="icon"
+                    >
+                    <div class="record-card-details">
+                      <div
+                        v-for="stat in getRecordStats(getRecordData(item.msg.messageBody.message)!, item.msg.messageBody.messageType)"
+                        :key="stat.label"
+                        class="rc-col"
+                      >
+                        <div class="rc-val">
+                          {{ stat.value }}
+                        </div>
+                        <div class="rc-lbl">
+                          {{ stat.label }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <img
                 v-if="isMyMessage(item.msg)"
-                :src="item.msg.sender?.avatar"
+                :src="getCachedImage(item.msg.sender?.avatar)"
                 class="msg-avatar"
                 alt="avatar"
                 @click.stop="goToUser(item.msg.fromId)"
@@ -713,6 +879,77 @@ const displayItems = computed(() => {
   border-radius: 12px;
   object-fit: cover;
   cursor: pointer;
+}
+
+/* 纪录消息 */
+.msg-record-wrapper {
+  max-width: 280px;
+}
+
+.record-player-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+
+.record-player-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.record-player-name {
+  font-size: 0.8rem;
+  color: #e0e0e0;
+  font-weight: 500;
+}
+
+.record-card {
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.record-card:hover {
+  opacity: 0.85;
+}
+
+.record-card-icon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.record-card-details {
+  display: flex;
+  gap: 24px;
+  text-align: center;
+}
+
+.rc-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rc-val {
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.rc-lbl {
+  font-size: 0.7rem;
+  opacity: 0.75;
+  margin-top: 2px;
 }
 
 .time-separator {
