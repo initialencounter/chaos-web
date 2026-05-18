@@ -98,6 +98,40 @@ export const useMessageStore = defineStore('im-message', () => {
     return fetchMessages(Number(user.toUid), 0, 0, 20)
   }
 
+  async function stickUser(toUid: number, stick: boolean) {
+    const res = await api.imUserRecentStick(toUid, stick)
+    if (res.code === 200) {
+      const user = recentUsers.value.find(u => String(u.toUid) === String(toUid))
+      if (user) {
+        user.stick = stick
+      }
+    }
+  }
+
+  async function deleteRecentUser(toUid: number) {
+    const res = await api.imUserRecentDelete(toUid)
+    if (res.code === 200) {
+      const idx = recentUsers.value.findIndex(u => String(u.toUid) === String(toUid))
+      if (idx >= 0) {
+        recentUsers.value.splice(idx, 1)
+      }
+      if (currentChatUser.value && String(currentChatUser.value.toUid) === String(toUid)) {
+        currentChatUser.value = null
+        messages.value = []
+      }
+    }
+  }
+
+  async function blockUser(toUid: number) {
+    const res = await api.relationSet(toUid, 2)
+    if (res.code === 200) {
+      const user = recentUsers.value.find(u => String(u.toUid) === String(toUid))
+      if (user && user.user) {
+        user.user.relation = 3
+      }
+    }
+  }
+
   return {
     recentUsers,
     messages,
@@ -110,5 +144,8 @@ export const useMessageStore = defineStore('im-message', () => {
     sendMessage,
     fetchTotalUnread,
     selectChat,
+    stickUser,
+    deleteRecentUser,
+    blockUser,
   }
 })

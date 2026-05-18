@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ImMessage, ImRecentUser } from '@tapsss/shared'
 import { formatTime } from '@tapsss/shared/utils'
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessageStore } from '../stores/im'
 
@@ -21,6 +21,85 @@ const sending = ref(false)
 const chatScrollEl = ref<HTMLElement | null>(null)
 const loadingMore = ref(false)
 const toUid = ref(props.toUid || '')
+
+// 右键菜单状态
+const contextMenu = ref<{
+  visible: boolean
+  x: number
+  y: number
+  user: ImRecentUser | null
+}>({
+  visible: false,
+  x: 0,
+  y: 0,
+  user: null,
+})
+
+const sortedRecentUsers = computed(() => {
+  return [...store.recentUsers].sort((a, b) => {
+    if (a.stick && !b.stick)
+      return -1
+    if (!a.stick && b.stick)
+      return 1
+    return 0
+  })
+})
+
+function showContextMenu(e: MouseEvent, user: ImRecentUser) {
+  contextMenu.value = {
+    visible: true,
+    x: e.clientX,
+    y: e.clientY,
+    user,
+  }
+}
+
+const contextMenuStyle = computed(() => ({
+  left: `${contextMenu.value.x}px`,
+  top: `${contextMenu.value.y}px`,
+}))
+
+function hideContextMenu() {
+  contextMenu.value.visible = false
+}
+
+function onDocumentClick() {
+  if (contextMenu.value.visible) {
+    hideContextMenu()
+  }
+}
+
+async function handleStickUser() {
+  const user = contextMenu.value.user
+  if (!user)
+    return
+  await store.stickUser(Number(user.toUid), !user.stick)
+  hideContextMenu()
+}
+
+async function handleBlockUser() {
+  const user = contextMenu.value.user
+  if (!user)
+    return
+  await store.blockUser(Number(user.toUid))
+  hideContextMenu()
+}
+
+async function handleDeleteUser() {
+  const user = contextMenu.value.user
+  if (!user)
+    return
+  await store.deleteRecentUser(Number(user.toUid))
+  hideContextMenu()
+}
+
+onMounted(() => {
+  document.addEventListener('click', onDocumentClick)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', onDocumentClick)
+})
 
 function buildMinimalRecentUser(toUid: string): ImRecentUser {
   return {
@@ -208,11 +287,12 @@ const displayItems = computed(() => {
         </div>
 
         <div
-          v-for="user in store.recentUsers"
+          v-for="user in sortedRecentUsers"
           :key="user.id"
           class="conversation-item"
-          :class="{ active: store.currentChatUser?.toUid === user.toUid }"
+          :class="{ active: store.currentChatUser?.toUid === user.toUid, sticked: user.stick }"
           @click="handleSelectChat(user)"
+          @contextmenu.prevent="showContextMenu($event, user)"
         >
           <img
             :src="user.user?.avatar"
@@ -237,6 +317,25 @@ const displayItems = computed(() => {
           </div>
         </div>
       </div>
+
+      <!-- 右键菜单 -->
+      <Teleport to="body">
+        <div
+          v-if="contextMenu.visible"
+          class="context-menu"
+          :style="contextMenuStyle"
+        >
+          <div class="context-menu-item" @click="handleStickUser">
+            {{ contextMenu.user?.stick ? '取消置顶' : '置顶' }}
+          </div>
+          <div class="context-menu-item" @click="handleBlockUser">
+            拉黑用户
+          </div>
+          <div class="context-menu-item context-menu-item--danger" @click="handleDeleteUser">
+            移除用户
+          </div>
+        </div>
+      </Teleport>
     </div>
 
     <!-- 右侧：聊天区域 -->
@@ -675,6 +774,15 @@ const displayItems = computed(() => {
   cursor: not-allowed;
 }
 
+/* 置顶标记 */
+.conversation-item.sticked {
+  background: rgba(250, 114, 153, 0.06);
+}
+
+.conversation-item.sticked:hover {
+  background: rgba(250, 114, 153, 0.1);
+}
+
 /* ===== 响应式 ===== */
 @media (max-width: 768px) {
   .conversation-sidebar {
@@ -693,5 +801,39 @@ const displayItems = computed(() => {
   .message-page.chat-open .chat-area {
     display: flex;
   }
+}
+</style>
+
+<style>
+/* 右键菜单（Teleport 到 body，不能用 scoped） */
+.context-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 140px;
+  background: #2a2a3e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 4px 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.context-menu-item {
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  color: #e0e0e0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.context-menu-item:hover {
+  background: rgba(250, 114, 153, 0.15);
+}
+
+.context-menu-item--danger {
+  color: #f87171;
+}
+
+.context-menu-item--danger:hover {
+  background: rgba(248, 113, 113, 0.15);
 }
 </style>

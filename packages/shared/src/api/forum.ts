@@ -186,6 +186,14 @@ export function createForumApi(fetchFn: FetchFn) {
     imMessageSend(toUid: number, messageType: number, message: string): Promise<ApiResponse<ImMessage>> {
       return fetchFn<ApiResponse<ImMessage>>('/im/message/send', { toUid, messageType, message })
     },
+
+    imUserRecentStick(toUid: number, stick: boolean): Promise<ApiResponse<null>> {
+      return fetchFn<ApiResponse<null>>('/im/user/recent/stick', { toUid, stick })
+    },
+
+    imUserRecentDelete(toUid: number): Promise<ApiResponse<null>> {
+      return fetchFn<ApiResponse<null>>('/im/user/recent/delete', { toUid })
+    },
   }
 }
 
