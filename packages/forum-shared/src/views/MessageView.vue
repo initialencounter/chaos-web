@@ -8,7 +8,6 @@ import { useMessageStore } from '../stores/im'
 defineOptions({ name: 'MessageView' })
 
 const props = defineProps<{
-  currentUid?: string
   toUid?: string
   avatarUrl?: string
   nickName?: string
@@ -21,8 +20,7 @@ const inputText = ref('')
 const sending = ref(false)
 const chatScrollEl = ref<HTMLElement | null>(null)
 const loadingMore = ref(false)
-
-const currentUid = computed(() => props.currentUid)
+const toUid = ref(props.toUid || '')
 
 function buildMinimalRecentUser(toUid: string): ImRecentUser {
   return {
@@ -99,6 +97,7 @@ function onChatScroll(e: Event) {
 }
 
 async function handleSelectChat(user: ImRecentUser) {
+  toUid.value = String(user.toUid)
   await store.selectChat(user)
   await nextTick()
   scrollToBottom()
@@ -157,7 +156,7 @@ function getImageUrl(message: string): string {
 }
 
 function isMyMessage(msg: ImMessage): boolean {
-  return String(msg.fromId) === String(currentUid.value)
+  return String(msg.fromId) !== String(store.currentChatUser?.toUid)
 }
 
 function formatMsgTime(timeMs: number): string {
@@ -168,6 +167,24 @@ function formatMsgTime(timeMs: number): string {
   }
   return formatTime(timeMs)
 }
+
+const TIME_GAP = 5 * 60 * 1000
+
+const displayItems = computed(() => {
+  const items: Array<{ type: 'time', time: string } | { type: 'message', msg: ImMessage }> = []
+  for (let i = 0; i < store.messages.length; i++) {
+    const msg = store.messages[i]
+    const prevMsg = i > 0 ? store.messages[i - 1] : null
+    const currentTime = msg.messageBody.createTime || msg.createTime
+    const prevTime = prevMsg ? (prevMsg.messageBody.createTime || prevMsg.createTime) : 0
+
+    if (!prevTime || (currentTime - prevTime) > TIME_GAP) {
+      items.push({ type: 'time', time: formatMsgTime(currentTime) })
+    }
+    items.push({ type: 'message', msg })
+  }
+  return items
+})
 </script>
 
 <template>
@@ -254,55 +271,61 @@ function formatMsgTime(timeMs: number): string {
             加载更早的消息...
           </div>
 
-          <div
-            v-for="msg in store.messages"
-            :key="msg.id"
-            class="message-row"
-            :class="isMyMessage(msg) ? 'msg-mine' : 'msg-other'"
+          <template
+            v-for="item in displayItems"
+            :key="item.type === 'time' ? `t-${item.time}` : item.msg.id"
           >
-            <img
-              v-if="!isMyMessage(msg)"
-              :src="msg.sender?.avatar"
-              class="msg-avatar"
-              alt="avatar"
-              @click.stop="goToUser(msg.fromId)"
-            >
-
-            <div class="msg-bubble-wrapper">
-              <!-- 文字消息 -->
-              <div
-                v-if="msg.messageBody.messageType === 0"
-                class="msg-bubble"
-                :class="isMyMessage(msg) ? 'bubble-mine' : 'bubble-other'"
-              >
-                {{ msg.messageBody.message }}
-              </div>
-
-              <!-- 图片消息 -->
-              <div
-                v-else-if="msg.messageBody.messageType === 1"
-                class="msg-bubble msg-image-bubble"
-                :class="isMyMessage(msg) ? 'bubble-mine' : 'bubble-other'"
-              >
-                <img
-                  :src="getImageUrl(msg.messageBody.message)"
-                  class="msg-image"
-                  alt="shared image"
-                  loading="lazy"
-                >
-              </div>
-
-              <span class="msg-time">{{ formatMsgTime(msg.messageBody.createTime || msg.createTime) }}</span>
+            <div v-if="item.type === 'time'" class="time-separator">
+              {{ item.time }}
             </div>
 
-            <img
-              v-if="isMyMessage(msg)"
-              :src="msg.sender?.avatar"
-              class="msg-avatar"
-              alt="avatar"
-              @click.stop="goToUser(msg.fromId)"
+            <div
+              v-else
+              class="message-row"
+              :class="isMyMessage(item.msg) ? 'msg-mine' : 'msg-other'"
             >
-          </div>
+              <img
+                v-if="!isMyMessage(item.msg)"
+                :src="item.msg.sender?.avatar"
+                class="msg-avatar"
+                alt="avatar"
+                @click.stop="goToUser(item.msg.fromId)"
+              >
+
+              <div class="msg-bubble-wrapper">
+                <!-- 文字消息 -->
+                <div
+                  v-if="item.msg.messageBody.messageType === 0"
+                  class="msg-bubble"
+                  :class="isMyMessage(item.msg) ? 'bubble-mine' : 'bubble-other'"
+                >
+                  {{ item.msg.messageBody.message }}
+                </div>
+
+                <!-- 图片消息 -->
+                <div
+                  v-else-if="item.msg.messageBody.messageType === 1"
+                  class="msg-bubble msg-image-bubble"
+                  :class="isMyMessage(item.msg) ? 'bubble-mine' : 'bubble-other'"
+                >
+                  <img
+                    :src="getImageUrl(item.msg.messageBody.message)"
+                    class="msg-image"
+                    alt="shared image"
+                    loading="lazy"
+                  >
+                </div>
+              </div>
+
+              <img
+                v-if="isMyMessage(item.msg)"
+                :src="item.msg.sender?.avatar"
+                class="msg-avatar"
+                alt="avatar"
+                @click.stop="goToUser(item.msg.fromId)"
+              >
+            </div>
+          </template>
         </div>
 
         <!-- 输入区域 -->
@@ -532,7 +555,6 @@ function formatMsgTime(timeMs: number): string {
 
 .message-row.msg-mine {
   align-self: flex-end;
-  flex-direction: row-reverse;
 }
 
 .message-row.msg-other {
@@ -594,11 +616,12 @@ function formatMsgTime(timeMs: number): string {
   cursor: pointer;
 }
 
-.msg-time {
-  font-size: 0.65rem;
+.time-separator {
+  text-align: center;
+  font-size: 0.75rem;
   color: #6b7280;
-  margin-top: 2px;
-  padding: 0 4px;
+  padding: 12px 0;
+  user-select: none;
 }
 
 /* 输入区域 */
