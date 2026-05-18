@@ -27,10 +27,7 @@ jobs:
 
       - name: set .env
         run: |
-          echo "ENCRYPT_KEY=${{ secrets.ENCRYPT_KEY }}" > .env
-          echo "ENCRYPT_SALT=${{ secrets.ENCRYPT_SALT }}" >> .env
-          echo "ENCRYPT_SECRET_KEY=${{ secrets.ENCRYPT_SECRET_KEY }}" >> .env
-          echo "DECRYPT_SECRET_KEY=${{ secrets.DECRYPT_SECRET_KEY }}" >> .env
+          echo "export const ENCRYPT_KEY = '${{ secrets.ENCRYPT_KEY }}';export const ENCRYPT_SALT = '${{ secrets.ENCRYPT_SALT }}';export const ENCRYPT_SECRET_KEY = '${{ secrets.ENCRYPT_SECRET_KEY }}';export const DECRYPT_SECRET_KEY = '${{ secrets.DECRYPT_SECRET_KEY }}';" > packages/server/src/secrets.ts
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6.0.5

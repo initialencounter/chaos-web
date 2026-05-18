@@ -13,7 +13,6 @@ const config = {
     'dist/main/**/*',
     'dist/preload/**/*',
     'dist/render/**/*',
-    '.env',
   ],
   win: {
     icon: 'logo.png',
