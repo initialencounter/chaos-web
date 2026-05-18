@@ -160,7 +160,7 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
       >
         <div class="record-icon">
           <img
-            :src="`/icon/${recordGameType}.png`"
+            :src="`./icon/${recordGameType}.png`"
             style="width: 48px; height: 48px; object-fit: contain"
             alt="icon"
           >
