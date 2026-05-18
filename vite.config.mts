@@ -3,12 +3,14 @@ import { join } from 'node:path'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 import { VitePluginDoubleshot } from 'vite-plugin-doubleshot'
+import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   root: join(__dirname, 'src/render'),
   plugins: [
     vue(),
+    vueDevTools(),
     VitePluginDoubleshot({
       type: 'electron',
       main: 'dist/main/index.js',
