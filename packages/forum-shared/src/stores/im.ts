@@ -39,11 +39,11 @@ export const useMessageStore = defineStore('im-message', () => {
       const res = await api.imMessageList(toUid, maxId, minId, count)
       if (res.code === 200 && res.data) {
         if (minId === 0) {
-          messages.value = res.data.sort((a, b) => a.createTime - b.createTime)
+          messages.value = res.data.sort((a: ImMessage, b: ImMessage) => a.createTime - b.createTime)
         }
         else {
           const existingIds = new Set(messages.value.map(m => m.id))
-          const newMessages = res.data.filter(m => !existingIds.has(m.id))
+          const newMessages = res.data.filter((m: ImMessage) => !existingIds.has(m.id))
           messages.value = [...newMessages, ...messages.value].sort((a, b) => a.createTime - b.createTime)
         }
         cacheMessages(String(toUid), messages.value)
