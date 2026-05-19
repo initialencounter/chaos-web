@@ -8,8 +8,9 @@
   },
   "scripts": {
     "build:s": "vite build && bun build ./proxy-server.ts --compile --target=bun-linux-x64 --outfile ./tapsss-forum/app",
-    "dev:s": "bun --hot ./proxy-server.ts",
+    "dev:s": "DEV=true bun --hot ./proxy-server.ts",
     "dev": "vite",
+    "dev:full": "run-p dev dev:s",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
@@ -36,24 +37,10 @@
     "@vue/tsconfig": "^0.9.1",
     "cors": "^2.8.5",
     "express": "^4.21.0",
+    "npm-run-all": "^4.1.5",
     "typescript": "~6.0.0",
     "vite": "^8.0.3",
     "vite-plugin-vue-devtools": "^8.1.2",
     "vue-tsc": "^3.2.6"
-  },
-  "resolutions": {
-    "@vue/compat": "beta",
-    "@vue/compiler-core": "beta",
-    "@vue/compiler-dom": "beta",
-    "@vue/compiler-sfc": "beta",
-    "@vue/compiler-ssr": "beta",
-    "@vue/compiler-vapor": "beta",
-    "@vue/reactivity": "beta",
-    "@vue/runtime-core": "beta",
-    "@vue/runtime-dom": "beta",
-    "@vue/runtime-vapor": "beta",
-    "@vue/server-renderer": "beta",
-    "@vue/shared": "beta",
-    "vue": "beta"
   }
 }

@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
+import http from 'node:http'
 import path from 'node:path'
 import { executeRequest, LOGIN_CONFIG } from '@tapsss/server'
 import cors from 'cors'
@@ -9,6 +10,7 @@ import { TOKEN, UID } from './secrets'
 
 const app = express()
 const PORT = 3001
+const DEV = process.env.DEV === 'true'
 
 LOGIN_CONFIG.uid = UID
 LOGIN_CONFIG.token = TOKEN
@@ -30,28 +32,30 @@ app.use(express.json())
 // 静态资源缓存策略
 const distDir = path.join(rootDir, 'dist')
 
-// Vite 带 hash 的产物文件 — 永久缓存
-app.use('/assets', express.static(path.join(distDir, 'assets'), {
-  maxAge: '365d',
-  immutable: true,
-}))
+if (!DEV) {
+  // Vite 带 hash 的产物文件 — 永久缓存
+  app.use('/assets', express.static(path.join(distDir, 'assets'), {
+    maxAge: '365d',
+    immutable: true,
+  }))
 
-// 公共静态资源（icon, theme, audio）— 7天缓存
-for (const dir of ['icon', 'theme', 'audio']) {
-  app.use(`/${dir}`, express.static(path.join(distDir, dir), {
-    maxAge: '7d',
+  // 公共静态资源（icon, theme, audio）— 7天缓存
+  for (const dir of ['icon', 'theme', 'audio']) {
+    app.use(`/${dir}`, express.static(path.join(distDir, dir), {
+      maxAge: '7d',
+    }))
+  }
+
+  // 其余静态文件（index.html 等）— 不缓存，始终重新验证
+  app.use(express.static(distDir, {
+    maxAge: 0,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache')
+      }
+    },
   }))
 }
-
-// 其余静态文件（index.html 等）— 不缓存，始终重新验证
-app.use(express.static(distDir, {
-  maxAge: 0,
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache')
-    }
-  },
-}))
 
 const apiPaths = [
   '/Minesweeper/post/list',
@@ -239,10 +243,59 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-// 处理前端的路由 (SPA 支持)
-app.use((req, res) => {
-  res.sendFile(path.join(rootDir, 'dist', 'index.html'))
-})
+// 处理前端的路由
+if (DEV) {
+  // dev 模式：将所有非 API 请求转发到 Vite dev server (port 5173)
+  const VITE_PORT = Number(process.env.VITE_PORT) || 5173
+  app.use((req, res) => {
+    const proxyReq = http.request(
+      {
+        hostname: 'localhost',
+        port: VITE_PORT,
+        path: req.url,
+        method: req.method,
+        headers: { ...req.headers, host: `localhost:${VITE_PORT}` },
+      },
+      (proxyRes) => {
+        res.writeHead(proxyRes.statusCode!, proxyRes.headers)
+        proxyRes.pipe(res)
+      },
+    )
+    proxyReq.on('error', () => {
+      res.status(502).send(`Vite dev server not running on port ${VITE_PORT}`)
+    })
+    // express 中间件已消耗 stream，需手动重新写入 body；同时合并 query 参数
+    const hasBody = req.body !== undefined && Object.keys(req.body).length > 0
+    const hasQuery = Object.keys(req.query).length > 0
+    if (hasBody || hasQuery) {
+      const contentType = req.headers['content-type'] || ''
+      let bodyData: string
+      if (contentType.includes('application/json')) {
+        bodyData = JSON.stringify({ ...req.query, ...req.body })
+        proxyReq.setHeader('Content-Type', 'application/json')
+      }
+      else {
+        const params = new URLSearchParams({
+          ...(req.query as Record<string, string>),
+          ...req.body,
+        })
+        bodyData = params.toString()
+        proxyReq.setHeader('Content-Type', 'application/x-www-form-urlencoded')
+      }
+      proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData))
+      proxyReq.end(bodyData)
+    }
+    else {
+      req.pipe(proxyReq)
+    }
+  })
+}
+else {
+  // SPA 支持
+  app.use((req, res) => {
+    res.sendFile(path.join(rootDir, 'dist', 'index.html'))
+  })
+}
 
 app.listen(PORT, '0.0.0.0', () => {
   // eslint-disable-next-line no-console

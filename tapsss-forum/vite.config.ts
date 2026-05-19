@@ -24,6 +24,11 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
+    // 固定 HMR 端口，确保页面从其他端口（如 3001）加载时 HMR 仍能正常连接
+    hmr: {
+      host: 'localhost',
+      port: 5173,
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:3001', // 模拟API服务器运行在3001端口
