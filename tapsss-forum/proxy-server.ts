@@ -13,7 +13,7 @@ const PORT = 3001
 LOGIN_CONFIG.uid = UID
 LOGIN_CONFIG.token = TOKEN
 
-const rootDir = process.cwd()
+const rootDir = path.resolve(process.cwd(), process.env.TOP_DIR ? 'tapsss-forum' : '.')
 
 // 缓存目录
 const IMAGE_CACHE_DIR = path.join(rootDir, 'image-cache')
