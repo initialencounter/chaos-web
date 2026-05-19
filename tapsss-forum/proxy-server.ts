@@ -39,8 +39,8 @@ if (!DEV) {
     immutable: true,
   }))
 
-  // 公共静态资源（icon, theme, audio）— 7天缓存
-  for (const dir of ['icon', 'theme', 'audio']) {
+  // 公共静态资源（icon, themes, audio）— 7天缓存
+  for (const dir of ['icon', 'themes', 'audio']) {
     app.use(`/${dir}`, express.static(path.join(distDir, dir), {
       maxAge: '7d',
     }))

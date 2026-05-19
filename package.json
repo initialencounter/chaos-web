@@ -8,6 +8,7 @@
     "dev:c": "cd ./tapsss-forum && vite",
     "dev:s": "TOP_DIR=true; DEV=true; bun --hot ./tapsss-forum/proxy-server.ts",
     "dev:full": "run-p dev:c dev:s",
+    "build:f": "cd ./tapsss-forum && pnpm build:s",
     "dev": "rimraf dist && chcp 65001 && vite",
     "debug": "rimraf dist && vite -- --dsb-debug",
     "build": "rimraf dist && vite build",

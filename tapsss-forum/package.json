@@ -7,7 +7,7 @@
     "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
-    "build:s": "vite build && bun build ./proxy-server.ts --compile --target=bun-linux-x64 --outfile ./tapsss-forum/app",
+    "build:s": "vite build && bun build ./proxy-server.ts --compile --target=bun-linux-x64 --outfile ./app",
     "dev:s": "DEV=true bun --hot ./proxy-server.ts",
     "dev": "vite",
     "dev:full": "run-p dev dev:s",
