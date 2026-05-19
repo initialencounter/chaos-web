@@ -2,16 +2,22 @@ import { Buffer } from 'node:buffer'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import { executeRequest } from '@tapsss/server'
+import { executeRequest, LOGIN_CONFIG } from '@tapsss/server'
 import cors from 'cors'
 import express from 'express'
+import { TOKEN, UID } from './secrets'
 
 const app = express()
 const PORT = 3001
 
+LOGIN_CONFIG.uid = UID
+LOGIN_CONFIG.token = TOKEN
+
+const rootDir = process.cwd()
+
 // 缓存目录
-const IMAGE_CACHE_DIR = path.join(process.cwd(), 'image-cache')
-const RECORD_CACHE_DIR = path.join(process.cwd(), 'record-cache')
+const IMAGE_CACHE_DIR = path.join(rootDir, 'image-cache')
+const RECORD_CACHE_DIR = path.join(rootDir, 'record-cache')
 fs.mkdirSync(IMAGE_CACHE_DIR, { recursive: true })
 fs.mkdirSync(RECORD_CACHE_DIR, { recursive: true })
 
@@ -22,7 +28,7 @@ app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 
 // 静态资源缓存策略
-const distDir = path.join(process.cwd(), 'dist')
+const distDir = path.join(rootDir, 'dist')
 
 // Vite 带 hash 的产物文件 — 永久缓存
 app.use('/assets', express.static(path.join(distDir, 'assets'), {
@@ -235,7 +241,7 @@ app.get('/health', (req, res) => {
 
 // 处理前端的路由 (SPA 支持)
 app.use((req, res) => {
-  res.sendFile(path.join(process.cwd(), 'dist', 'index.html'))
+  res.sendFile(path.join(rootDir, 'dist', 'index.html'))
 })
 
 app.listen(PORT, '0.0.0.0', () => {

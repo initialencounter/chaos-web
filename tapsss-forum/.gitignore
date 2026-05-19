@@ -44,3 +44,4 @@ app
 image-cache
 record-cache
 encrypt.ts
+secrets.ts

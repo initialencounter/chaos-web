@@ -5,7 +5,6 @@ import path from 'node:path'
 
 import {
   computeMD5,
-  CONFIG,
   decryptAESECB,
   encryptAESECB,
   executeRequest,
@@ -123,15 +122,11 @@ function deleteCredentials(): void {
 }
 
 function clearCredentials(): void {
-  CONFIG.uid = ''
-  CONFIG.token = ''
   LOGIN_CONFIG.uid = ''
   LOGIN_CONFIG.token = ''
 }
 
 function applyCredentials(uid: string, token: string): void {
-  CONFIG.uid = uid
-  CONFIG.token = token
   LOGIN_CONFIG.uid = uid
   LOGIN_CONFIG.token = token
 }
@@ -140,7 +135,7 @@ function applyCredentials(uid: string, token: string): void {
 
 function makeHeaders(): any {
   const timeStamp = Date.now().toString()
-  const apiKey = computeMD5(`${CONFIG.uid + CONFIG.token + timeStamp}api`)
+  const apiKey = computeMD5(`${LOGIN_CONFIG.uid + LOGIN_CONFIG.token + timeStamp}api`)
   return {
     'Upgrade': 'websocket',
     'Connection': 'Upgrade',
@@ -150,8 +145,8 @@ function makeHeaders(): any {
     'device': 'OPD2413',
     'version': '30610',
     'channel': 'App',
-    'token': CONFIG.token,
-    'uid': CONFIG.uid,
+    'token': LOGIN_CONFIG.token,
+    'uid': LOGIN_CONFIG.uid,
     'Host': TARGET_HOST,
     'Accept-Encoding': 'gzip',
     'User-Agent': 'okhttp/4.7.2',
@@ -177,14 +172,14 @@ function sendToRenderer(data: any): void {
 }
 
 function connectToGameServer(): boolean {
-  if (!CONFIG.uid) {
+  if (!LOGIN_CONFIG.uid) {
     console.error('[Main] Cannot connect: no uid set')
     return false
   }
 
   disposeChaosWs()
 
-  const targetUrl = `ws://${TARGET_HOST}/Minesweeper/socket/chaos/${CONFIG.uid}`
+  const targetUrl = `ws://${TARGET_HOST}/Minesweeper/socket/chaos/${LOGIN_CONFIG.uid}`
   const headers = makeHeaders()
 
   chaosWs = new WebSocket(targetUrl, { headers })
@@ -300,7 +295,7 @@ function setupIPC(): void {
     if (creds.uid && creds.password) {
       const result = await doLogin(creds.uid, creds.password)
       if (result.success) {
-        return { loggedIn: true, uid: CONFIG.uid }
+        return { loggedIn: true, uid: LOGIN_CONFIG.uid }
       }
       return { loggedIn: false, reason: 'login_failed', msg: result.msg }
     }
@@ -393,14 +388,14 @@ function createWindow(): void {
 function setupImageAuthProxy(): void {
   const filter = { urls: [`http://${TARGET_HOST}/*`, `https://${TARGET_HOST}/*`] }
   session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
-    if (!CONFIG.uid || !CONFIG.token) {
+    if (!LOGIN_CONFIG.uid || !LOGIN_CONFIG.token) {
       callback({ requestHeaders: details.requestHeaders })
       return
     }
     const timeStamp = Date.now().toString()
-    const apiKey = computeMD5(`${CONFIG.uid + CONFIG.token + timeStamp}api`)
-    details.requestHeaders.token = CONFIG.token
-    details.requestHeaders.uid = CONFIG.uid
+    const apiKey = computeMD5(`${LOGIN_CONFIG.uid + LOGIN_CONFIG.token + timeStamp}api`)
+    details.requestHeaders.token = LOGIN_CONFIG.token
+    details.requestHeaders.uid = LOGIN_CONFIG.uid
     details.requestHeaders['time-stamp'] = timeStamp
     details.requestHeaders['api-key'] = apiKey
     details.requestHeaders.device = 'OPD2413'

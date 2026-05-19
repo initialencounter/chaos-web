@@ -2,6 +2,18 @@ import { Buffer } from 'node:buffer'
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
 import { DECRYPT_SECRET_KEY, ENCRYPT_KEY, ENCRYPT_SALT, ENCRYPT_SECRET_KEY } from './secrets'
 
+export const LOGIN_CONFIG = {
+  id: '',
+  password: '',
+  uid: '',
+  token: '',
+  encryptSecretKey: ENCRYPT_SECRET_KEY,
+  decryptSecretKey: DECRYPT_SECRET_KEY,
+  key: ENCRYPT_KEY,
+  salt: ENCRYPT_SALT,
+  host: 'minesweeper.natapp1.cc',
+}
+
 export function computeMD5(str: string, salt = ''): string {
   if (!str)
     return ''
@@ -55,31 +67,12 @@ export function aesEcbDecrypt(encryptedData: string, key: string): string {
   return decrypted.toString('utf8')
 }
 
-// 配置区
-export const CONFIG = {
-  uid: '',
-  token: '',
-  host: 'minesweeper.natapp1.cc',
-  key: ENCRYPT_KEY,
-  salt: ENCRYPT_SALT,
-}
-
 export function decryptAESECB(encryptedData: string): string {
-  return aesEcbDecrypt(encryptedData, CONFIG.key)
+  return aesEcbDecrypt(encryptedData, LOGIN_CONFIG.key)
 }
 
 export function encryptAESECB(plaintext: string): string {
-  return aesEcbEncrypt(plaintext, CONFIG.key, CONFIG.salt)
-}
-
-export const LOGIN_CONFIG = {
-  id: '',
-  password: '',
-  uid: '',
-  token: '',
-  encryptSecretKey: ENCRYPT_SECRET_KEY,
-  decryptSecretKey: DECRYPT_SECRET_KEY,
-  host: 'minesweeper.natapp1.cc',
+  return aesEcbEncrypt(plaintext, LOGIN_CONFIG.key, LOGIN_CONFIG.salt)
 }
 
 export async function executeRequest<T>(path: string, method: string, params: Record<string, any>): Promise<T> {
@@ -95,8 +88,8 @@ export async function executeRequest<T>(path: string, method: string, params: Re
     'version': '30610',
     'channel': 'App',
     'language': 'zh',
-    'token': CONFIG.token,
-    'uid': CONFIG.uid,
+    'token': LOGIN_CONFIG.token,
+    'uid': LOGIN_CONFIG.uid,
     'Host': 'minesweeper.natapp1.cc',
     'Connection': 'Keep-Alive',
     'Accept-Encoding': 'gzip',

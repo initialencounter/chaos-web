@@ -22,7 +22,7 @@
     "noEmit": true
   },
   "include": [
-    "encrypt.ts",
+    "secrets.ts",
     "proxy-server.ts",
     "vite.config.*",
     "vitest.config.*",
