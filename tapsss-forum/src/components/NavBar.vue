@@ -27,7 +27,7 @@ watch(
 
       <div class="nav-links">
         <router-link
-          :to="{ name: 'home' }"
+          :to="{ name: 'forum-home' }"
           class="nav-link"
           :class="{ active: route.path === '/' }"
         >

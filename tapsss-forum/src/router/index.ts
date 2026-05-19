@@ -49,7 +49,7 @@ const router = createRouter({
       return savedPosition
     }
     else {
-      if (to.name !== 'home') {
+      if (to.name !== 'forum-home') {
         return { top: 0 }
       }
     }
