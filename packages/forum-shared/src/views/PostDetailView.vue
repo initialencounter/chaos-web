@@ -11,6 +11,7 @@ import {
   removeHashWrappedStrings,
   removeImagesAndLinksFromMarkdown,
 } from '@tapsss/shared/utils'
+import { ElIcon } from 'element-plus'
 import MarkdownIt from 'markdown-it'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -441,9 +442,9 @@ onMounted(async () => {
             :disabled="togglingPostLike"
             @click="togglePostLike"
           >
-            <el-icon>
+            <ElIcon>
               <component :is="post.hasGood ? StarFilled : Star" />
-            </el-icon>
+            </ElIcon>
           </button>
           <span class="stat-count">{{ post.goodCount }}</span>
           <span class="stat-label">点赞</span>
@@ -546,9 +547,9 @@ onMounted(async () => {
                   :class="{ liked: comment.hasGood }"
                   @click="toggleCommentLike(comment)"
                 >
-                  <el-icon>
+                  <ElIcon>
                     <component :is="comment.hasGood ? StarFilled : Star" />
-                  </el-icon>
+                  </ElIcon>
                   {{ comment.goodCount }}
                 </button>
                 <button

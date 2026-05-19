@@ -14,6 +14,7 @@ import {
   TIMING_LEVELS_MAP,
   TIMING_LEVELS_TEXT_COLOR,
 } from '@tapsss/shared/utils'
+import { ElIcon } from 'element-plus'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResolveAsset } from '../inject'
@@ -265,9 +266,9 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
         }}
       </div>
       <button class="like-btn" :class="{ liked: post.hasGood }" :disabled="togglingLike" @click="togglePostLike">
-        <el-icon class="like-icon">
+        <ElIcon class="like-icon">
           <component :is="post.hasGood ? StarFilled : Star" />
-        </el-icon>
+        </ElIcon>
         {{
           post.goodCount > 1000
             ? `${(post.goodCount / 1000).toFixed(1)}k`
