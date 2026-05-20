@@ -83,7 +83,7 @@ export function removeImagesAndLinksFromMarkdown(markdownText: string): string {
 }
 
 export function findHashWrappedStrings(input: string): string[] {
-  const regex = /#([^#]+)#/g
+  const regex = /#([^#]+)#\s/g
   const matches: string[] = []
   let match = regex.exec(input)
   while (match !== null) {
@@ -94,7 +94,7 @@ export function findHashWrappedStrings(input: string): string[] {
 }
 
 export function removeHashWrappedStrings(input: string): string {
-  return input.replace(/#[^#]+#/g, '')
+  return input.replace(/#[^#]+#\s/g, '')
 }
 
 export function extractImageLinksFromMarkdown(markdownText: string): string[] {
