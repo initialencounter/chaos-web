@@ -13,7 +13,7 @@ import {
   shallowRef,
   watch,
 } from 'vue'
-import { useForumApi } from '../inject'
+import { useAssetBase, useForumApi } from '../inject'
 import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps<{
@@ -21,6 +21,7 @@ const props = defineProps<{
 }>()
 
 const api = useForumApi()
+const assetBase = useAssetBase()
 
 type PuzzleData = PuzzleRecordGetResponse['data']
 
@@ -98,7 +99,7 @@ let audioNodeOffset = 0
 
 async function initAudio() {
   audioCtx = new window.AudioContext()
-  const flagResp = await fetch('./assets/audio/flag.mp3')
+  const flagResp = await fetch(`${assetBase}/audio/flag.mp3`)
   const flagData = await flagResp.arrayBuffer()
   flagBuffer = await audioCtx.decodeAudioData(flagData)
 }
