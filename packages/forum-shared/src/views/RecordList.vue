@@ -131,7 +131,20 @@ function getLevelText(item: MinesweeperRecordListDatum) {
     return '中级'
   if (column === 30 && row === 16 && mine === 99)
     return '高级'
-  return `${column}*${row}*${mine}`
+  return `${row}*${column}*${mine}`
+}
+
+function getNonoLevelText(item: NonoRecordListDatum) {
+  const { column, row, mine } = item
+  if (row === 6)
+    return '初级'
+  if (row === 10)
+    return '中级'
+  if (row === 15)
+    return '高级'
+  if (row === 20)
+    return '专家'
+  return `${row}*${column}*${mine}`
 }
 
 function getModeText(mode: number) {
@@ -253,6 +266,7 @@ onMounted(() => {
           <div class="score-container">
             <div class="score-left">
               <span v-if="activeTab === 0">{{ getLevelText(item as MinesweeperRecordListDatum) }}</span>
+              <span v-if="activeTab === 4">{{ getNonoLevelText(item as NonoRecordListDatum) }}</span>
               <span v-else>{{ (item as any).row }}x{{ (item as any).column }}</span>
             </div>
             <div class="score-main">
