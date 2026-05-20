@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import type {
-  MinesweeperRecordListDatum,
-  NonoRecordListDatum,
-  PuzzleRecordListDatum,
-  SchulteRecordListDatum,
-  TzfeRecordListDatum,
+import type { MinesweeperRecordListDatum, NonoRecordListDatum, PuzzleRecordListDatum, SchulteRecordListDatum, TzfeRecordListDatum } from '@tapsss/shared'
+import {
+  getRankText,
+  TIMING_LEVELS_COLOR,
+  TIMING_LEVELS_TEXT_COLOR,
 } from '@tapsss/shared'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -207,7 +206,16 @@ onMounted(() => {
                 class="avatar"
               />
               <span class="nickname">{{ item.user.nickName }}</span>
-              <span class="rank-star">★ {{ item.user.timingLevel }}</span>
+              <span
+                v-if="getRankText(item.user.timingLevel === -1 ? 0 : item.user.timingLevel, item.user.timingRank)"
+                class="rank-badge"
+                :style="{
+                  backgroundColor: TIMING_LEVELS_COLOR[item.user.timingLevel === -1 ? 0 : item.user.timingLevel] || '#000',
+                  color: TIMING_LEVELS_TEXT_COLOR[item.user.timingLevel === -1 ? 0 : item.user.timingLevel] || '#FFF',
+                }"
+              >
+                {{ getRankText(item.user.timingLevel === -1 ? 0 : item.user.timingLevel, item.user.timingRank) }}
+              </span>
             </div>
             <div v-if="activeTab === 0" class="tags">
               <span class="tag tag-classic">经典</span>
@@ -400,13 +408,12 @@ onMounted(() => {
   color: #fff;
 }
 
-.rank-star {
-  background-color: #e53935;
-  color: #fff;
-  font-size: 10px;
+.rank-badge {
+  font-size: 0.7rem;
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: bold;
+  white-space: nowrap;
 }
 
 .tags {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SearchUser } from '@tapsss/shared'
-import { TIMING_LEVELS_COLOR, TIMING_LEVELS_MAP, TIMING_LEVELS_TEXT_COLOR } from '@tapsss/shared/utils'
+import { getRankText, TIMING_LEVELS_COLOR, TIMING_LEVELS_TEXT_COLOR } from '@tapsss/shared/utils'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import UserAvatar from './UserAvatar.vue'
@@ -13,21 +13,10 @@ const levelIndex = computed(() =>
   props.user.timingLevel === -1 ? 0 : props.user.timingLevel,
 )
 
-const levelColor = computed(
-  () => TIMING_LEVELS_COLOR[levelIndex.value ?? 0] || '#000',
-)
-const textColor = computed(
-  () => TIMING_LEVELS_TEXT_COLOR[levelIndex.value ?? 0] || '#FFF',
-)
-
-const rankText = computed(() => {
-  const r = props.user.timingRank
-  if (!r)
-    return ''
-  return r === 1
-    ? '雷帝'
-    : `${TIMING_LEVELS_MAP[levelIndex?.value ?? 0]}${r <= 300 ? ` ${r}` : ''}`
-})
+const rankStyle = computed(() => ({
+  backgroundColor: TIMING_LEVELS_COLOR[levelIndex.value ?? 0] || '#000',
+  color: TIMING_LEVELS_TEXT_COLOR[levelIndex.value ?? 0] || '#FFF',
+}))
 
 const router = useRouter()
 
@@ -47,11 +36,11 @@ function goToUser() {
           <div class="header">
             <span class="nickname" :class="[{ 'is-vip': user.vip }]">{{ user.nickName }}</span>
             <span
-              v-if="rankText"
+              v-if="getRankText(levelIndex, user.timingRank)"
               class="rank-badge"
-              :style="{ backgroundColor: levelColor, color: textColor }"
+              :style="rankStyle"
             >
-              {{ rankText }}
+              {{ getRankText(levelIndex, user.timingRank) }}
             </span>
             <span v-if="user.sex === 1" class="gender male">♂</span>
             <span v-if="user.sex === 2" class="gender female">♀</span>

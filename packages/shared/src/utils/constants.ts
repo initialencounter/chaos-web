@@ -109,3 +109,11 @@ export function extractImageLinksFromMarkdown(markdownText: string): string[] {
   }
   return links
 }
+
+export function getRankText(levelIndex: number, timingRank: number): string {
+  if (!timingRank)
+    return ''
+  return timingRank === 1
+    ? '雷帝'
+    : `${TIMING_LEVELS_MAP[levelIndex ?? 0]}${timingRank <= 300 ? ` ${timingRank}` : ''}`
+}
