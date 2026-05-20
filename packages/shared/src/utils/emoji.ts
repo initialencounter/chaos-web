@@ -4,6 +4,8 @@
  * @returns 替换后的文本
  */
 export function replaceEmojiStrings(text: string): string {
+  if (!text)
+    return ''
   // 表情字符串到 Emoji 的映射表
   const emojiMap: Record<string, string> = {
     '[啊]': '😲',
