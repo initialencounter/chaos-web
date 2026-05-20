@@ -167,7 +167,7 @@ function goMessage() {
         >
         <div class="saolei-info">
           <div class="saolei-name">
-            {{ saolei.name }} <span class="lbl">(ID: {{ saolei.id }})</span>
+            {{ saolei.name }} <span class="lbl">(ID: {{ saolei.openId }})</span>
           </div>
           <div class="saolei-time">
             绑定于: {{ formatTime(parseInt(saolei.createTime) || 0) }}
