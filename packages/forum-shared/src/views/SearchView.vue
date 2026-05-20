@@ -349,4 +349,10 @@ function switchTab(type: 'post' | 'user') {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+@media (max-width: 768px) {
+  .search {
+    padding: 12px;
+  }
+}
 </style>

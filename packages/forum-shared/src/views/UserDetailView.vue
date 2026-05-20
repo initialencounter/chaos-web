@@ -533,4 +533,11 @@ h3 {
 .error {
   color: #fa7299;
 }
+
+@media (max-width: 768px) {
+  .user-detail {
+    padding: 12px;
+    padding-bottom: 40px;
+  }
+}
 </style>

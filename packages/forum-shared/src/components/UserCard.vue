@@ -171,4 +171,10 @@ function goToUser() {
   font-weight: bold;
   white-space: nowrap;
 }
+
+@media (max-width: 768px) {
+  .user-card {
+    padding: 12px;
+  }
+}
 </style>

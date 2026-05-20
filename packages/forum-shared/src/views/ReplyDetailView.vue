@@ -231,4 +231,10 @@ onMounted(() => {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+@media (max-width: 768px) {
+  .reply-detail {
+    padding: 12px;
+  }
+}
 </style>

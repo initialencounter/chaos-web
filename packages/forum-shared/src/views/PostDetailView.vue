@@ -1280,4 +1280,14 @@ onMounted(async () => {
   display: flex;
   align-items: center;
 }
+
+@media (max-width: 768px) {
+  .post-detail {
+    padding: 12px;
+  }
+  .post-content,
+  .comments-section {
+    padding: 16px;
+  }
+}
 </style>

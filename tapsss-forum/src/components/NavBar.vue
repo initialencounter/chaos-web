@@ -157,6 +157,7 @@ watch(
   .nav-container {
     flex-direction: column;
     gap: 15px;
+    padding: 0 12px;
   }
 
   .nav-search {

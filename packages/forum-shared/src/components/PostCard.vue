@@ -469,4 +469,10 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
   align-items: center;
   gap: 5px;
 }
+
+@media (max-width: 768px) {
+  .post-card {
+    padding: 14px;
+  }
+}
 </style>

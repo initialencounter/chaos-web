@@ -77,4 +77,10 @@ function goBack() {
   background-color: #2a2a2a;
   border-color: #fa7299;
 }
+
+@media (max-width: 768px) {
+  .replay-view {
+    padding: 12px;
+  }
+}
 </style>
