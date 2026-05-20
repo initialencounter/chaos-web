@@ -121,14 +121,15 @@ function formatDate(timestamp: number) {
   return `${m}-${day} ${h}:${min}`
 }
 
-function getLevelText(type: number) {
-  if (type === 0)
+function getLevelText(item: MinesweeperRecordListDatum) {
+  const { column, row, mine } = item
+  if (column === 8 && row === 8 && mine === 10)
     return '初级'
-  if (type === 1)
+  if (column === 16 && row === 16 && mine === 40)
     return '中级'
-  if (type === 2)
+  if (column === 30 && row === 16 && mine === 99)
     return '高级'
-  return '自定义'
+  return `${column}*${row}*${mine}`
 }
 
 function getModeText(mode: number) {
@@ -228,7 +229,7 @@ onMounted(() => {
           <!-- Score display -->
           <div class="score-container">
             <div class="score-left">
-              <span v-if="activeTab === 0">{{ getLevelText((item as any).type) }}</span>
+              <span v-if="activeTab === 0">{{ getLevelText(item as MinesweeperRecordListDatum) }}</span>
               <span v-else>{{ (item as any).row }}x{{ (item as any).column }}</span>
             </div>
             <div class="score-main">
