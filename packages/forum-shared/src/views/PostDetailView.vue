@@ -3,6 +3,7 @@ import type { BaseUser, CommentDatum, PostGetResponse } from '@tapsss/shared'
 import { Star, StarFilled } from '@element-plus/icons-vue'
 import {
   computeType,
+  escapeHtml,
   extractImageLinksFromMarkdown,
   findHashWrappedStrings,
   formatTime,
@@ -11,6 +12,7 @@ import {
   removeHashWrappedStrings,
   removeImagesAndLinksFromMarkdown,
   replaceEmojiStrings,
+  replaceMentionAndReplayLinks,
 } from '@tapsss/shared/utils'
 import { ElIcon } from 'element-plus'
 import MarkdownIt from 'markdown-it'
@@ -18,7 +20,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import UserAvatar from '../components/UserAvatar.vue'
-import { useResolveAsset } from '../inject'
+import { useAssetBase, useResolveAsset } from '../inject'
 import { usePostStore } from '../stores/post'
 
 defineOptions({ name: 'PostDetailView' })
@@ -67,8 +69,9 @@ const plainText = computed(() => {
 })
 
 const md = new MarkdownIt({ breaks: true, linkify: true })
+const assetBase = useAssetBase()
 const renderedText = computed(() => {
-  return md.render(replaceEmojiStrings(plainText.value))
+  return replaceMentionAndReplayLinks(md.render(replaceEmojiStrings(plainText.value)), assetBase)
 })
 
 const images = computed(() => {
@@ -273,6 +276,31 @@ function openReplay(recordId?: number) {
   })
 }
 
+function handleContentClick(event: MouseEvent) {
+  const target = event.target as HTMLElement
+  if (target.classList.contains('mention-link')) {
+    event.preventDefault()
+    event.stopPropagation()
+    const uid = target.getAttribute('data-uid')
+    if (uid) {
+      router.push({ name: 'user', params: { uid } })
+    }
+  }
+  else if (target.classList.contains('replay-link')) {
+    event.preventDefault()
+    event.stopPropagation()
+    const recordId = target.getAttribute('data-record-id')
+    const recordType = target.getAttribute('data-record-type')
+    if (recordId && recordType) {
+      router.push({ name: 'replay', params: { recordId, recordType } })
+    }
+  }
+}
+
+function renderCommentHtml(comment: string): string {
+  return replaceEmojiStrings(replaceMentionAndReplayLinks(escapeHtml(comment), assetBase))
+}
+
 onMounted(async () => {
   await loadPost()
   await loadComments()
@@ -339,7 +367,7 @@ onMounted(async () => {
 
       <!-- 内容 -->
       <div class="post-body">
-        <div class="post-text markdown-body" v-html="renderedText" />
+        <div class="post-text markdown-body" @click="handleContentClick" v-html="renderedText" />
 
         <!-- 图片 -->
         <div v-if="cachedImages.length > 0" class="post-images">
@@ -562,9 +590,7 @@ onMounted(async () => {
                 </button>
               </div>
             </div>
-            <div class="comment-content">
-              {{ replaceEmojiStrings(comment.comment) }}
-            </div>
+            <div class="comment-content" @click="handleContentClick" v-html="renderCommentHtml(comment.comment)" />
 
             <!-- 回复 -->
             <div v-if="comment.replyCount > 0" class="replies">
@@ -590,9 +616,7 @@ onMounted(async () => {
                       }}</span>
                     </div>
                   </div>
-                  <div class="reply-content">
-                    {{ replaceEmojiStrings(reply.comment) }}
-                  </div>
+                  <div class="reply-content" @click="handleContentClick" v-html="renderCommentHtml(reply.comment)" />
                 </div>
               </div>
 
@@ -1290,5 +1314,45 @@ onMounted(async () => {
   .comments-section {
     padding: 16px;
   }
+}
+
+:deep(.mention-link) {
+  color: #fa7299;
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  outline: none;
+}
+
+:deep(.mention-link:hover) {
+  text-decoration: underline;
+}
+
+:deep(.replay-link) {
+  color: #5d9cec;
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+:deep(.replay-icon) {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: middle;
+  margin-right: 2px;
+}
+
+:deep(.replay-link:hover) {
+  text-decoration: underline;
 }
 </style>

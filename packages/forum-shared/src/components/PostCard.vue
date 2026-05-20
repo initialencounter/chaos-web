@@ -3,6 +3,7 @@ import type { PostListDatum } from '@tapsss/shared'
 import { Star, StarFilled } from '@element-plus/icons-vue'
 import {
   computeType,
+  escapeHtml,
   extractImageLinksFromMarkdown,
   findHashWrappedStrings,
   formatTime,
@@ -11,6 +12,7 @@ import {
   removeHashWrappedStrings,
   removeImagesAndLinksFromMarkdown,
   replaceEmojiStrings,
+  replaceMentionAndReplayLinks,
   TIMING_LEVELS_COLOR,
   TIMING_LEVELS_MAP,
   TIMING_LEVELS_TEXT_COLOR,
@@ -18,7 +20,7 @@ import {
 import { ElIcon } from 'element-plus'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useResolveAsset } from '../inject'
+import { useAssetBase, useResolveAsset } from '../inject'
 import { usePostStore } from '../stores/post'
 import UserAvatar from './UserAvatar.vue'
 
@@ -66,6 +68,33 @@ function openReplay(recordId?: number) {
       recordType: props.post.recordType.toString(),
     },
   })
+}
+
+function handleContentClick(event: MouseEvent) {
+  const target = event.target as HTMLElement
+  if (target.classList.contains('mention-link')) {
+    event.preventDefault()
+    event.stopPropagation()
+    const uid = target.getAttribute('data-uid')
+    if (uid) {
+      router.push({ name: 'user', params: { uid } })
+    }
+  }
+  else if (target.classList.contains('replay-link')) {
+    event.preventDefault()
+    event.stopPropagation()
+    const recordId = target.getAttribute('data-record-id')
+    const recordType = target.getAttribute('data-record-type')
+    if (recordId && recordType) {
+      router.push({ name: 'replay', params: { recordId, recordType } })
+    }
+  }
+}
+
+const assetBase = useAssetBase()
+
+function renderCommentHtml(comment: string): string {
+  return replaceEmojiStrings(replaceMentionAndReplayLinks(escapeHtml(comment), assetBase))
 }
 
 const levelIndex = computed(() =>
@@ -141,9 +170,7 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
         <span v-for="tag in tags" :key="tag" class="tag">{{ tag }}</span>
       </div>
 
-      <p v-if="plainText" class="post-content">
-        {{ replaceEmojiStrings(plainText.slice(0, 100) + (plainText.length > 100 ? "..." : "")) }}
-      </p>
+      <p v-if="plainText" class="post-content" @click="handleContentClick" v-html="renderCommentHtml(plainText.slice(0, 100) + (plainText.length > 100 ? '...' : ''))" />
 
       <div v-if="cachedImages.length > 0" class="post-images">
         <img
@@ -249,12 +276,7 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
           </div>
         </div>
       </div>
-      <div class="lc-content">
-        {{
-          replaceEmojiStrings(post.lastComment.comment.slice(0, 100)
-            + (post.lastComment.comment.length > 100 ? "..." : ""))
-        }}
-      </div>
+      <div class="lc-content" @click="handleContentClick" v-html="renderCommentHtml(post.lastComment.comment.slice(0, 100) + (post.lastComment.comment.length > 100 ? '...' : ''))" />
     </div>
 
     <div class="post-footer">
@@ -475,5 +497,45 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
   .post-card {
     padding: 14px;
   }
+}
+
+:deep(.mention-link) {
+  color: #fa7299;
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  outline: none;
+}
+
+:deep(.mention-link:hover) {
+  text-decoration: underline;
+}
+
+:deep(.replay-link) {
+  color: #5d9cec;
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+:deep(.replay-icon) {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: middle;
+  margin-right: 2px;
+}
+
+:deep(.replay-link:hover) {
+  text-decoration: underline;
 }
 </style>

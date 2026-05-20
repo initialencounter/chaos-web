@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { ReplyListDatum } from '@tapsss/shared'
-import { formatTime, replaceEmojiStrings } from '@tapsss/shared/utils'
+import { escapeHtml, formatTime, replaceEmojiStrings, replaceMentionAndReplayLinks } from '@tapsss/shared/utils'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import UserAvatar from '../components/UserAvatar.vue'
+import { useAssetBase } from '../inject'
 import { usePostStore } from '../stores'
 
 defineOptions({ name: 'ReplyDetailView' })
@@ -55,6 +56,33 @@ function loadMoreReplies() {
   loadReplies(currentPage.value)
 }
 
+function handleContentClick(event: MouseEvent) {
+  const target = event.target as HTMLElement
+  if (target.classList.contains('mention-link')) {
+    event.preventDefault()
+    event.stopPropagation()
+    const uid = target.getAttribute('data-uid')
+    if (uid) {
+      router.push({ name: 'user', params: { uid } })
+    }
+  }
+  else if (target.classList.contains('replay-link')) {
+    event.preventDefault()
+    event.stopPropagation()
+    const recordId = target.getAttribute('data-record-id')
+    const recordType = target.getAttribute('data-record-type')
+    if (recordId && recordType) {
+      router.push({ name: 'replay', params: { recordId, recordType } })
+    }
+  }
+}
+
+const assetBase = useAssetBase()
+
+function renderCommentHtml(comment: string): string {
+  return replaceEmojiStrings(replaceMentionAndReplayLinks(escapeHtml(comment), assetBase))
+}
+
 onMounted(() => {
   loadReplies()
 })
@@ -92,9 +120,7 @@ onMounted(() => {
             }}</span>
           </div>
         </div>
-        <div class="reply-content">
-          {{ replaceEmojiStrings(reply.comment) }}
-        </div>
+        <div class="reply-content" @click="handleContentClick" v-html="renderCommentHtml(reply.comment)" />
       </div>
 
       <div class="load-more-replies">
@@ -236,5 +262,45 @@ onMounted(() => {
   .reply-detail {
     padding: 12px;
   }
+}
+
+:deep(.mention-link) {
+  color: #fa7299;
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  outline: none;
+}
+
+:deep(.mention-link:hover) {
+  text-decoration: underline;
+}
+
+:deep(.replay-link) {
+  color: #5d9cec;
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+:deep(.replay-icon) {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: middle;
+  margin-right: 2px;
+}
+
+:deep(.replay-link:hover) {
+  text-decoration: underline;
 }
 </style>

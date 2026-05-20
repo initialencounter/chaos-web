@@ -133,6 +133,39 @@ export function getSchulteTypeText(type: number): string {
   }
 }
 
+const replayPrefixMap: Record<string, string> = {
+  ms: '0',
+  p: '1',
+  t: '2',
+  s: '3',
+  n: '4',
+}
+
+export function replaceMentionAndReplayLinks(text: string, assetBase: string): string {
+  let result = text.replace(
+    /@([^[\]]+)\[(\d+)\]/g,
+    '<button data-uid="$2" class="mention-link">@$1</button>',
+  )
+  result = result.replace(
+    /\$(ms|[npst])(\d+)/g,
+    (_, prefix: string, id: string) => {
+      const recordType = replayPrefixMap[prefix]
+      const textColor = recordTextColor[Number(recordType)]
+      return `<button data-record-id="${id}" data-record-type="${recordType}" class="replay-link" style="background-color:${textColor}20;color:${textColor};outline:none;border:none"><img src="${assetBase}icon/${recordType}.png" class="replay-icon">录像 ${id}</button>`
+    },
+  )
+  return result
+}
+
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
 export function getMinesweeperTypeText(type: number): string {
   switch (type) {
     case 1:
