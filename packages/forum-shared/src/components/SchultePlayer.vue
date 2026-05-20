@@ -3,7 +3,7 @@ import type {
   SchulteActionRecord,
   SchulteRecordGetResponse,
 } from '@tapsss/shared'
-import { cacheRecord, getCachedRecord, parseSchulteReplayHandle } from '@tapsss/shared/utils'
+import { cacheRecord, getCachedRecord, getSchulteTypeText, parseSchulteReplayHandle } from '@tapsss/shared/utils'
 import {
   computed,
   nextTick,
@@ -531,8 +531,7 @@ function getActionPos(idx: number) {
       <div class="info-panel">
         <div class="stat-item">
           <span>难度: </span>{{ replayData.row }} x {{ replayData.column }}
-          {{ replayData.type === 1 ? "简单" : "普通" }}
-          {{ replayData.maps ? "打乱" : "" }}
+          {{ getSchulteTypeText(replayData.type) }}
           {{ replayData.blind ? "盲玩" : "" }}
         </div>
         <div class="stat-item">

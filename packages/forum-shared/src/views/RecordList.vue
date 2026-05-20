@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { MinesweeperRecordListDatum, NonoRecordListDatum, PuzzleRecordListDatum, SchulteRecordListDatum, TzfeRecordListDatum } from '@tapsss/shared'
 import {
+  getMinesweeperTypeText,
   getRankText,
+  getSchulteTypeText,
   TIMING_LEVELS_COLOR,
   TIMING_LEVELS_TEXT_COLOR,
 } from '@tapsss/shared'
@@ -133,9 +135,9 @@ function getLevelText(item: MinesweeperRecordListDatum) {
 }
 
 function getModeText(mode: number) {
-  if (mode === 0)
-    return '标记'
   if (mode === 1)
+    return '标记'
+  if (mode === 0)
     return '无标记'
   return ''
 }
@@ -219,8 +221,29 @@ onMounted(() => {
               </span>
             </div>
             <div v-if="activeTab === 0" class="tags">
-              <span class="tag tag-classic">经典</span>
-              <span v-if="getModeText((item as any).mode)" class="tag tag-border">{{
+              <span class="tag tag-classic">{{ getMinesweeperTypeText((item as MinesweeperRecordListDatum).type) }}</span>
+              <span class="tag tag-classic">{{
+                getModeText((item as any).mode)
+              }}</span>
+              <span v-if="!(item as MinesweeperRecordListDatum).finished" class="tag tag-border">{{
+                '未完成'
+              }}</span>
+            </div>
+            <div v-else-if="activeTab === 1" class="tags">
+              <span class="tag tag-classic">{{
+                getSchulteTypeText((item as SchulteRecordListDatum).type) + ((item as SchulteRecordListDatum).blind ? '盲玩' : '')
+              }}</span>
+            </div>
+            <div v-else-if="activeTab === 2" class="tags">
+              <span class="tag tag-classic">{{
+                ((item as PuzzleRecordListDatum).swipe ? '滑动' : '点击')
+              }}</span>
+              <span v-if="(item as PuzzleRecordListDatum).blind" class="tag tag-classic">{{
+                '盲玩'
+              }}</span>
+            </div>
+            <div v-else-if="activeTab === 4" class="tags">
+              <span class="tag tag-classic">{{
                 getModeText((item as any).mode)
               }}</span>
             </div>
@@ -254,10 +277,10 @@ onMounted(() => {
               </template>
               <template v-else-if="activeTab === 1 && (item as any).tapCorrect">
                 <div class="score-val">
-                  {{ (item as any).tapCorrect }}
+                  {{ (item as SchulteRecordListDatum).tap - (item as SchulteRecordListDatum).tapCorrect }}
                 </div>
                 <div class="score-lbl">
-                  正确点击
+                  错误
                 </div>
               </template>
               <template v-else-if="activeTab === 2 && (item as any).step">

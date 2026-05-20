@@ -117,3 +117,35 @@ export function getRankText(levelIndex: number, timingRank: number): string {
     ? '雷帝'
     : `${TIMING_LEVELS_MAP[levelIndex ?? 0]}${timingRank <= 300 ? ` ${timingRank}` : ''}`
 }
+
+export function getSchulteTypeText(type: number): string {
+  switch (type) {
+    case 0:
+      return '普通'
+    case 1:
+      return '简单'
+    case 2:
+      return '简单打乱'
+    case 3:
+      return '打乱'
+    default:
+      return `未知类型(${type})`
+  }
+}
+
+export function getMinesweeperTypeText(type: number): string {
+  switch (type) {
+    case 1:
+      return '自定义'
+    case 2:
+      return '经典'
+    case 3:
+      return '无尽'
+    case 4:
+      return '录像重开'
+    case 5:
+      return '每日一图'
+    default:
+      return `未知类型(${type})`
+  }
+}
