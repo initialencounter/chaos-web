@@ -10,6 +10,7 @@ import {
   recordTextColor,
   removeHashWrappedStrings,
   removeImagesAndLinksFromMarkdown,
+  replaceEmojiStrings,
 } from '@tapsss/shared/utils'
 import { ElIcon } from 'element-plus'
 import MarkdownIt from 'markdown-it'
@@ -67,7 +68,7 @@ const plainText = computed(() => {
 
 const md = new MarkdownIt({ breaks: true, linkify: true })
 const renderedText = computed(() => {
-  return md.render(plainText.value)
+  return md.render(replaceEmojiStrings(plainText.value))
 })
 
 const images = computed(() => {
@@ -328,7 +329,7 @@ onMounted(async () => {
 
       <!-- 标题 -->
       <h1 class="post-title">
-        {{ post.title }}
+        {{ replaceEmojiStrings(post.title) }}
       </h1>
 
       <!-- 标签 -->
@@ -562,7 +563,7 @@ onMounted(async () => {
               </div>
             </div>
             <div class="comment-content">
-              {{ comment.comment }}
+              {{ replaceEmojiStrings(comment.comment) }}
             </div>
 
             <!-- 回复 -->
@@ -590,7 +591,7 @@ onMounted(async () => {
                     </div>
                   </div>
                   <div class="reply-content">
-                    {{ reply.comment }}
+                    {{ replaceEmojiStrings(reply.comment) }}
                   </div>
                 </div>
               </div>

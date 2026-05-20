@@ -10,6 +10,7 @@ import {
   recordTextColor,
   removeHashWrappedStrings,
   removeImagesAndLinksFromMarkdown,
+  replaceEmojiStrings,
   TIMING_LEVELS_COLOR,
   TIMING_LEVELS_MAP,
   TIMING_LEVELS_TEXT_COLOR,
@@ -132,7 +133,7 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
 
     <h2 v-if="post.title" class="post-title">
       <span v-if="post.stick === 1" class="stick-badge">置顶</span>
-      {{ post.title }}
+      {{ replaceEmojiStrings(post.title) }}
     </h2>
 
     <template v-if="post.stick !== 1">
@@ -141,7 +142,7 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
       </div>
 
       <p v-if="plainText" class="post-content">
-        {{ plainText.slice(0, 100) + (plainText.length > 100 ? "..." : "") }}
+        {{ replaceEmojiStrings(plainText.slice(0, 100) + (plainText.length > 100 ? "..." : "")) }}
       </p>
 
       <div v-if="cachedImages.length > 0" class="post-images">
@@ -250,8 +251,8 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
       </div>
       <div class="lc-content">
         {{
-          post.lastComment.comment.slice(0, 100)
-            + (post.lastComment.comment.length > 100 ? "..." : "")
+          replaceEmojiStrings(post.lastComment.comment.slice(0, 100)
+            + (post.lastComment.comment.length > 100 ? "..." : ""))
         }}
       </div>
     </div>

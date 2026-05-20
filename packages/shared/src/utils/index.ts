@@ -1,4 +1,5 @@
 export * from './constants'
+export * from './emoji'
 export * from './messageCache'
 export * from './recordCache'
 export * from './replayParser'

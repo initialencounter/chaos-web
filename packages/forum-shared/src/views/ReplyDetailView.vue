@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ReplyListDatum } from '@tapsss/shared'
-import { formatTime } from '@tapsss/shared/utils'
+import { formatTime, replaceEmojiStrings } from '@tapsss/shared/utils'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import UserAvatar from '../components/UserAvatar.vue'
@@ -93,7 +93,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="reply-content">
-          {{ reply.comment }}
+          {{ replaceEmojiStrings(reply.comment) }}
         </div>
       </div>
 

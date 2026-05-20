@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SearchUser } from '@tapsss/shared'
-import { getRankText, TIMING_LEVELS_COLOR, TIMING_LEVELS_TEXT_COLOR } from '@tapsss/shared/utils'
+import { getRankText, replaceEmojiStrings, TIMING_LEVELS_COLOR, TIMING_LEVELS_TEXT_COLOR } from '@tapsss/shared/utils'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import UserAvatar from './UserAvatar.vue'
@@ -51,8 +51,8 @@ function goToUser() {
         </div>
       </div>
       <div v-if="user.sign" class="right-section">
-        <div class="sign" :title="user.sign">
-          {{ user.sign }}
+        <div class="sign" :title="replaceEmojiStrings(user.sign)">
+          {{ replaceEmojiStrings(user.sign) }}
         </div>
       </div>
     </div>

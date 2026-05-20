@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PostListDatum } from '@tapsss/shared'
+import { replaceEmojiStrings } from '@tapsss/shared/utils'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import PostCard from '../components/PostCard.vue'
@@ -93,7 +94,7 @@ onMounted(async () => {
         <div v-for="post in stickPosts" :key="post.id" class="stick-post-item" @click="goToPostDetail(post.id)">
           <span class="stick-badge">置顶</span>
           <div class="stick-post-title">
-            {{ post.title }}
+            {{ replaceEmojiStrings(post.title) }}
           </div>
         </div>
       </div>

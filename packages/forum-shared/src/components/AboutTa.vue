@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { HomeUser, SaoleiOauth, UserMatchMedal } from '@tapsss/shared'
-import { formatTime } from '@tapsss/shared/utils'
+import { formatTime, replaceEmojiStrings } from '@tapsss/shared/utils'
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResolveAsset } from '../inject'
@@ -151,7 +151,7 @@ function goMessage() {
         <div class="detail-item">
           <span class="lbl">简介</span>
           <span class="val">{{
-            user.sign || "这个人很懒，什么都没有留下"
+            replaceEmojiStrings(user.sign || "这个人很懒，什么都没有留下")
           }}</span>
         </div>
       </div>

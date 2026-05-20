@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ImMessage, ImRecentUser } from '@tapsss/shared'
-import { computeNonoType, computeType, formatTime, recordBgColor, recordTextColor } from '@tapsss/shared/utils'
+import { computeNonoType, computeType, formatTime, recordBgColor, recordTextColor, replaceEmojiStrings } from '@tapsss/shared/utils'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessageStore } from '../stores/im'
@@ -430,7 +430,7 @@ const displayItems = computed(() => {
             </div>
             <div class="conv-bottom">
               <span class="conv-preview">
-                {{ user.lastMessage?.messageBody?.message || '' }}
+                {{ replaceEmojiStrings(user.lastMessage?.messageBody?.message || '') }}
               </span>
               <span v-if="user.unReadCount > 0" class="unread-badge">
                 {{ user.unReadCount > 99 ? '99+' : user.unReadCount }}
@@ -520,7 +520,7 @@ const displayItems = computed(() => {
                   class="msg-bubble"
                   :class="isMyMessage(item.msg) ? 'bubble-mine' : 'bubble-other'"
                 >
-                  {{ item.msg.messageBody.message }}
+                  {{ replaceEmojiStrings(item.msg.messageBody.message) }}
                 </div>
 
                 <!-- 图片消息 -->
