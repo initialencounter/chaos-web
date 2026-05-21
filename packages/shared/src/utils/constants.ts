@@ -151,7 +151,7 @@ export function replaceMentionAndReplayLinks(text: string, assetBase: string): s
     (_, prefix: string, id: string) => {
       const recordType = replayPrefixMap[prefix]
       const textColor = recordTextColor[Number(recordType)]
-      return `<button data-record-id="${id}" data-record-type="${recordType}" class="replay-link" style="background-color:${textColor}20;color:${textColor};outline:none;border:none;border-radius:4px;padding:2px 8px"><img src="${assetBase}icon/${recordType}.png" class="replay-icon">录像 ${id}</button>`
+      return `<button data-record-id="${id}" data-record-type="${recordType}" class="replay-link" style="background-color:${textColor}20;color:${textColor};outline:none;border:none;border-radius:4px;padding:2px 8px"><img src="${assetBase}/icon/${recordType}.png" class="replay-icon">录像 ${id}</button>`
     },
   )
   return result
