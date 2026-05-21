@@ -9,7 +9,7 @@ import { proxyImageUrl } from './utils/imageProxy'
 
 setForumApi(api)
 setResolveAsset(url => Promise.resolve(proxyImageUrl(url)))
-setAssetBase('/')
+setAssetBase('')
 
 const app = createApp(App)
 
