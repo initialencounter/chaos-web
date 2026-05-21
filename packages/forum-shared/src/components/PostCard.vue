@@ -2,6 +2,7 @@
 import type { PostListDatum } from '@tapsss/shared'
 import { Star, StarFilled } from '@element-plus/icons-vue'
 import {
+  computeNonoType,
   computeType,
   escapeHtml,
   extractImageLinksFromMarkdown,
@@ -250,6 +251,68 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
               </div>
               <div class="r-lbl">
                 步数
+              </div>
+            </div>
+          </template>
+          <template v-if="recordGameType === 3 && post.schulteRecord">
+            <div class="r-col">
+              <div class="r-val">
+                {{ post.schulteRecord.row }}x{{ post.schulteRecord.column }}
+              </div>
+              <div class="r-lbl">
+                难度
+              </div>
+            </div>
+            <div class="r-col">
+              <div class="r-val">
+                {{ post.schulteRecord.time / 1000 }}
+              </div>
+              <div class="r-lbl">
+                时间
+              </div>
+            </div>
+            <div class="r-col">
+              <div class="r-val">
+                {{ post.schulteRecord.tap - post.schulteRecord.tapCorrect }}
+              </div>
+              <div class="r-lbl">
+                错误
+              </div>
+            </div>
+          </template>
+          <template v-if="recordGameType === 4 && post.nonoRecord">
+            <div class="r-col">
+              <div class="r-val">
+                {{ computeNonoType(post.nonoRecord.mine) }}
+              </div>
+              <div class="r-lbl">
+                难度
+              </div>
+            </div>
+            <div class="r-col">
+              <div class="r-val">
+                {{ post.nonoRecord.time / 1000 }}
+              </div>
+              <div class="r-lbl">
+                时间
+              </div>
+            </div>
+          </template>
+          <template v-if="recordGameType === 2 && post.tzfeRecord">
+            <div class="r-col">
+              <div class="r-val">
+                {{ post.tzfeRecord.score }}
+              </div>
+              <div class="r-lbl">
+                分数
+              </div>
+            </div>
+            <div class="r-col">
+              <div class="r-val">
+                {{ post.tzfeRecord.time / 1000 }}
+              </div>
+              <div class="r-lbl">
+                时间
               </div>
             </div>
           </template>
