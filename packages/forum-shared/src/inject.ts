@@ -7,6 +7,7 @@ export interface ForumApi {
   commentReplyList: (...args: any[]) => Promise<any>
   postListSearch: (...args: any[]) => Promise<any>
   postListGoodUser: (...args: any[]) => Promise<any>
+  postListUser: (...args: any[]) => Promise<any>
   postGood: (...args: any[]) => Promise<any>
   commentGood: (...args: any[]) => Promise<any>
   commentAdd: (...args: any[]) => Promise<any>

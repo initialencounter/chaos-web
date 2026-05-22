@@ -65,6 +65,10 @@ export function createForumApi(fetchFn: FetchFn) {
       return fetchFn<PostListGoodUserResponse>('/post/list/good/user', { postId, page, count })
     },
 
+    postListUser(targetUid: number, page = 0, count = 20): Promise<PostList> {
+      return fetchFn<PostList>('/post/list/user', { targetUid, page, count })
+    },
+
     postGood(postId: number, isGood: boolean): Promise<PostResponse> {
       return fetchFn<PostResponse>('/post/good', { postId, isGood })
     },

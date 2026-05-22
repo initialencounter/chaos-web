@@ -64,6 +64,7 @@ const apiPaths = [
   '/Minesweeper/post/list/search',
   '/Minesweeper/post/comment/list/reply',
   '/Minesweeper/post/list/good/user',
+  '/Minesweeper/post/list/user',
   '/Minesweeper/user/search',
   '/Minesweeper/minesweeper/record/list',
   '/Minesweeper/schulte/record/list/filter',

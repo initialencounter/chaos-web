@@ -12,6 +12,7 @@ import UserAvatar from '../components/UserAvatar.vue'
 import { useUserStore } from '../stores/user'
 import RecordList from './RecordList.vue'
 import UserCareer from './UserCareer.vue'
+import UserPosts from './UserPosts.vue'
 
 defineOptions({ name: 'UserDetailView' })
 
@@ -22,7 +23,7 @@ const userStore = useUserStore()
 const userData = ref<UserHomeResponse['data'] | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
-const currentTab = ref<'career' | 'records' | 'about'>('about')
+const currentTab = ref<'career' | 'records' | 'posts' | 'about'>('about')
 
 onMounted(async () => {
   const uid = Number(route.params.uid)
@@ -196,6 +197,13 @@ const zodiac = computed(() => {
         </div>
         <div
           class="tab-item"
+          :class="{ active: currentTab === 'posts' }"
+          @click="currentTab = 'posts'"
+        >
+          动态
+        </div>
+        <div
+          class="tab-item"
           :class="{ active: currentTab === 'about' }"
           @click="currentTab = 'about'"
         >
@@ -210,9 +218,13 @@ const zodiac = computed(() => {
             v-else-if="currentTab === 'records'"
             :uid="String(user.id)"
           />
+          <UserPosts
+            v-else-if="currentTab === 'posts'"
+            :uid="String(user.id)"
+          />
           <AboutTa
             v-else-if="currentTab === 'about'"
-            :user="user"
+            :user="user as any"
             :saolei="saolei"
             :user-match-medals="userData?.userMatchMedals"
             @relation-change="(rel: number) => { if (user) user.relation = rel }"

@@ -24,6 +24,7 @@ export const {
   commentReplyList,
   postListSearch,
   postListGoodUser,
+  postListUser,
   postGood,
   commentGood,
   commentAdd,
