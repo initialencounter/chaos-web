@@ -276,6 +276,15 @@ function openReplay(recordId?: number) {
   })
 }
 
+function goBack() {
+  if (window.history.state && window.history.state.back) {
+    router.back()
+  }
+  else {
+    router.push({ name: 'forum-home' })
+  }
+}
+
 function handleContentClick(event: MouseEvent) {
   const target = event.target as HTMLElement
   if (target.classList.contains('mention-link')) {
@@ -315,9 +324,9 @@ onMounted(async () => {
 
     <div v-else-if="post" class="post-content">
       <!-- 返回按钮 -->
-      <router-link :to="{ name: 'forum-home' }" class="back-btn">
-        ← 返回列表
-      </router-link>
+      <a href="#" class="back-btn" @click.prevent="goBack">
+        ← 返回
+      </a>
 
       <!-- 帖子内容 -->
       <div class="post-header">
