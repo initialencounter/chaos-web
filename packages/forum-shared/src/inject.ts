@@ -34,13 +34,9 @@ export interface ForumApi {
 }
 
 export const forumApiKey: InjectionKey<ForumApi> = Symbol('forumApi')
-export const resolveAssetKey: InjectionKey<(url?: string | null) => string | Promise<string>> = Symbol('resolveAsset')
-export const assetBaseKey: InjectionKey<string> = Symbol('assetBase')
 
-// Module-level singletons (for Pinia stores and non-component code)
+// Module-level singleton for ForumApi
 let _api: ForumApi | null = null
-let _resolveAsset: ((url?: string | null) => string | Promise<string>) | null = null
-let _assetBase = ''
 
 export function setForumApi(api: ForumApi) {
   _api = api
@@ -52,20 +48,19 @@ export function useForumApi(): ForumApi {
   return _api
 }
 
-export function setResolveAsset(fn: (url?: string | null) => string | Promise<string>) {
-  _resolveAsset = fn
-}
-
-export function useResolveAsset() {
-  if (!_resolveAsset)
-    throw new Error('ResolveAsset not initialized. Call setResolveAsset() before use.')
-  return _resolveAsset
-}
-
-export function setAssetBase(base: string) {
-  _assetBase = base
-}
-
-export function useAssetBase() {
-  return _assetBase
+/**
+ * 解析资源 URL。
+ * - Electron 环境（window.electronAPI.cacheImage 存在）：通过 IPC 缓存远程图片
+ * - Web 环境：通过服务端代理转发远程图片
+ * - 非远程 URL 直接返回
+ */
+export async function resolveAsset(url?: string | null): Promise<string> {
+  if (!url)
+    return './Z7.png'
+  if (!url.startsWith('http://') && !url.startsWith('https://'))
+    return url
+  if (typeof window !== 'undefined' && (window as any).electronAPI?.cacheImage)
+    return (window as any).electronAPI.cacheImage(url)
+  const proxyBase = (import.meta as any).env?.DEV ? '/api/image-proxy' : '/image-proxy'
+  return `${proxyBase}?url=${encodeURIComponent(url)}`
 }

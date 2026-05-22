@@ -6,7 +6,7 @@ const OSS_BASE = 'https://minesweeper.oss-cn-hongkong.aliyuncs.com'
  */
 export function proxyImageUrl(url: string | undefined | null): string {
   if (!url)
-    return './assets/Z7.png'
+    return './Z7.png'
   if (url.startsWith('http://') || url.startsWith('https://'))
     return url
   if (url.startsWith('@/assets/'))
@@ -25,7 +25,7 @@ export function proxyImageUrl(url: string | undefined | null): string {
  */
 export function resolveImageUrl(url: string | undefined | null): string {
   if (!url)
-    return './assets/Z7.png'
+    return './Z7.png'
   if (url.startsWith('@/assets/')) {
     return url.replace('@/assets/', './assets/')
   }
@@ -46,7 +46,7 @@ export function resolveImageUrl(url: string | undefined | null): string {
  */
 export async function resolveAndCache(url: string | undefined | null): Promise<string> {
   if (!url)
-    return './assets/Z7.png'
+    return './Z7.png'
   if (url.startsWith('@/assets/')) {
     return url.replace('@/assets/', './assets/')
   }

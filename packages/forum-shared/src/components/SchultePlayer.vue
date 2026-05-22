@@ -13,14 +13,13 @@ import {
   shallowRef,
   watch,
 } from 'vue'
-import { useAssetBase, useForumApi } from '../inject'
+import { useForumApi } from '../inject'
 import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps<{
   recordId: string
 }>()
 const api = useForumApi()
-const assetBase = useAssetBase()
 
 type SchulteData = SchulteRecordGetResponse['data']
 
@@ -80,7 +79,7 @@ let audioNodeOffset = 0
 
 async function initAudio() {
   audioCtx = new window.AudioContext()
-  const flagResp = await fetch(`${assetBase}/audio/flag.mp3`)
+  const flagResp = await fetch('./audio/flag.mp3')
   const flagData = await flagResp.arrayBuffer()
   flagBuffer = await audioCtx.decodeAudioData(flagData)
 }

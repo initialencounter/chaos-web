@@ -3,7 +3,7 @@ import type { HomeUser, SaoleiOauth, UserMatchMedal } from '@tapsss/shared'
 import { formatTime, replaceEmojiStrings } from '@tapsss/shared/utils'
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useResolveAsset } from '../inject'
+import { resolveAsset } from '../inject'
 import { useUserStore } from '../stores/user'
 
 const props = defineProps<{
@@ -17,7 +17,6 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
-const resolveAsset = useResolveAsset()
 const userStore = useUserStore()
 
 const cachedSaoleiAvatar = ref('')

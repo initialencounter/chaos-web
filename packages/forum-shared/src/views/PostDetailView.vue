@@ -20,7 +20,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import UserAvatar from '../components/UserAvatar.vue'
-import { useAssetBase, useResolveAsset } from '../inject'
+import { resolveAsset } from '../inject'
 import { usePostStore } from '../stores/post'
 
 defineOptions({ name: 'PostDetailView' })
@@ -29,8 +29,6 @@ const props = defineProps<{
   id: string
   currentUid?: string
 }>()
-
-const resolveAsset = useResolveAsset()
 
 const router = useRouter()
 const postStore = usePostStore()
@@ -69,9 +67,8 @@ const plainText = computed(() => {
 })
 
 const md = new MarkdownIt({ breaks: true, linkify: true })
-const assetBase = useAssetBase()
 const renderedText = computed(() => {
-  return replaceMentionAndReplayLinks(md.render(replaceEmojiStrings(plainText.value)), assetBase)
+  return replaceMentionAndReplayLinks(md.render(replaceEmojiStrings(plainText.value)))
 })
 
 const images = computed(() => {
@@ -307,7 +304,7 @@ function handleContentClick(event: MouseEvent) {
 }
 
 function renderCommentHtml(comment: string): string {
-  return replaceEmojiStrings(replaceMentionAndReplayLinks(escapeHtml(comment), assetBase))
+  return replaceEmojiStrings(replaceMentionAndReplayLinks(escapeHtml(comment)))
 }
 
 onMounted(async () => {
@@ -398,7 +395,7 @@ onMounted(async () => {
         >
           <div class="record-icon">
             <img
-              :src="`/icon/${recordGameType}.png`"
+              :src="`./icon/${recordGameType}.png`"
               style="width: 48px; height: 48px; object-fit: contain"
               alt="icon"
             >

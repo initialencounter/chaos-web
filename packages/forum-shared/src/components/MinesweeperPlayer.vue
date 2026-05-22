@@ -14,14 +14,13 @@ import {
   shallowRef,
   watch,
 } from 'vue'
-import { useAssetBase, useForumApi } from '../inject'
+import { useForumApi } from '../inject'
 import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps<{
   recordId: string
 }>()
 const api = useForumApi()
-const assetBase = useAssetBase()
 
 interface Cell {
   id: number
@@ -57,8 +56,8 @@ let audioNodeOffset = 0
 async function initAudio() {
   audioCtx = new AudioContext()
   const [openResp, flagResp] = await Promise.all([
-    fetch(`${assetBase}/audio/open.mp3`),
-    fetch(`${assetBase}/audio/flag.mp3`),
+    fetch('./audio/open.mp3'),
+    fetch('./audio/flag.mp3'),
   ])
   const [openData, flagData] = await Promise.all([
     openResp.arrayBuffer(),
@@ -142,19 +141,19 @@ let rafId: number | null = null
 
 // Image resources
 const skinUrls = [
-  `${assetBase}/themes/wom/type0.png`,
-  `${assetBase}/themes/wom/type1.png`,
-  `${assetBase}/themes/wom/type2.png`,
-  `${assetBase}/themes/wom/type3.png`,
-  `${assetBase}/themes/wom/type4.png`,
-  `${assetBase}/themes/wom/type5.png`,
-  `${assetBase}/themes/wom/type6.png`,
-  `${assetBase}/themes/wom/type7.png`,
-  `${assetBase}/themes/wom/type8.png`,
-  `${assetBase}/themes/wom/type9.png`,
-  `${assetBase}/themes/wom/closed.png`, // 10
-  `${assetBase}/themes/wom/flag.png`, // 11
-  `${assetBase}/themes/wom/cursor-arrow.png`, // 12
+  './themes/wom/type0.png',
+  './themes/wom/type1.png',
+  './themes/wom/type2.png',
+  './themes/wom/type3.png',
+  './themes/wom/type4.png',
+  './themes/wom/type5.png',
+  './themes/wom/type6.png',
+  './themes/wom/type7.png',
+  './themes/wom/type8.png',
+  './themes/wom/type9.png',
+  './themes/wom/closed.png', // 10
+  './themes/wom/flag.png', // 11
+  './themes/wom/cursor-arrow.png', // 12
 ]
 const loadedImages: Record<number, HTMLImageElement> = {}
 

@@ -21,13 +21,12 @@ import {
 import { ElIcon } from 'element-plus'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAssetBase, useResolveAsset } from '../inject'
+import { resolveAsset } from '../inject'
 import { usePostStore } from '../stores/post'
 import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps<{ post: PostListDatum }>()
 const router = useRouter()
-const resolveAsset = useResolveAsset()
 const postStore = usePostStore()
 const togglingLike = ref(false)
 
@@ -92,10 +91,8 @@ function handleContentClick(event: MouseEvent) {
   }
 }
 
-const assetBase = useAssetBase()
-
 function renderCommentHtml(comment: string): string {
-  return replaceEmojiStrings(replaceMentionAndReplayLinks(escapeHtml(comment), assetBase))
+  return replaceEmojiStrings(replaceMentionAndReplayLinks(escapeHtml(comment)))
 }
 
 const levelIndex = computed(() =>
@@ -123,7 +120,7 @@ const plainText = computed(() => {
 })
 const images = computed(() =>
   extractImageLinksFromMarkdown(props.post.text || '').map(
-    url => url || './assets/Z7.png',
+    url => url || './Z7.png',
   ),
 )
 
@@ -190,7 +187,7 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
       >
         <div class="record-icon">
           <img
-            :src="`${assetBase}/icon/${recordGameType}.png`"
+            :src="`./icon/${recordGameType}.png`"
             style="width: 48px; height: 48px; object-fit: contain"
             alt="icon"
           >

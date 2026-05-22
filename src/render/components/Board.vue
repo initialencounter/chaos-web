@@ -175,9 +175,9 @@ function _setKeybind(action: keyof typeof defaultKeybinds, key: string) {
 }
 
 // ========== 音效 ==========
-const openSound = new Howl({ src: ['./assets/audio/open.mp3'], volume: 0.5 })
-const flagSound = new Howl({ src: ['./assets/audio/flag.mp3'], volume: 0.5 })
-const boomSound = new Howl({ src: ['./assets/audio/boom.mp3'], volume: 0.2 })
+const openSound = new Howl({ src: ['./audio/open.mp3'], volume: 0.5 })
+const flagSound = new Howl({ src: ['./audio/flag.mp3'], volume: 0.5 })
+const boomSound = new Howl({ src: ['./audio/boom.mp3'], volume: 0.2 })
 
 // ========== 响应式状态 ==========
 const minefield = ref<Minefield>({
@@ -1350,14 +1350,14 @@ function getImageSrc(cell: Cell): string {
   const mines = cell.Mines
   if (cell.IsOpen) {
     if (cell.IsMine)
-      return `./assets/themes/${theme}/flag.png`
+      return `./themes/${theme}/flag.png`
     if (cell.Mines === 9)
-      return `./assets/themes/${theme}/closed.png`
-    return `./assets/themes/${theme}/type${mines}.png`
+      return `./themes/${theme}/closed.png`
+    return `./themes/${theme}/type${mines}.png`
   }
   if (cell.IsFlagged)
-    return `./assets/themes/${theme}/flag.png`
-  return `./assets/themes/${theme}/closed.png`
+    return `./themes/${theme}/flag.png`
+  return `./themes/${theme}/closed.png`
 }
 
 // ========== 计时器 ==========

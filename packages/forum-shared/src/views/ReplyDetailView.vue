@@ -4,7 +4,6 @@ import { escapeHtml, formatTime, replaceEmojiStrings, replaceMentionAndReplayLin
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import UserAvatar from '../components/UserAvatar.vue'
-import { useAssetBase } from '../inject'
 import { usePostStore } from '../stores'
 
 defineOptions({ name: 'ReplyDetailView' })
@@ -77,10 +76,8 @@ function handleContentClick(event: MouseEvent) {
   }
 }
 
-const assetBase = useAssetBase()
-
 function renderCommentHtml(comment: string): string {
-  return replaceEmojiStrings(replaceMentionAndReplayLinks(escapeHtml(comment), assetBase))
+  return replaceEmojiStrings(replaceMentionAndReplayLinks(escapeHtml(comment)))
 }
 
 onMounted(() => {

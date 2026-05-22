@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useResolveAsset } from '../inject'
+import { resolveAsset } from '../inject'
 
 const props = withDefaults(defineProps<{
   user?: {
@@ -19,7 +19,6 @@ const props = withDefaults(defineProps<{
 })
 
 const router = useRouter()
-const resolveAsset = useResolveAsset()
 
 const cachedSrc = ref('')
 
