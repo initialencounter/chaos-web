@@ -102,11 +102,12 @@ async function handleLogout() {
 
   <router-view
     v-if="gameStarted"
-    v-slot="{ Component }"
+    v-slot="{ Component, route }"
   >
-    <keep-alive exclude="GameView,ReplayDetailView,UserDetailView,ForumPostDetailView,ForumMessageView">
+    <keep-alive exclude="GameView,ReplayDetailView">
       <component
         :is="Component"
+        :key="route.fullPath"
         :current-uid="currentUid"
         @logout="handleLogout"
       />

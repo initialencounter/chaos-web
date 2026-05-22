@@ -7,9 +7,9 @@ import NavBar from './components/NavBar.vue'
   <div class="app">
     <NavBar />
     <main class="main-content">
-      <RouterView v-slot="{ Component }">
-        <keep-alive include="HomeView">
-          <component :is="Component" />
+      <RouterView v-slot="{ Component, route }">
+        <keep-alive exclude="ReplayDetailView">
+          <component :is="Component" :key="route.fullPath" />
         </keep-alive>
       </RouterView>
     </main>
