@@ -14,6 +14,7 @@ export default lightwing(
       'release',
       'api_docs',
       'scripts',
+      'deploy.md',
     ],
   },
   {
