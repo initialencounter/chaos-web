@@ -117,7 +117,7 @@ onMounted(() => {
             }}</span>
           </div>
         </div>
-        <div class="reply-content" @click="handleContentClick" v-html="renderCommentHtml(reply.comment)" />
+        <div class="reply-content" @click="handleContentClick" v-html="renderCommentHtml(reply.comment ?? '')" />
       </div>
 
       <div class="load-more-replies">

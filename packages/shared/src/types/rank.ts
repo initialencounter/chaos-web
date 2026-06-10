@@ -3,19 +3,19 @@ import type { ApiResponse, BaseUser } from './common'
 // ========== 通用排行榜条目 ==========
 export interface RankDatum {
   bvs: number
-  createTime: null
+  createTime: unknown
   exp: number
   level: number
   lose: number
-  movesArray: null
+  movesArray: unknown
   rank: number
   rankHistory: number
-  record: null
+  record: unknown
   recordId: number
   score: number
   stage: number
   time: number
-  timeArray: null
+  timeArray: unknown
   timeBeg: number
   timeExp: number
   timeInt: number

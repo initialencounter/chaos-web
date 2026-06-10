@@ -94,7 +94,7 @@ onMounted(async () => {
         <div v-for="post in stickPosts" :key="post.id" class="stick-post-item" @click="goToPostDetail(post.id)">
           <span class="stick-badge">置顶</span>
           <div class="stick-post-title">
-            {{ replaceEmojiStrings(post.title) }}
+            {{ replaceEmojiStrings(post.title ?? '') }}
           </div>
         </div>
       </div>

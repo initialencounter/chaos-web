@@ -36,11 +36,11 @@ function goToUser() {
           <div class="header">
             <span class="nickname" :class="[{ 'is-vip': user.vip }]">{{ user.nickName }}</span>
             <span
-              v-if="getRankText(levelIndex, user.timingRank)"
+              v-if="getRankText(levelIndex ?? 0, user.timingRank)"
               class="rank-badge"
               :style="rankStyle"
             >
-              {{ getRankText(levelIndex, user.timingRank) }}
+              {{ getRankText(levelIndex ?? 0, user.timingRank) }}
             </span>
             <span v-if="user.sex === 1" class="gender male">♂</span>
             <span v-if="user.sex === 2" class="gender female">♀</span>
