@@ -13,6 +13,9 @@ import {
   removeImagesAndLinksFromMarkdown,
   replaceEmojiStrings,
   replaceMentionAndReplayLinks,
+  TIMING_LEVELS_COLOR,
+  TIMING_LEVELS_MAP,
+  TIMING_LEVELS_TEXT_COLOR,
 } from '@tapsss/shared/utils'
 import { ElIcon } from 'element-plus'
 import MarkdownIt from 'markdown-it'
@@ -87,6 +90,25 @@ const recordGameType = computed(() => post.value?.recordType ?? 0)
 
 const recordBg = computed(() => recordBgColor[recordGameType.value])
 const recordColor = computed(() => recordTextColor[recordGameType.value])
+
+const levelIndex = computed(() =>
+  post.value.user.timingLevel === -1 ? 0 : post.value.user.timingLevel,
+)
+const levelColor = computed(
+  () => TIMING_LEVELS_COLOR[levelIndex.value] || '#000',
+)
+const textColor = computed(
+  () => TIMING_LEVELS_TEXT_COLOR[levelIndex.value] || '#FFF',
+)
+
+const rankText = computed(() => {
+  const r = post.value.user.timingRank
+  if (!r)
+    return ''
+  return r === 1
+    ? '雷帝'
+    : `${TIMING_LEVELS_MAP[levelIndex.value]}${r <= 300 ? ` ${r}` : ''}`
+})
 
 async function loadPost() {
   loading.value = true
@@ -336,21 +358,12 @@ onMounted(async () => {
           <div class="user-meta">
             <div class="name-row">
               <span class="nickname">{{ post.user.nickName }}</span>
-              <span v-if="post.user.timingRank === 1" class="rank-badge rank-1">
-                雷帝
-              </span>
               <span
-                v-else-if="post.user.timingRank && post.user.timingRank <= 300"
+                v-if="rankText"
                 class="rank-badge"
+                :style="{ backgroundColor: levelColor, color: textColor }"
               >
-                {{
-                  post.user.timingLevel === -1
-                    ? "萌新"
-                    : ["萌新", "入门", "熟练", "高手", "大神"][
-                      post.user.timingLevel
-                    ]
-                }}
-                {{ post.user.timingRank }}
+                {{ rankText }}
               </span>
             </div>
             <div class="time-device">
@@ -766,15 +779,8 @@ onMounted(async () => {
 
 .rank-badge {
   font-size: 0.8rem;
-  padding: 3px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
-  background-color: #fa7299;
-  color: white;
-}
-
-.rank-1 {
-  background-color: #ffd700;
-  color: #000;
 }
 
 .time-device {
