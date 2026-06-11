@@ -131,10 +131,10 @@ onMounted(async () => {
 .home {
   max-width: 800px;
   margin: 0 auto;
-  background-color: #f7f8fa;
+  background-color: #121212;
   min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #333;
+  color: #e0e0e0;
 }
 
 .header-nav {
@@ -142,17 +142,18 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 10px 15px;
-  background-color: #fff;
+  background-color: #1b1b1b;
   position: sticky;
   top: 0;
   z-index: 10;
+  border-bottom: 1px solid #333;
 }
 
 .avatar-placeholder {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #e0e0e0;
+  background-color: #333;
 }
 
 .nav-center {
@@ -162,14 +163,14 @@ onMounted(async () => {
 
 .nav-tab {
   font-size: 16px;
-  color: #666;
+  color: #999;
   cursor: pointer;
   position: relative;
   transition: all 0.2s;
 }
 
 .nav-tab.active {
-  color: #000;
+  color: #ffffff;
   font-weight: bold;
   font-size: 18px;
 }
@@ -189,11 +190,11 @@ onMounted(async () => {
 .search-icon {
   width: 24px;
   height: 24px;
-  color: #333;
+  color: #e0e0e0;
 }
 
 .stick-posts-container {
-  background-color: #fff;
+  background-color: #1b1b1b;
   padding: 0 15px;
 }
 
@@ -201,7 +202,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #333;
   cursor: pointer;
 }
 
@@ -220,7 +221,7 @@ onMounted(async () => {
 }
 
 .stick-post-title {
-  color: #333;
+  color: #e0e0e0;
   font-size: 0.95rem;
   flex: 1;
   overflow: hidden;
@@ -229,14 +230,15 @@ onMounted(async () => {
 }
 
 .posts-list-wrapper {
-  background-color: #fff;
+  background-color: #1b1b1b;
   padding: 15px;
   min-height: 50vh;
+  margin-top: 10px;
 }
 
 .post-item {
   margin-bottom: 15px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #333;
 }
 
 .loading,
@@ -255,8 +257,8 @@ onMounted(async () => {
 
 .load-more-btn {
   padding: 10px 24px;
-  background-color: #f0f0f0;
-  color: #666;
+  background-color: #2a2a2a;
+  color: #e0e0e0;
   border: none;
   border-radius: 20px;
   cursor: pointer;
@@ -266,12 +268,12 @@ onMounted(async () => {
 /* Deep overrides to theme PostCard properly as requested */
 :deep(.post-card) {
   background-color: transparent !important;
-  color: #333 !important;
+  color: #e0e0e0 !important;
   padding: 15px 0 !important;
   border-radius: 0 !important;
   border: none !important;
   margin-bottom: 0 !important;
-  border-bottom: 1px solid #f0f0f0 !important;
+  border-bottom: 1px solid #333 !important;
 }
 
 :deep(.post-card:last-child) {
@@ -285,23 +287,23 @@ onMounted(async () => {
 }
 
 :deep(.nickname) {
-  color: #333 !important;
+  color: #e0e0e0 !important;
 }
 
 :deep(.post-title) {
-  color: #000 !important;
+  color: #ffffff !important;
 }
 
 :deep(.post-content) {
-  color: #666 !important;
+  color: #ccc !important;
 }
 
 :deep(.last-comment) {
-  background-color: #f7f8fa !important;
+  background-color: #2a2a2a !important;
 }
 
 :deep(.lc-content) {
-  color: #666 !important;
+  color: #ccc !important;
 }
 
 :deep(.tag) {
