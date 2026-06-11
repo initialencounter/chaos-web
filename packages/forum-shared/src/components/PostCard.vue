@@ -350,7 +350,6 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
     <div class="post-footer">
       <div class="interaction share">
         <img :src="iconShare" alt="share" class="action-icon">
-        转发
       </div>
       <div class="interaction comment">
         <img :src="iconComment" alt="comment" class="action-icon">

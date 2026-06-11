@@ -70,7 +70,7 @@ onMounted(async () => {
   <div class="home">
     <div class="header-nav">
       <div class="nav-left">
-        <div class="avatar-placeholder" />
+        <!-- <div class="avatar-placeholder" /> -->
       </div>
       <div class="nav-center">
         <div class="nav-tab" :class="{ active: postType === 0 }" @click="changeType(0)">
@@ -84,10 +84,10 @@ onMounted(async () => {
         </div>
       </div>
       <div class="nav-right">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <!-- <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
+        </svg> -->
       </div>
     </div>
 
@@ -147,6 +147,7 @@ onMounted(async () => {
   top: 0;
   z-index: 10;
   border-bottom: 1px solid #333;
+  border-radius: 8px 8px 0 0;
 }
 
 .avatar-placeholder {
@@ -167,6 +168,7 @@ onMounted(async () => {
   cursor: pointer;
   position: relative;
   transition: all 0.2s;
+  padding: 5px 0;
 }
 
 .nav-tab.active {
