@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { PostListDatum } from '@tapsss/shared'
-import { Star, StarFilled } from '@element-plus/icons-vue'
 import {
   computeNonoType,
   computeType,
@@ -18,9 +17,11 @@ import {
   TIMING_LEVELS_MAP,
   TIMING_LEVELS_TEXT_COLOR,
 } from '@tapsss/shared/utils'
-import { ElIcon } from 'element-plus'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import iconComment from '../../../../icons/ic_post_comment.png'
+import iconLike from '../../../../icons/ic_post_good.png'
+import iconShare from '../../../../icons/ic_post_share.png'
 import { resolveAsset } from '../inject'
 import { usePostStore } from '../stores/post'
 import UserAvatar from './UserAvatar.vue'
@@ -340,18 +341,20 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
     </div>
 
     <div class="post-footer">
-      <div class="interaction">
-        <span class="icon">💬</span>
+      <div class="interaction share">
+        <img :src="iconShare" alt="share" class="action-icon">
+        转发
+      </div>
+      <div class="interaction comment">
+        <img :src="iconComment" alt="comment" class="action-icon">
         {{
           post.commentCount > 1000
             ? `${(post.commentCount / 1000).toFixed(1)}k`
             : post.commentCount
         }}
       </div>
-      <button class="like-btn" :class="{ liked: post.hasGood }" :disabled="togglingLike" @click="togglePostLike">
-        <ElIcon class="like-icon">
-          <component :is="post.hasGood ? StarFilled : Star" />
-        </ElIcon>
+      <button class="like-btn interaction like" :class="{ liked: post.hasGood }" :disabled="togglingLike" @click="togglePostLike">
+        <img :src="iconLike" alt="like" class="action-icon" :class="{ 'liked-img': post.hasGood }">
         {{
           post.goodCount > 1000
             ? `${(post.goodCount / 1000).toFixed(1)}k`
@@ -512,22 +515,38 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
 }
 .post-footer {
   display: flex;
-  gap: 20px;
+  justify-content: space-between;
+  margin-top: 15px;
   color: #9ea1a6;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
 }
-.like-btn {
+.interaction {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  flex: 1;
+  justify-content: center;
+}
+.action-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  opacity: 0.7;
+}
+.like-btn {
   background: none;
   border: none;
   color: #9ea1a6;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 6px;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  justify-content: center;
 }
 
 .like-btn:hover:not(:disabled) {
@@ -543,14 +562,9 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
   color: #fa7299;
 }
 
-.like-btn .like-icon {
-  font-size: 1.1rem;
-}
-
-.interaction {
-  display: flex;
-  align-items: center;
-  gap: 5px;
+.liked-img {
+  filter: sepia(1) hue-rotate(300deg) saturate(3) brightness(1.2);
+  opacity: 1;
 }
 
 @media (max-width: 768px) {

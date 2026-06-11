@@ -68,25 +68,27 @@ onMounted(async () => {
 
 <template>
   <div class="home">
-    <div class="filter-tabs">
-      <button
-        class="tab-btn" :class="[{ active: postType === 0 }]"
-        @click="changeType(0)"
-      >
-        最新
-      </button>
-      <button
-        class="tab-btn" :class="[{ active: postType === 1 }]"
-        @click="changeType(1)"
-      >
-        热门
-      </button>
-      <button
-        class="tab-btn" :class="[{ active: postType === 3 }]"
-        @click="changeType(3)"
-      >
-        关注
-      </button>
+    <div class="header-nav">
+      <div class="nav-left">
+        <div class="avatar-placeholder" />
+      </div>
+      <div class="nav-center">
+        <div class="nav-tab" :class="{ active: postType === 0 }" @click="changeType(0)">
+          最新
+        </div>
+        <div class="nav-tab" :class="{ active: postType === 1 }" @click="changeType(1)">
+          热门
+        </div>
+        <div class="nav-tab" :class="{ active: postType === 3 }" @click="changeType(3)">
+          关注
+        </div>
+      </div>
+      <div class="nav-right">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </div>
     </div>
 
     <div class="stick-posts-container">
@@ -100,15 +102,13 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div class="posts-container">
+    <div class="posts-list-wrapper">
       <div v-if="loading && posts.length === 0" class="loading">
         加载中...
       </div>
-
       <div v-else-if="posts.length === 0" class="empty">
         暂无帖子
       </div>
-
       <div v-else>
         <PostCard
           v-for="post in posts"
@@ -131,102 +131,112 @@ onMounted(async () => {
 .home {
   max-width: 800px;
   margin: 0 auto;
-  padding: 20px;
+  background-color: #f7f8fa;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #333;
 }
 
-.forum-header {
-  text-align: center;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #333;
-}
-
-.forum-header h1 {
-  color: #ffffff;
-  font-size: 2.5rem;
-  margin-bottom: 10px;
-}
-
-.subtitle {
-  color: #999;
-  font-size: 1.1rem;
-  margin-bottom: 10px;
-}
-
-.filter-tabs {
+.header-nav {
   display: flex;
-  gap: 10px;
-  margin-top: 10px;
-  margin-bottom: 10px;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 15px;
+  background-color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-.tab-btn {
-  padding: 10px 20px;
-  background-color: #2a2a2a;
-  color: #ffffff;
-  border: none;
-  border-radius: 20px;
+.avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+}
+
+.nav-center {
+  display: flex;
+  gap: 20px;
+}
+
+.nav-tab {
+  font-size: 16px;
+  color: #666;
   cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.3s;
+  position: relative;
+  transition: all 0.2s;
 }
 
-.tab-btn:hover {
-  background-color: #3a3a3a;
+.nav-tab.active {
+  color: #000;
+  font-weight: bold;
+  font-size: 18px;
 }
 
-.tab-btn.active {
+.nav-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 4px;
   background-color: #fa7299;
-  color: #ffffff;
+  border-radius: 2px;
+}
+
+.search-icon {
+  width: 24px;
+  height: 24px;
+  color: #333;
 }
 
 .stick-posts-container {
-  margin-bottom: 10px;
+  background-color: #fff;
+  padding: 0 15px;
 }
 
 .stick-post-item {
   display: flex;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
-  transition: opacity 0.3s;
 }
 
 .stick-post-item:last-child {
   border-bottom: none;
 }
 
-.stick-post-item:hover {
-  opacity: 0.8;
-}
-
 .stick-badge {
-  background-color: #fa7299;
-  color: #fff;
-  font-size: 0.85rem;
-  padding: 3px 8px;
+  font-size: 0.75rem;
+  padding: 2px 4px;
   border-radius: 4px;
-  margin-right: 15px;
+  background-color: #fa7299;
+  color: white;
+  margin-right: 8px;
   white-space: nowrap;
 }
 
 .stick-post-title {
-  color: #ddd;
-  font-size: 1.05rem;
+  color: #333;
+  font-size: 0.95rem;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.posts-container {
-  margin-bottom: 40px;
+.posts-list-wrapper {
+  background-color: #fff;
+  padding: 15px;
+  min-height: 50vh;
 }
 
 .post-item {
-  margin-bottom: 20px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .loading,
@@ -234,38 +244,78 @@ onMounted(async () => {
   text-align: center;
   padding: 40px;
   color: #999;
-  font-size: 1.2rem;
+  font-size: 1rem;
 }
 
 .load-more {
   text-align: center;
-  margin-top: 30px;
+  margin-top: 20px;
+  padding-bottom: 20px;
 }
 
 .load-more-btn {
-  padding: 12px 30px;
-  background-color: #2a2a2a;
-  color: #ffffff;
-  border: 1px solid #444;
-  border-radius: 25px;
+  padding: 10px 24px;
+  background-color: #f0f0f0;
+  color: #666;
+  border: none;
+  border-radius: 20px;
   cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.3s;
+  font-size: 0.9rem;
 }
 
-.load-more-btn:hover:not(:disabled) {
-  background-color: #3a3a3a;
-  border-color: #fa7299;
+/* Deep overrides to theme PostCard properly as requested */
+:deep(.post-card) {
+  background-color: transparent !important;
+  color: #333 !important;
+  padding: 15px 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  margin-bottom: 0 !important;
+  border-bottom: 1px solid #f0f0f0 !important;
 }
 
-.load-more-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+:deep(.post-card:last-child) {
+  border-bottom: none !important;
 }
 
-@media (max-width: 768px) {
-  .home {
-    padding: 12px;
-  }
+:deep(.post-card:hover) {
+  background-color: transparent !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.nickname) {
+  color: #333 !important;
+}
+
+:deep(.post-title) {
+  color: #000 !important;
+}
+
+:deep(.post-content) {
+  color: #666 !important;
+}
+
+:deep(.last-comment) {
+  background-color: #f7f8fa !important;
+}
+
+:deep(.lc-content) {
+  color: #666 !important;
+}
+
+:deep(.tag) {
+  color: #fa7299 !important;
+}
+
+:deep(.like-btn),
+:deep(.interaction) {
+  color: #999 !important;
+  background-color: transparent !important;
+  border: none !important;
+}
+
+:deep(.time-device) {
+  color: #999 !important;
 }
 </style>
