@@ -79,6 +79,7 @@ export function removeImagesAndLinksFromMarkdown(markdownText: string): string {
   result = result.replace(/<img[^>]*>/g, '')
   result = result.replace(/\[(.*?)\]\(.*?\)/g, '$1')
   result = result.replace(/<a\b[^>]*>(.*?)<\/a>/g, '$1')
+  result = result.replace(/---/g, '\n')
   return result
 }
 

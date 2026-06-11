@@ -85,8 +85,8 @@ const plainText = computed(() => {
   ).trim()
 })
 
-const md = new MarkdownIt({ breaks: true, linkify: true })
-const renderedText = computed(() => {
+const md = new MarkdownIt({ breaks: true, linkify: true, html: true })
+const renderedMarkdown = computed(() => {
   return replaceMentionAndReplayLinks(md.render(replaceEmojiStrings(plainText.value)))
 })
 
@@ -432,7 +432,7 @@ onUnmounted(() => {
 
       <!-- 内容 -->
       <div class="post-body">
-        <div class="post-text markdown-body" @click="handleContentClick" v-html="renderedText" />
+        <div class="post-text" @click="handleContentClick" v-html="renderedMarkdown" />
 
         <!-- 图片 -->
         <div v-if="cachedImages.length > 0" class="post-images">
@@ -891,8 +891,8 @@ onUnmounted(() => {
 }
 
 .post-title {
-  font-size: 1.2rem;
-  font-weight: normal;
+  font-size: 1.8rem;
+  font-weight: bold;
   margin: 15px 0;
   color: #ffffff;
 }

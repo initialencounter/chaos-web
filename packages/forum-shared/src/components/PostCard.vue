@@ -17,6 +17,7 @@ import {
   TIMING_LEVELS_MAP,
   TIMING_LEVELS_TEXT_COLOR,
 } from '@tapsss/shared/utils'
+import MarkdownIt from 'markdown-it'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import iconComment from '../../../../icons/ic_post_comment.png'
@@ -119,6 +120,12 @@ const plainText = computed(() => {
   const t = props.post.text || ''
   return removeHashWrappedStrings(removeImagesAndLinksFromMarkdown(t)).trim()
 })
+
+const md = new MarkdownIt({ breaks: true, linkify: true, html: true })
+const renderedMarkdown = computed(() => {
+  return replaceMentionAndReplayLinks(md.render(replaceEmojiStrings(plainText.value)))
+})
+
 const images = computed(() =>
   extractImageLinksFromMarkdown(props.post.text || '').map(
     url => url || './Z7.png',
@@ -169,7 +176,7 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
         <span v-for="tag in tags" :key="tag" class="tag">{{ tag }}</span>
       </div>
 
-      <p v-if="plainText" class="post-content" @click="handleContentClick" v-html="renderCommentHtml(plainText.slice(0, 100) + (plainText.length > 100 ? '...' : ''))" />
+      <div v-if="plainText" class="post-content" @click="handleContentClick" v-html="renderedMarkdown" />
 
       <div v-if="cachedImages.length > 0" class="post-images">
         <img
@@ -442,9 +449,43 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
   color: #e0e0e0;
   line-height: 1.5;
   margin-bottom: 10px;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   word-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
+
+.post-content :deep(p) {
+  margin: 0 0 4px 0;
+}
+.post-content :deep(p:last-child) {
+  margin-bottom: 0;
+}
+.post-content :deep(h1),
+.post-content :deep(h2),
+.post-content :deep(h3),
+.post-content :deep(h4),
+.post-content :deep(h5),
+.post-content :deep(h6) {
+  font-size: 1.1rem;
+  margin: 0 0 4px 0;
+  font-weight: bold;
+}
+.post-content :deep(img) {
+  max-width: 100%;
+  border-radius: 4px;
+}
+.post-content :deep(a) {
+  color: #fa7299;
+  text-decoration: none;
+}
+.post-content :deep(a:hover) {
+  text-decoration: underline;
+}
+
 .post-images {
   display: flex;
   gap: 10px;
