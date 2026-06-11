@@ -30,6 +30,7 @@ export interface ForumApi {
   nonoCareer: (...args: any[]) => Promise<any>
   tzfeCareer: (...args: any[]) => Promise<any>
   schulteCareer: (...args: any[]) => Promise<any>
+  gameNewsUser: (...args: any[]) => Promise<any>
   [key: string]: any
 }
 

@@ -47,4 +47,5 @@ export const {
   nonoCareer,
   tzfeCareer,
   schulteCareer,
+  gameNewsUser,
 } = api

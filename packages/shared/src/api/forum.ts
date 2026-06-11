@@ -166,6 +166,11 @@ export function createForumApi(fetchFn: FetchFn) {
       return fetchFn<SchulteCareerResponse>('/schulte/career', { targetUid, level: 5, type: 0, blind: false })
     },
 
+    // ========== 动态/新闻 ==========
+    gameNewsUser(uid: number, type = -1, page = 0, count = 20): Promise<ApiResponse<any[]>> {
+      return fetchFn<ApiResponse<any[]>>('/game/news/user', { uid, type, page, count })
+    },
+
     // ========== IM 消息 ==========
     messageCount(): Promise<ApiResponse<ImMessageCountData>> {
       return fetchFn<ApiResponse<ImMessageCountData>>('/user/message/count', {})

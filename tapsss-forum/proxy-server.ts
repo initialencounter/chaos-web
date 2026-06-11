@@ -84,6 +84,7 @@ const apiPaths = [
   '/Minesweeper/rank/tzfe/list',
   '/Minesweeper/rank/nono/list',
   '/Minesweeper/rank/all',
+  '/Minesweeper/game/news/user',
 ]
 
 apiPaths.forEach((path) => {

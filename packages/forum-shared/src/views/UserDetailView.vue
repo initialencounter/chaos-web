@@ -12,6 +12,7 @@ import UserAvatar from '../components/UserAvatar.vue'
 import { useUserStore } from '../stores/user'
 import RecordList from './RecordList.vue'
 import UserCareer from './UserCareer.vue'
+import UserNews from './UserNews.vue'
 import UserPosts from './UserPosts.vue'
 
 defineOptions({ name: 'UserDetailView' })
@@ -23,7 +24,7 @@ const userStore = useUserStore()
 const userData = ref<UserHomeResponse['data'] | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
-const currentTab = ref<'career' | 'records' | 'posts' | 'about'>('about')
+const currentTab = ref<'career' | 'records' | 'posts' | 'news' | 'about'>('about')
 
 onMounted(async () => {
   const uid = Number(route.params.uid)
@@ -204,6 +205,13 @@ const zodiac = computed(() => {
         </div>
         <div
           class="tab-item"
+          :class="{ active: currentTab === 'news' }"
+          @click="currentTab = 'news'"
+        >
+          资讯
+        </div>
+        <div
+          class="tab-item"
           :class="{ active: currentTab === 'about' }"
           @click="currentTab = 'about'"
         >
@@ -220,6 +228,10 @@ const zodiac = computed(() => {
           />
           <UserPosts
             v-else-if="currentTab === 'posts'"
+            :uid="String(user.id)"
+          />
+          <UserNews
+            v-else-if="currentTab === 'news'"
             :uid="String(user.id)"
           />
           <AboutTa
