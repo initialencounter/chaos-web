@@ -45,11 +45,15 @@ export const recordTextColor = ['#FB7299', '#5D9CEC', '#F15021', '#F18400', '#EE
 
 export function formatTime(timeValMs: number): string {
   const date = new Date(timeValMs)
+  const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
   const h = String(date.getHours()).padStart(2, '0')
   const min = String(date.getMinutes()).padStart(2, '0')
-  return `${m}-${d} ${h}:${min}`
+  if (y === new Date().getFullYear()) {
+    return `${m}-${d} ${h}:${min}`
+  }
+  return `${y}-${m}-${d} ${h}:${min}`
 }
 
 export function computeType(row: number, column: number, mine: number): string {
