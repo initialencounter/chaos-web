@@ -22,6 +22,7 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import iconComment from '../../../../icons/ic_post_comment.png'
 import iconLike from '../../../../icons/ic_post_good.png'
+import iconLikeActive from '../../../../icons/ic_post_good_active.webp'
 import iconShare from '../../../../icons/ic_post_share.png'
 import { resolveAsset } from '../inject'
 import { usePostStore } from '../stores/post'
@@ -353,19 +354,20 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
       </div>
       <div class="interaction comment">
         <img :src="iconComment" alt="comment" class="action-icon">
-        {{
+        <span class="count-text">{{
           post.commentCount > 1000
             ? `${(post.commentCount / 1000).toFixed(1)}k`
             : post.commentCount
-        }}
+        }}</span>
       </div>
-      <button class="like-btn interaction like" :class="{ liked: post.hasGood }" :disabled="togglingLike" @click="togglePostLike">
-        <img :src="iconLike" alt="like" class="action-icon" :class="{ 'liked-img': post.hasGood }">
-        {{
+      <button class="like-btn interaction like" :disabled="togglingLike" @click="togglePostLike">
+        <img v-if="post.hasGood" :src="iconLikeActive" alt="like" class="action-icon">
+        <img v-else :src="iconLike" alt="like" class="action-icon">
+        <span class="count-text">{{
           post.goodCount > 1000
             ? `${(post.goodCount / 1000).toFixed(1)}k`
             : post.goodCount
-        }}
+        }}</span>
       </button>
     </div>
   </div>
@@ -558,35 +560,35 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
   justify-content: space-between;
   margin-top: 15px;
   color: #9ea1a6;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
 }
 .interaction {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   flex: 1;
   justify-content: center;
 }
 .action-icon {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
   opacity: 0.7;
+}
+.count-text {
+  font-size: 1.05rem;
+  line-height: 1;
+  transform: translateY(1px); /* slight vertical tweak to perfectly align with icon */
 }
 .like-btn {
   background: none;
   border: none;
   color: #9ea1a6;
-  font-size: 0.95rem;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 6px;
   transition: all 0.2s;
   display: flex;
-  align-items: center;
-  gap: 5px;
-  flex: 1;
-  justify-content: center;
 }
 
 .like-btn:hover:not(:disabled) {
@@ -600,11 +602,6 @@ const recordColor = computed(() => recordTextColor[recordGameType.value])
 
 .like-btn.liked {
   color: #fa7299;
-}
-
-.liked-img {
-  filter: sepia(1) hue-rotate(300deg) saturate(3) brightness(1.2);
-  opacity: 1;
 }
 
 @media (max-width: 768px) {
