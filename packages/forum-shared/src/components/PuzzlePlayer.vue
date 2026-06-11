@@ -581,6 +581,8 @@ function getActionDesc(idx: number) {
   const tiles = moveInfo?.tiles.map(t => t.num).join(',') ?? ''
   return `[${act.time.toFixed(3)}s] 空白→(${act.column + 1}, ${act.row + 1}) 移动: [${tiles}]`
 }
+
+defineExpose({ replayData })
 </script>
 
 <template>

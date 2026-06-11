@@ -511,6 +511,8 @@ function getActionPos(idx: number) {
   const pos = nm?.get(data?.parsedActions[idx]?.idx ?? 0)
   return pos ? { c: pos.c + 1, r: pos.r + 1 } : { c: '?', r: '?' }
 }
+
+defineExpose({ replayData })
 </script>
 
 <template>

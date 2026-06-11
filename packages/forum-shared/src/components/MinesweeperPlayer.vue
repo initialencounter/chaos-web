@@ -613,6 +613,8 @@ const currentFrameActionInfo = computed(() => {
     = act.action === 0 ? '左键' : act.action === 1 ? '双击' : '右键'
   return `帧: ${fi}/${frameStates.length - 1} | 时间: ${act.time.toFixed(3)}s | 坐标: (${act.column}, ${act.row}) | ${actionName}`
 })
+
+defineExpose({ replayData })
 </script>
 
 <template>

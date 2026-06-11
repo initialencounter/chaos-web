@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MinesweeperPlayer from '../components/MinesweeperPlayer.vue'
 import PuzzlePlayer from '../components/PuzzlePlayer.vue'
@@ -12,8 +13,23 @@ const router = useRouter()
 const recordId = route.params.recordId as string
 const recordType = (route.params.recordType as string) || '0'
 
+const minesweeperRef = ref<InstanceType<typeof MinesweeperPlayer> | null>(null)
+const puzzleRef = ref<InstanceType<typeof PuzzlePlayer> | null>(null)
+const schulteRef = ref<InstanceType<typeof SchultePlayer> | null>(null)
+
+const postId = computed(() => {
+  const ref = minesweeperRef.value || puzzleRef.value || schulteRef.value
+  return (ref?.replayData as any)?.postId ?? null
+})
+
 function goBack() {
   router.go(-1)
+}
+
+function goToPost() {
+  if (postId.value) {
+    router.push({ name: 'post', params: { id: postId.value } })
+  }
 }
 </script>
 
@@ -21,18 +37,21 @@ function goBack() {
   <div class="replay-view">
     <div class="header">
       <button class="back-btn" @click="goBack">
-        ← 返回帖子
+        ← 返回
+      </button>
+      <button v-if="postId" class="post-btn" @click="goToPost">
+        📝 查看帖子
       </button>
       <h1>录像回放 #{{ recordId }}</h1>
     </div>
     <div v-if="recordType === '0'">
-      <MinesweeperPlayer :record-id="recordId" />
+      <MinesweeperPlayer ref="minesweeperRef" :record-id="recordId" />
     </div>
     <div v-if="recordType === '1'">
-      <PuzzlePlayer :record-id="recordId" />
+      <PuzzlePlayer ref="puzzleRef" :record-id="recordId" />
     </div>
     <div v-if="recordType === '3'">
-      <SchultePlayer :record-id="recordId" />
+      <SchultePlayer ref="schulteRef" :record-id="recordId" />
     </div>
     <div v-else>
       <p>未知的录像类型: {{ recordType }}</p>
@@ -76,6 +95,24 @@ function goBack() {
 .back-btn:hover {
   background-color: #2a2a2a;
   border-color: #fa7299;
+}
+
+.post-btn {
+  display: inline-block;
+  color: #5d9cec;
+  text-decoration: none;
+  font-size: 1rem;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.post-btn:hover {
+  background-color: #2a2a2a;
+  border-color: #5d9cec;
 }
 
 @media (max-width: 768px) {
