@@ -19,7 +19,7 @@ import {
 } from '@tapsss/shared/utils'
 import { ElIcon } from 'element-plus'
 import MarkdownIt from 'markdown-it'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import UserAvatar from '../components/UserAvatar.vue'
@@ -52,6 +52,22 @@ const showTab = ref<'comments' | 'likes'>('comments')
 const commentText = ref('')
 const submittingComment = ref(false)
 const togglingPostLike = ref(false)
+
+const showCommentInput = ref(false)
+const commentInputRef = ref<HTMLTextAreaElement | null>(null)
+const commentsRef = ref<HTMLElement | null>(null)
+
+function scrollToComments() {
+  commentsRef.value?.scrollIntoView({ behavior: 'smooth' })
+}
+
+watch(showCommentInput, (val) => {
+  if (val) {
+    setTimeout(() => {
+      commentInputRef.value?.focus()
+    }, 100)
+  }
+})
 
 const postId = computed(() => Number.parseInt(props.id))
 
@@ -329,14 +345,44 @@ function renderCommentHtml(comment: string): string {
   return replaceEmojiStrings(replaceMentionAndReplayLinks(escapeHtml(comment)))
 }
 
+const postHeaderRef = ref<HTMLElement | null>(null)
+const isHeaderSticky = ref(false)
+
+function handleScroll() {
+  if (postHeaderRef.value) {
+    const rect = postHeaderRef.value.getBoundingClientRect()
+    isHeaderSticky.value = rect.bottom < 0
+  }
+}
+
 onMounted(async () => {
+  window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
   await loadPost()
   await loadComments()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll, { capture: true } as any)
 })
 </script>
 
 <template>
   <div class="post-detail">
+    <!-- 顶部常驻悬浮栏 -->
+    <div v-if="post" class="sticky-top-bar" :class="{ 'is-visible': isHeaderSticky }">
+      <a href="#" class="sticky-back-btn" @click.prevent="goBack">
+        <svg viewBox="0 0 24 24" fill="none" style="width: 24px; height: 24px;">
+          <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </a>
+      <UserAvatar
+        class-name="avatar-small"
+        :user="post.user"
+        :size="32"
+      />
+      <span class="nickname-small">{{ post.user.nickName }}</span>
+    </div>
+
     <div v-if="loading" class="loading">
       加载帖子中...
     </div>
@@ -348,7 +394,7 @@ onMounted(async () => {
       </a>
 
       <!-- 帖子内容 -->
-      <div class="post-header">
+      <div ref="postHeaderRef" class="post-header">
         <div class="user-info">
           <UserAvatar
             class-name="avatar"
@@ -374,15 +420,15 @@ onMounted(async () => {
         </div>
       </div>
 
+      <!-- 标签 -->
+      <div v-if="tags.length > 0" class="post-tags">
+        <span v-for="tag in tags" :key="tag" class="tag">#{{ tag }}#</span>
+      </div>
+
       <!-- 标题 -->
       <h1 class="post-title">
         {{ replaceEmojiStrings(post.title) }}
       </h1>
-
-      <!-- 标签 -->
-      <div v-if="tags.length > 0" class="post-tags">
-        <span v-for="tag in tags" :key="tag" class="tag">#{{ tag }}</span>
-      </div>
 
       <!-- 内容 -->
       <div class="post-body">
@@ -474,89 +520,33 @@ onMounted(async () => {
             </template>
           </div>
         </div>
-      </div>
-
-      <!-- 统计信息 -->
-      <div class="post-stats">
-        <div class="stat">
-          <span class="stat-icon">💬</span>
-          <span class="stat-count">{{ post.commentCount }}</span>
-          <span class="stat-label">评论</span>
-        </div>
-        <div class="stat">
-          <button
-            class="like-btn"
-            :class="{ liked: post.hasGood }"
-            :disabled="togglingPostLike"
-            @click="togglePostLike"
-          >
-            <ElIcon>
-              <component :is="post.hasGood ? StarFilled : Star" />
-            </ElIcon>
-          </button>
-          <span class="stat-count">{{ post.goodCount }}</span>
-          <span class="stat-label">点赞</span>
-        </div>
-        <div class="stat">
-          <span class="stat-icon">👁️</span>
-          <span class="stat-count">{{ post.viewCount || 0 }}</span>
-          <span class="stat-label">浏览</span>
+        <div v-if="post.viewCount" class="view-count">
+          浏览数 {{ post.viewCount }}
         </div>
       </div>
     </div>
 
     <!-- 评论和点赞区域 -->
-    <div class="comments-section">
+    <div ref="commentsRef" class="comments-section">
       <div class="comments-header">
         <div class="tab-buttons">
           <button
-            class="section-tab-btn" :class="[{ active: showTab === 'comments' }]"
+            class="header-tab-btn" :class="[{ active: showTab === 'comments' }]"
             @click="switchTab('comments')"
           >
-            评论 ({{ post?.commentCount || 0 }})
+            评论 {{ post?.commentCount || 0 }}
           </button>
           <button
-            class="section-tab-btn" :class="[{ active: showTab === 'likes' }]"
+            class="header-tab-btn" :class="[{ active: showTab === 'likes' }]"
             @click="switchTab('likes')"
           >
-            点赞 ({{ post?.goodCount || 0 }})
+            赞 {{ post?.goodCount || 0 }}
           </button>
         </div>
 
-        <div v-if="showTab === 'comments'" class="sort-tabs">
-          <button
-            class="sort-btn" :class="[{ active: sortType === 0 }]"
-            @click="changeSort(0)"
-          >
-            最新
-          </button>
-          <button
-            class="sort-btn" :class="[{ active: sortType === 1 }]"
-            @click="changeSort(1)"
-          >
-            热门
-          </button>
-        </div>
-      </div>
-
-      <!-- 评论输入框 -->
-      <div v-if="showTab === 'comments'" class="comment-form">
-        <textarea
-          v-model="commentText"
-          class="comment-input"
-          placeholder="写下你的评论..."
-          rows="3"
-          maxlength="500"
-        />
-        <div class="comment-form-footer">
-          <span class="char-count">{{ commentText.length }}/500</span>
-          <button
-            class="submit-comment-btn"
-            :disabled="!commentText.trim() || submittingComment"
-            @click="submitComment"
-          >
-            {{ submittingComment ? '发送中...' : '发送评论' }}
-          </button>
+        <div v-if="showTab === 'comments'" class="sort-tabs-text">
+          <span class="sort-text" :class="{ active: sortType === 0 }" @click="changeSort(0)">最新</span>
+          <span class="sort-text" :class="{ active: sortType === 1 }" @click="changeSort(1)">热门</span>
         </div>
       </div>
 
@@ -708,6 +698,68 @@ onMounted(async () => {
         </div>
       </template>
     </div>
+
+    <!-- 底部固定操作栏 -->
+    <div v-if="post" class="bottom-action-bar">
+      <div class="fake-input-wrapper">
+        <div class="fake-input" @click="showCommentInput = true">
+          写评论...
+        </div>
+      </div>
+      <div class="action-icons">
+        <div class="action-icon" @click="scrollToComments">
+          <svg viewBox="0 0 24 24" fill="none" class="svg-icon">
+            <path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H16L22 24V6C22 4.9 21.1 4 20 4ZM20 18.2L18.8 17H4V6H20V18.2ZM6 9H18V11H6V9ZM6 13H15V15H6V13Z" fill="currentColor" />
+          </svg>
+        </div>
+        <div class="action-icon">
+          <svg viewBox="0 0 24 24" fill="none" class="svg-icon">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" stroke="currentColor" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+          </svg>
+        </div>
+        <div class="action-icon" :class="{ 'liked-icon': post.hasGood }" @click="togglePostLike">
+          <svg v-if="!post.hasGood" viewBox="0 0 24 24" fill="none" class="svg-icon">
+            <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" fill="currentColor" />
+          </svg>
+          <svg v-else viewBox="0 0 24 24" fill="currentColor" class="svg-icon">
+            <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 评论输入弹窗 -->
+    <div v-if="showCommentInput" class="comment-modal-overlay" @click.self="showCommentInput = false">
+      <div class="comment-modal-content">
+        <div class="comment-modal-header">
+          <span class="modal-title">评论</span>
+          <button
+            class="submit-comment-btn"
+            :disabled="!commentText.trim() || submittingComment"
+            @click="submitComment; showCommentInput = false"
+          >
+            发布
+          </button>
+        </div>
+        <textarea
+          ref="commentInputRef"
+          v-model="commentText"
+          class="comment-modal-input"
+          placeholder="写评论..."
+          rows="4"
+          maxlength="500"
+        />
+        <div class="comment-modal-toolbar">
+          <div class="toolbar-icons">
+            <span class="t-icon">😀</span>
+            <span class="t-icon">🖼️</span>
+            <span class="t-icon">@</span>
+            <span class="t-icon">🎥</span>
+          </div>
+          <span class="char-count">{{ commentText.length }}/500</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -716,6 +768,55 @@ onMounted(async () => {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
+  padding-bottom: 80px; /* Leave space for bottom bar */
+}
+
+/* 顶部常驻悬浮栏 */
+.sticky-top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 73px;
+  background-color: rgba(27, 27, 27, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  z-index: 100;
+  border-bottom: 1px solid #333;
+  transform: translateY(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.sticky-top-bar.is-visible {
+  transform: translateY(0);
+}
+
+.sticky-back-btn {
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+  padding: 5px;
+}
+
+.avatar-small {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin-right: 10px;
+  object-fit: cover;
+}
+
+.nickname-small {
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: #ffffff;
 }
 
 .back-btn {
@@ -790,9 +891,9 @@ onMounted(async () => {
 }
 
 .post-title {
-  font-size: 1.8rem;
-  font-weight: bold;
-  margin: 20px 0;
+  font-size: 1.2rem;
+  font-weight: normal;
+  margin: 15px 0;
   color: #ffffff;
 }
 
@@ -880,6 +981,12 @@ onMounted(async () => {
   margin-top: 4px;
 }
 
+.view-count {
+  margin-top: 15px;
+  font-size: 0.9rem;
+  color: #999;
+}
+
 .post-stats {
   display: flex;
   gap: 30px;
@@ -911,7 +1018,8 @@ onMounted(async () => {
 .comments-section {
   background-color: #1b1b1b;
   border-radius: 12px;
-  padding: 30px;
+  padding-right: 30px;
+  padding-left: 30px;
 }
 
 .comments-header {
@@ -921,6 +1029,13 @@ onMounted(async () => {
   margin-bottom: 25px;
   padding-bottom: 15px;
   border-bottom: 1px solid #333;
+  /* 评论区导航栏吸顶 */
+  position: sticky;
+  top: 50px; /* offset by sticky-top-bar height */
+  background-color: #1b1b1b;
+  z-index: 90;
+  padding-top: 40px;
+  margin-top: -15px;
 }
 
 .comments-header h2 {
@@ -933,50 +1048,60 @@ onMounted(async () => {
   gap: 20px;
 }
 
-.section-tab-btn {
+.header-tab-btn {
   background: none;
   border: none;
   color: #999;
-  font-size: 1.5rem;
-  font-weight: bold;
+  font-size: 1.1rem;
+  font-weight: normal;
   cursor: pointer;
   padding: 0;
   transition: color 0.3s;
-}
-
-.section-tab-btn:hover {
-  color: #ddd;
-}
-
-.section-tab-btn.active {
-  color: #ffffff;
-  border-bottom: 2px solid #fa7299;
-  padding-bottom: 5px;
-}
-
-.sort-tabs {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  align-items: center;
+  padding-right: 1rem;
 }
 
-.sort-btn {
-  padding: 8px 16px;
-  background-color: #2a2a2a;
+.header-tab-btn .tab-text {
+  position: relative;
+  padding-bottom: 6px;
+}
+
+.header-tab-btn .tab-count {
+  font-size: 0.8rem;
+  margin-left: 4px;
+}
+
+.header-tab-btn.active {
   color: #ffffff;
-  border: none;
-  border-radius: 20px;
+  font-weight: bold;
+}
+
+.header-tab-btn.active .tab-text::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  width: 60%;
+  height: 3px;
+  background-color: #fff;
+  border-radius: 2px;
+}
+
+.sort-tabs-text {
+  display: flex;
+  gap: 15px;
+  font-size: 0.95rem;
+  color: #999;
+}
+
+.sort-text {
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.3s;
 }
 
-.sort-btn:hover {
-  background-color: #3a3a3a;
-}
-
-.sort-btn.active {
-  background-color: #fa7299;
-  color: #ffffff;
+.sort-text.active {
+  color: #fff;
 }
 
 .empty-comments {
@@ -1200,76 +1325,133 @@ onMounted(async () => {
   text-decoration: underline;
 }
 
-.like-btn {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
+.bottom-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background-color: #1e1e1e;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  border-top: 1px solid #333;
+  z-index: 100;
+  margin: 0 auto;
+}
+
+.fake-input-wrapper {
+  flex: 1;
+  margin-right: 20px;
+}
+
+.fake-input {
+  background-color: #2a2a2a;
+  color: #777;
+  padding: 10px 15px;
+  border-radius: 20px;
+  font-size: 0.95rem;
   cursor: pointer;
-  padding: 0;
-  transition: transform 0.2s;
 }
 
-.like-btn:hover:not(:disabled) {
-  transform: scale(1.15);
+.action-icons {
+  display: flex;
+  gap: 20px;
+  align-items: center;
 }
 
-.like-btn.liked {
+.action-icon {
+  cursor: pointer;
+  color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-icon.liked-icon {
   color: #fa7299;
 }
 
-.like-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.svg-icon {
+  width: 26px;
+  height: 26px;
 }
 
-.comment-form {
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #333;
+.comment-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
 }
 
-.comment-input {
+.comment-modal-content {
   width: 100%;
-  padding: 12px;
-  background-color: #2a2a2a;
-  border: 1px solid #444;
-  border-radius: 8px;
-  color: #e0e0e0;
-  font-size: 0.95rem;
-  resize: vertical;
-  box-sizing: border-box;
+  max-width: 800px;
+  margin: 0 auto;
+  background-color: #1e1e1e;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  padding: 15px 20px;
+  display: flex;
+  flex-direction: column;
 }
 
-.comment-input:focus {
-  outline: none;
-  border-color: #fa7299;
-}
-
-.comment-form-footer {
+.comment-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 8px;
+  margin-bottom: 15px;
 }
 
-.char-count {
-  font-size: 0.8rem;
-  color: #888;
+.modal-title {
+  color: #fff;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.comment-modal-input {
+  width: 100%;
+  background-color: transparent;
+  color: #fff;
+  border: none;
+  font-size: 1rem;
+  resize: none;
+  margin-bottom: 10px;
+}
+
+.comment-modal-input:focus {
+  outline: none;
+}
+
+.comment-modal-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #333;
+  padding-top: 10px;
+}
+
+.toolbar-icons {
+  display: flex;
+  gap: 15px;
+  font-size: 1.3rem;
+  cursor: pointer;
 }
 
 .submit-comment-btn {
-  padding: 8px 20px;
-  background-color: #fa7299;
-  color: #ffffff;
+  padding: 6px 16px;
+  background-color: transparent;
+  color: #fa7299;
   border: none;
-  border-radius: 20px;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.3s;
-}
-
-.submit-comment-btn:hover:not(:disabled) {
-  background-color: #e85d82;
+  font-size: 1.05rem;
+  font-weight: bold;
+  transition: all 0.3s;
 }
 
 .submit-comment-btn:disabled {

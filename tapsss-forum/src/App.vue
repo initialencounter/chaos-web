@@ -13,12 +13,6 @@ import NavBar from './components/NavBar.vue'
         </keep-alive>
       </RouterView>
     </main>
-    <footer class="app-footer">
-      <p>扫雷社区论坛 - 只读版本</p>
-      <p class="footer-note">
-        数据来自游戏服务器，仅供浏览
-      </p>
-    </footer>
   </div>
 </template>
 
