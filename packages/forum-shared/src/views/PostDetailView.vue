@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { BaseUser, CommentDatum, PostGetResponse } from '@tapsss/shared'
-import { Star, StarFilled } from '@element-plus/icons-vue'
 import {
   computeType,
   escapeHtml,
@@ -17,10 +16,11 @@ import {
   TIMING_LEVELS_MAP,
   TIMING_LEVELS_TEXT_COLOR,
 } from '@tapsss/shared/utils'
-import { ElIcon } from 'element-plus'
 import MarkdownIt from 'markdown-it'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import iconLike from '../../../../icons/ic_post_good.png'
+import iconLikeActive from '../../../../icons/ic_post_good_active.webp'
 
 import UserAvatar from '../components/UserAvatar.vue'
 import { resolveAsset } from '../inject'
@@ -251,6 +251,7 @@ async function toggleCommentLike(comment: { id: number, hasGood: boolean, goodCo
 }
 
 async function submitComment() {
+  showCommentInput.value = false
   const text = commentText.value.trim()
   if (!text || submittingComment.value)
     return
@@ -585,10 +586,9 @@ onUnmounted(() => {
                   :class="{ liked: comment.hasGood }"
                   @click="toggleCommentLike(comment)"
                 >
-                  <ElIcon>
-                    <component :is="comment.hasGood ? StarFilled : Star" />
-                  </ElIcon>
-                  {{ comment.goodCount }}
+                  <img v-if="comment.hasGood" :src="iconLikeActive" alt="like" class="comment-action-icon">
+                  <img v-else :src="iconLike" alt="like" class="comment-action-icon">
+                  <span class="count-text">{{ comment.goodCount }}</span>
                 </button>
                 <button
                   v-if="currentUid && comment.uid === currentUid"
@@ -736,7 +736,7 @@ onUnmounted(() => {
           <button
             class="submit-comment-btn"
             :disabled="!commentText.trim() || submittingComment"
-            @click="submitComment; showCommentInput = false"
+            @click="submitComment"
           >
             发布
           </button>
@@ -1468,6 +1468,24 @@ onUnmounted(() => {
   padding: 4px 8px;
   border-radius: 4px;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.comment-action-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  opacity: 0.7;
+}
+
+.count-text {
+  transform: translateY(1px);
+}
+
+.comment-like-btn.liked .comment-action-icon {
+  opacity: 1;
 }
 
 .comment-like-btn:hover {
