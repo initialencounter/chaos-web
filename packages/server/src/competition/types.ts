@@ -22,6 +22,8 @@ export interface CompetitionConfig {
   scoreFormula: 'ioe_minus_time_penalty'
   /** 时间惩罚系数 */
   timePenaltyCoefficient: number
+  /** 黑名单 UID，不上榜 */
+  blacklist: string[]
   /** 轮询间隔 (毫秒) */
   pollIntervalMs: number
   /** 评论分页大小 */

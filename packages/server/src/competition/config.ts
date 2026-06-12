@@ -20,4 +20,5 @@ export const CURRENT_COMPETITION_CONFIG: CompetitionConfig = {
   pollIntervalMs: 15 * 60 * 1000,
   commentsPerPage: 20,
   repliesPerPage: 20,
+  blacklist: ['103124'],
 }

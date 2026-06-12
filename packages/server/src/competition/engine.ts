@@ -334,6 +334,9 @@ export function createCompetitionEngine(
       const totalSubmissions = candidates.length
 
       for (const candidate of candidates) {
+        // 跳过黑名单
+        if (config.blacklist.includes(candidate.uid))
+          continue
         const key = buildKey(candidate.uid, candidate.recordId)
         const validated = await validateRecord(candidate.recordId, candidate.uid, config, executeRequest, logger, recordCacheDir)
         if (!validated)
@@ -406,9 +409,12 @@ export function createCompetitionEngine(
       return a.recordData.time - b.recordData.time
     })
 
-    // 每个玩家只保留最佳成绩
+    // 过滤黑名单 + 每个玩家只保留最佳成绩
+    const blacklistSet = new Set(state.config.blacklist)
     const seenUids = new Set<string>()
     const bestEntries = entries.filter((e) => {
+      if (blacklistSet.has(e.uid))
+        return false
       if (seenUids.has(e.uid))
         return false
       seenUids.add(e.uid)
