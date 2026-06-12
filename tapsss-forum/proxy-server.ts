@@ -249,6 +249,7 @@ const competitionEngine = createCompetitionEngine(
   {
     executeRequest,
     cacheDir: COMPETITION_CACHE_DIR,
+    recordCacheDir: RECORD_CACHE_DIR,
     logger: console,
   },
 )

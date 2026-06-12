@@ -84,8 +84,10 @@ export interface CompetitionState {
 export interface EngineDeps {
   /** API 请求函数 */
   executeRequest: <T>(path: string, method: string, params: Record<string, any>) => Promise<T>
-  /** 磁盘缓存目录 */
+  /** 比赛状态缓存目录 */
   cacheDir: string
+  /** proxy-server 录像磁盘缓存目录 */
+  recordCacheDir: string
   /** 日志输出 */
   logger: Pick<Console, 'log' | 'warn' | 'error'>
 }

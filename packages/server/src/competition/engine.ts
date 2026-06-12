@@ -91,6 +91,7 @@ async function fetchAllReplies(
 /**
  * 验证并获取一条录像记录
  * 如果验证失败返回 null
+ * recordCache: 录像数据内存缓存，key=recordId，避免重复请求上游 API
  */
 async function validateRecord(
   recordId: number,
@@ -98,19 +99,46 @@ async function validateRecord(
   config: CompetitionConfig,
   executeRequest: EngineDeps['executeRequest'],
   logger: EngineDeps['logger'],
+  recordCacheDir: string,
 ): Promise<{ recordData: CompetitionEntry['recordData'] } | null> {
   try {
-    const res: RecordGetResponse = await executeRequest(
-      '/Minesweeper/minesweeper/record/get',
-      'POST',
-      { recordId },
-    )
-    if (!res || res.code !== 200 || !res.data) {
-      logger.warn(`[Competition] 获取录像失败 recordId=${recordId}:`, res)
-      return null
+    let record: RecordGetResponse['data'] | undefined
+
+    // 检查 proxy-server 的录像磁盘缓存
+    const diskCacheFile = path.join(recordCacheDir, `minesweeper-${recordId}.json`)
+    if (fs.existsSync(diskCacheFile)) {
+      try {
+        const cached: RecordGetResponse = JSON.parse(fs.readFileSync(diskCacheFile, 'utf-8'))
+        if (cached.code === 200 && cached.data) {
+          record = cached.data
+        }
+      }
+      catch {
+        logger.warn(`[Competition] 磁盘缓存解析失败 recordId=${recordId}`)
+      }
     }
 
-    const record = res.data
+    // 未命中则请求上游 API
+    if (!record) {
+      const res: RecordGetResponse = await executeRequest(
+        '/Minesweeper/minesweeper/record/get',
+        'POST',
+        { recordId },
+      )
+      if (!res || res.code !== 200 || !res.data) {
+        logger.warn(`[Competition] 获取录像失败 recordId=${recordId}:`, res)
+        return null
+      }
+      record = res.data
+      // 回写到 proxy-server 磁盘缓存
+      try {
+        fs.writeFileSync(diskCacheFile, JSON.stringify(res))
+        logger.log(`[Competition] 写入磁盘缓存 recordId=${recordId}`)
+      }
+      catch {
+        // 写入失败不影响主流程
+      }
+    }
 
     // 1. 录像所有者必须匹配评论者
     if (String(record.uid) !== String(expectedUid)) {
@@ -195,7 +223,7 @@ export function createCompetitionEngine(
   config: CompetitionConfig,
   deps: EngineDeps,
 ): CompetitionEngine {
-  const { executeRequest, cacheDir, logger } = deps
+  const { executeRequest, cacheDir, recordCacheDir, logger } = deps
   const stateFilePath = path.join(cacheDir, 'competition-state.json')
 
   let state: CompetitionState = {
@@ -307,7 +335,7 @@ export function createCompetitionEngine(
 
       for (const candidate of candidates) {
         const key = buildKey(candidate.uid, candidate.recordId)
-        const validated = await validateRecord(candidate.recordId, candidate.uid, config, executeRequest, logger)
+        const validated = await validateRecord(candidate.recordId, candidate.uid, config, executeRequest, logger, recordCacheDir)
         if (!validated)
           continue
 
