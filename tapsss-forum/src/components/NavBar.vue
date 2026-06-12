@@ -155,9 +155,12 @@ watch(
 
 @media (max-width: 768px) {
   .nav-container {
-    flex-direction: column;
-    gap: 15px;
+    gap: 10px;
     padding: 0 12px;
+  }
+
+  .brand-text {
+    font-size: 1.15rem;
   }
 
   .nav-search {
@@ -166,8 +169,12 @@ watch(
   }
 
   .nav-links {
-    width: 100%;
-    justify-content: center;
+    gap: 6px;
+  }
+
+  .nav-link {
+    font-size: 0.85rem;
+    padding: 6px 12px;
   }
 }
 </style>
