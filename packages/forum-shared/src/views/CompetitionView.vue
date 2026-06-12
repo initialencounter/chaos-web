@@ -256,7 +256,7 @@ onUnmounted(() => {
               <span v-else class="status-badge provisional">未完成</span>
             </td>
             <td class="col-comment" @click="handleCommentClick">
-              <span class="comment-html" v-html="renderComment(entry.commentText)" />
+              <span class="comment-html" :title="entry.commentText" v-html="renderComment(entry.commentText)" />
             </td>
           </tr>
         </tbody>
@@ -546,7 +546,7 @@ onUnmounted(() => {
   color: #ccc;
   font-size: 13px;
   line-height: 1.5;
-  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .comment-html :deep(.replay-link) {
@@ -582,6 +582,15 @@ onUnmounted(() => {
   .player-avatar {
     width: 28px;
     height: 28px;
+  }
+  .col-comment {
+    max-width: 120px;
+  }
+  .comment-html {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
   }
 }
 </style>
