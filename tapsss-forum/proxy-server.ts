@@ -3,7 +3,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
-import { executeRequest, LOGIN_CONFIG } from '@tapsss/server'
+import { createCompetitionEngine, CURRENT_COMPETITION_CONFIG, executeRequest, LOGIN_CONFIG } from '@tapsss/server'
 import cors from 'cors'
 import express from 'express'
 import { TOKEN, UID } from './secrets'
@@ -20,8 +20,10 @@ const rootDir = path.resolve(process.cwd(), process.env.TOP_DIR ? 'tapsss-forum'
 // 缓存目录
 const IMAGE_CACHE_DIR = path.join(rootDir, 'image-cache')
 const RECORD_CACHE_DIR = path.join(rootDir, 'record-cache')
+const COMPETITION_CACHE_DIR = path.join(rootDir, 'competition-cache')
 fs.mkdirSync(IMAGE_CACHE_DIR, { recursive: true })
 fs.mkdirSync(RECORD_CACHE_DIR, { recursive: true })
+fs.mkdirSync(COMPETITION_CACHE_DIR, { recursive: true })
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
 
@@ -241,6 +243,54 @@ for (const [apiPath, recordType] of Object.entries(recordPaths)) {
   })
 }
 
+// ======== 比赛排行榜引擎 ========
+const competitionEngine = createCompetitionEngine(
+  CURRENT_COMPETITION_CONFIG,
+  {
+    executeRequest,
+    cacheDir: COMPETITION_CACHE_DIR,
+    logger: console,
+  },
+)
+
+// 从磁盘恢复状态
+competitionEngine.loadFromDisk()
+
+// 获取排行榜
+app.get('/api/competition/leaderboard', (req, res) => {
+  try {
+    const entries = competitionEngine.getLeaderboard()
+    const stats = competitionEngine.getStatistics()
+    res.json({
+      code: 200,
+      data: {
+        entries,
+        lastUpdated: competitionEngine.getLastPollTime(),
+        competitionTitle: '全标速效比赛',
+        competitionTimeWindow: '2026-06-10 20:00 ~ 2026-06-18 00:00',
+        totalSubmissions: stats.totalSubmissions,
+        totalValidEntries: stats.totalValid,
+        totalFinalEntries: stats.totalFinal,
+      },
+      msg: null,
+    })
+  }
+  catch (err) {
+    res.status(500).json({ code: 500, data: null, msg: String(err) })
+  }
+})
+
+// 手动刷新排行榜
+app.post('/api/competition/refresh', async (req, res) => {
+  try {
+    await competitionEngine.poll()
+    res.json({ code: 200, data: { success: true }, msg: null })
+  }
+  catch (err) {
+    res.status(500).json({ code: 500, data: null, msg: String(err) })
+  }
+})
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
@@ -302,4 +352,16 @@ else {
 app.listen(PORT, '0.0.0.0', () => {
   // eslint-disable-next-line no-console
   console.log(`代理服务器运行在 http://localhost:${PORT}`)
+
+  // 5 秒后首次轮询，之后每 15 分钟自动轮询
+  setTimeout(() => {
+    competitionEngine.poll().then(() => {
+      // eslint-disable-next-line no-console
+      console.log('[Competition] 首次轮询完成')
+    }).catch((err: Error) => {
+      console.error('[Competition] 首次轮询失败:', err)
+    })
+  }, 5000)
+
+  competitionEngine.startAutoPoll()
 })

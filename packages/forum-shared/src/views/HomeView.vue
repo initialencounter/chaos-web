@@ -59,6 +59,10 @@ function goToPostDetail(id: number) {
   router.push({ name: 'post', params: { id } })
 }
 
+function goToCompetition() {
+  router.push({ name: 'competition' })
+}
+
 onMounted(async () => {
   if (posts.value.length === 0) {
     await loadPosts()
@@ -84,10 +88,7 @@ onMounted(async () => {
         </div>
       </div>
       <div class="nav-right">
-        <!-- <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg> -->
+        <span class="competition-link" @click="goToCompetition">🏆</span>
       </div>
     </div>
 
@@ -189,10 +190,15 @@ onMounted(async () => {
   border-radius: 2px;
 }
 
-.search-icon {
-  width: 24px;
-  height: 24px;
-  color: #e0e0e0;
+.competition-link {
+  font-size: 24px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  user-select: none;
+}
+
+.competition-link:hover {
+  transform: scale(1.2);
 }
 
 .stick-posts-container {

@@ -1,3 +1,4 @@
+import CompetitionView from '@tapsss/forum-shared/views/CompetitionView.vue'
 import HomeView from '@tapsss/forum-shared/views/HomeView.vue'
 import PostDetailView from '@tapsss/forum-shared/views/PostDetailView.vue'
 import ReplayDetailView from '@tapsss/forum-shared/views/ReplayDetailView.vue'
@@ -36,6 +37,11 @@ const router = createRouter({
       name: 'replay',
       component: ReplayDetailView,
       props: true,
+    },
+    {
+      path: '/forum/competition',
+      name: 'competition',
+      component: CompetitionView,
     },
     {
       path: '/forum/user/:uid',
