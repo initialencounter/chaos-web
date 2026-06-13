@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MinesweeperPlayer from '../components/MinesweeperPlayer.vue'
+import NonoPlayer from '../components/NonoPlayer.vue'
 import PuzzlePlayer from '../components/PuzzlePlayer.vue'
 import SchultePlayer from '../components/SchultePlayer.vue'
 
@@ -14,11 +15,12 @@ const recordId = route.params.recordId as string
 const recordType = (route.params.recordType as string) || '0'
 
 const minesweeperRef = ref<InstanceType<typeof MinesweeperPlayer> | null>(null)
+const nonoRef = ref<InstanceType<typeof NonoPlayer> | null>(null)
 const puzzleRef = ref<InstanceType<typeof PuzzlePlayer> | null>(null)
 const schulteRef = ref<InstanceType<typeof SchultePlayer> | null>(null)
 
 const postId = computed(() => {
-  const ref = minesweeperRef.value || puzzleRef.value || schulteRef.value
+  const ref = minesweeperRef.value || nonoRef.value || puzzleRef.value || schulteRef.value
   return (ref?.replayData as any)?.postId ?? null
 })
 
@@ -47,10 +49,13 @@ function goToPost() {
     <div v-if="recordType === '0'">
       <MinesweeperPlayer ref="minesweeperRef" :record-id="recordId" />
     </div>
-    <div v-if="recordType === '1'">
+    <div v-else-if="recordType === '1'">
       <PuzzlePlayer ref="puzzleRef" :record-id="recordId" />
     </div>
-    <div v-if="recordType === '3'">
+    <div v-else-if="recordType === '4'">
+      <NonoPlayer ref="nonoRef" :record-id="recordId" />
+    </div>
+    <div v-else-if="recordType === '3'">
       <SchultePlayer ref="schulteRef" :record-id="recordId" />
     </div>
     <div v-else>

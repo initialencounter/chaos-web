@@ -207,6 +207,7 @@ const recordPaths: Record<string, string> = {
   '/Minesweeper/minesweeper/record/get': 'minesweeper',
   '/Minesweeper/puzzle/record/get': 'puzzle',
   '/Minesweeper/schulte/record/get': 'schulte',
+  '/Minesweeper/nono/record/get': 'nono',
 }
 
 for (const [apiPath, recordType] of Object.entries(recordPaths)) {

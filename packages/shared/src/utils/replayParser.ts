@@ -81,3 +81,32 @@ export function parsePuzzleReplayHandle(base64Str: string): PuzzleActionRecord[]
   }
   return actions
 }
+
+export function parseNonoReplayHandle(base64Str: string): ActionRecord[] {
+  const binaryString = window.atob(base64Str)
+  const len = binaryString.length
+  const bytes = new Uint8Array(len)
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i)
+  }
+
+  const decompressed = pako.inflate(bytes, { to: 'string' }) as string
+  const segments = decompressed.split('|')
+  const actions: ActionRecord[] = []
+
+  for (const seg of segments) {
+    if (!seg)
+      continue
+    const parts = seg.split(':')
+    if (parts.length === 4) {
+      actions.push({
+        action: Number.parseInt(parts[0]!, 10),
+        row: Number.parseInt(parts[1]!, 10),
+        column: Number.parseInt(parts[2]!, 10),
+        time: Number.parseInt(parts[3]!, 10) / 1000,
+      })
+    }
+  }
+
+  return actions
+}

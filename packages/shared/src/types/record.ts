@@ -270,6 +270,31 @@ export interface NonoRecordListDatum {
 
 export type NonoRecordListFilterResponse = ApiResponse<NonoRecordListDatum[]>
 
+export interface NonoRecordGetData {
+  collect: boolean
+  column: number
+  createTime: number
+  finishMode: number
+  handle: string
+  id: number
+  map: string
+  mine: number
+  mode: number
+  playCount: number
+  postId: number
+  rank: number
+  rankPercent: number
+  row: number
+  themeId: number
+  time: number
+  type: number
+  uid: string
+  upload: boolean
+  user: BaseUser
+}
+
+export type NonoRecordGetResponse = ApiResponse<NonoRecordGetData>
+
 // ========== 混沌扫雷用户记录 ==========
 export interface ChaosUserRecordDatum {
   correct: number

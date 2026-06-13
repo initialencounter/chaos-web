@@ -36,6 +36,7 @@ export const {
   minesweeperRecordGet,
   puzzleRecordGetResponse,
   schulteRecordGet,
+  nonoRecordGet,
   minesweeperRecordList,
   schulteRecordListFilter,
   puzzleRecordListFilter,

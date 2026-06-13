@@ -23,6 +23,7 @@ import type {
 } from '../types/post'
 import type {
   MinesweeperRecordListResponse,
+  NonoRecordGetResponse,
   NonoRecordListFilterResponse,
   PuzzleRecordGetResponse,
   PuzzleRecordListFilterResponse,
@@ -113,6 +114,10 @@ export function createForumApi(fetchFn: FetchFn) {
 
     schulteRecordGet(recordId: number): Promise<SchulteRecordGetResponse> {
       return fetchFn<SchulteRecordGetResponse>('/schulte/record/get', { recordId })
+    },
+
+    nonoRecordGet(recordId: number): Promise<NonoRecordGetResponse> {
+      return fetchFn<NonoRecordGetResponse>('/nono/record/get', { recordId })
     },
 
     // ========== 记录列表 ==========
