@@ -3,7 +3,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
-import { createCompetitionEngine, createTranscendenceCupEngine, CURRENT_COMPETITION_CONFIG, executeRequest, LOGIN_CONFIG, TCUP_CONFIG } from '@tapsss/server'
+import { createCompetitionEngine, createTranscendenceCupEngine, executeRequest, loadSpeedCompetitionConfig, loadTranscendenceCupConfig, LOGIN_CONFIG } from '@tapsss/server'
 import cors from 'cors'
 import express from 'express'
 import { TOKEN, UID } from './secrets'
@@ -243,9 +243,12 @@ for (const [apiPath, recordType] of Object.entries(recordPaths)) {
   })
 }
 
-// ======== 比赛排行榜引擎 ========
+const COMPETITION_CONFIG_DIR = path.join(rootDir, 'competition-config')
+
+// ======== 全标速效比赛引擎 ========
+const SPEED_CONFIG = loadSpeedCompetitionConfig(COMPETITION_CONFIG_DIR)
 const competitionEngine = createCompetitionEngine(
-  CURRENT_COMPETITION_CONFIG,
+  SPEED_CONFIG,
   {
     executeRequest,
     cacheDir: COMPETITION_CACHE_DIR,
@@ -258,6 +261,7 @@ const competitionEngine = createCompetitionEngine(
 competitionEngine.loadFromDisk()
 
 // ======== 超越杯比赛引擎 ========
+const TCUP_CONFIG = loadTranscendenceCupConfig(COMPETITION_CONFIG_DIR)
 const tcupEngine = createTranscendenceCupEngine(
   TCUP_CONFIG,
   {

@@ -139,6 +139,9 @@ importers:
       '@tapsss/shared':
         specifier: workspace:*
         version: link:../shared
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
     devDependencies:
       '@types/node':
         specifier: ^24.12.0
@@ -525,11 +528,6 @@ packages:
         optional: true
       oxlint:
         optional: true
-
-  '@electron/asar@3.2.1':
-    resolution: {integrity: sha512-hE2cQMZ5+4o7+6T2lUaVbxIzrOjZZfX7dB02xuapyYFJZEAiWTelq6J3mMoxzd0iONDvYLPVKecB5tyjIoVDVA==}
-    engines: {node: '>=10.12.0'}
-    hasBin: true
 
   '@electron/asar@3.4.1':
     resolution: {integrity: sha512-i4/rNPRS84t0vSRa2HorerGRXWyF4vThfHesw0dmcWHp+cspK743UanA0suA5Q5y8kzY2y6YKrvbIUn69BCAiA==}
@@ -1404,9 +1402,6 @@ packages:
   '@types/fs-extra@9.0.13':
     resolution: {integrity: sha512-nEnwB++1u5lVDM2UI4c1+5R+FYaKfaAzS4OococimjVm3nQw3TuzH5UNsocrcTBbhnerblyHj4A49qXbIiZdpA==}
 
-  '@types/glob@7.2.0':
-    resolution: {integrity: sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==}
-
   '@types/hast@3.0.4':
     resolution: {integrity: sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ==}
 
@@ -1439,10 +1434,6 @@ packages:
 
   '@types/mdast@4.0.4':
     resolution: {integrity: sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA==}
-
-  '@types/minimatch@6.0.0':
-    resolution: {integrity: sha512-zmPitbQ8+6zNutpwgcQuLcsEpn/Cj54Kbn7L5pX0Os5kdWplB7xPgEh/g+SWOB/qmows2gpuCaPyduq8ZZRnxA==}
-    deprecated: This is a stub types definition. minimatch provides its own type definitions, so you do not need this installed.
 
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
@@ -4617,10 +4608,6 @@ packages:
   string-ts@2.3.1:
     resolution: {integrity: sha512-xSJq+BS52SaFFAVxuStmx6n5aYZU571uYUnUrPXkPFCfdHyZMMlbP2v2Wx5sNBnAVzq/2+0+mcBLBa3Xa5ubYw==}
 
-  string-width@4.2.0:
-    resolution: {integrity: sha512-zUz5JD+tgqtuDjMhwIg5uFVV3dtqZ9yQJlZVfq4I01/K5Paj5UHj7VyrQOJvzawSVlKpObApbfD0Ed6yJc+1eg==}
-    engines: {node: '>=8'}
-
   string-width@4.2.3:
     resolution: {integrity: sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==}
     engines: {node: '>=8'}
@@ -5625,15 +5612,6 @@ snapshots:
     optionalDependencies:
       eslint: 10.3.0(jiti@2.7.0)
 
-  '@electron/asar@3.2.1':
-    dependencies:
-      chromium-pickle-js: 0.2.0
-      commander: 5.0.0
-      glob: 7.2.0
-      minimatch: 3.1.5
-    optionalDependencies:
-      '@types/glob': 7.2.0
-
   '@electron/asar@3.4.1':
     dependencies:
       commander: 5.0.0
@@ -6062,7 +6040,7 @@ snapshots:
   '@isaacs/cliui@8.0.2':
     dependencies:
       string-width: 5.1.2
-      string-width-cjs: string-width@4.2.0
+      string-width-cjs: string-width@4.2.3
       strip-ansi: 7.2.0
       strip-ansi-cjs: strip-ansi@6.0.1
       wrap-ansi: 8.1.0
@@ -6422,12 +6400,6 @@ snapshots:
     dependencies:
       '@types/node': 24.12.4
 
-  '@types/glob@7.2.0':
-    dependencies:
-      '@types/minimatch': 6.0.0
-      '@types/node': 24.12.4
-    optional: true
-
   '@types/hast@3.0.4':
     dependencies:
       '@types/unist': 3.0.3
@@ -6457,11 +6429,6 @@ snapshots:
   '@types/mdast@4.0.4':
     dependencies:
       '@types/unist': 3.0.3
-
-  '@types/minimatch@6.0.0':
-    dependencies:
-      minimatch: 10.2.5
-    optional: true
 
   '@types/ms@2.1.0': {}
 
@@ -7623,7 +7590,7 @@ snapshots:
 
   electron-winstaller@5.4.0:
     dependencies:
-      '@electron/asar': 3.2.1
+      '@electron/asar': 3.4.1
       debug: 4.4.3
       fs-extra: 7.0.1
       lodash: 4.18.1
@@ -10311,12 +10278,6 @@ snapshots:
   string-argv@0.3.2: {}
 
   string-ts@2.3.1: {}
-
-  string-width@4.2.0:
-    dependencies:
-      emoji-regex: 8.0.0
-      is-fullwidth-code-point: 3.0.0
-      strip-ansi: 6.0.1
 
   string-width@4.2.3:
     dependencies:

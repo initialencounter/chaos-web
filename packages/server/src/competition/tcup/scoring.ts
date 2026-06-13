@@ -163,6 +163,8 @@ interface RankEntry {
 
 /**
  * 对一组玩家按某指标排名
+ * @param players 玩家列表
+ * @param extractValue 从 PlayerAggregate 中提取用于排名的数值，返回 null 表示该玩家不参与排名
  * @param sortAscending true=越小越好(time/minBv), false=越大越好(bvs/maxBv/points)
  */
 export function rankCategory(
