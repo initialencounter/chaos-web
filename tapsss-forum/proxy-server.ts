@@ -208,6 +208,7 @@ const recordPaths: Record<string, string> = {
   '/Minesweeper/puzzle/record/get': 'puzzle',
   '/Minesweeper/schulte/record/get': 'schulte',
   '/Minesweeper/nono/record/get': 'nono',
+  '/Minesweeper/tzfe/record/get': 'tzfe',
 }
 
 for (const [apiPath, recordType] of Object.entries(recordPaths)) {
@@ -254,98 +255,110 @@ function fmtTime(ts: number): string {
 }
 
 const SPEED_CONFIG = loadSpeedCompetitionConfig(COMPETITION_CONFIG_DIR)
-const competitionEngine = createCompetitionEngine(
-  SPEED_CONFIG,
-  {
-    executeRequest,
-    cacheDir: COMPETITION_CACHE_DIR,
-    recordCacheDir: RECORD_CACHE_DIR,
-    logger: console,
-  },
-)
+let competitionEngine: ReturnType<typeof createCompetitionEngine> | null = null
 
-// 从磁盘恢复状态
-competitionEngine.loadFromDisk()
+if (SPEED_CONFIG.enabled) {
+  competitionEngine = createCompetitionEngine(
+    SPEED_CONFIG,
+    {
+      executeRequest,
+      cacheDir: COMPETITION_CACHE_DIR,
+      recordCacheDir: RECORD_CACHE_DIR,
+      logger: console,
+    },
+  )
+
+  // 从磁盘恢复状态
+  competitionEngine.loadFromDisk()
+}
 
 // ======== 超越杯比赛引擎 ========
 const TCUP_CONFIG = loadTranscendenceCupConfig(COMPETITION_CONFIG_DIR)
-const tcupEngine = createTranscendenceCupEngine(
-  TCUP_CONFIG,
-  {
-    executeRequest,
-    cacheDir: COMPETITION_CACHE_DIR,
-    recordCacheDir: RECORD_CACHE_DIR,
-    logger: console,
-  },
-)
-tcupEngine.loadFromDisk()
+let tcupEngine: ReturnType<typeof createTranscendenceCupEngine> | null = null
+
+if (TCUP_CONFIG.enabled) {
+  tcupEngine = createTranscendenceCupEngine(
+    TCUP_CONFIG,
+    {
+      executeRequest,
+      cacheDir: COMPETITION_CACHE_DIR,
+      recordCacheDir: RECORD_CACHE_DIR,
+      logger: console,
+    },
+  )
+  tcupEngine.loadFromDisk()
+}
 
 // 获取排行榜
-app.get('/api/competition/leaderboard', (req, res) => {
-  try {
-    const entries = competitionEngine.getLeaderboard()
-    const stats = competitionEngine.getStatistics()
-    res.json({
-      code: 200,
-      data: {
-        entries,
-        lastUpdated: competitionEngine.getLastPollTime(),
-        competitionTitle: SPEED_CONFIG.name,
-        competitionTimeWindow: `${fmtTime(SPEED_CONFIG.startTime)} ~ ${fmtTime(SPEED_CONFIG.endTime)}`,
-        competitionDescription: SPEED_CONFIG.description,
-        totalSubmissions: stats.totalSubmissions,
-        totalValidEntries: stats.totalValid,
-        totalFinalEntries: stats.totalFinal,
-      },
-      msg: null,
-    })
-  }
-  catch (err) {
-    res.status(500).json({ code: 500, data: null, msg: String(err) })
-  }
-})
+if (competitionEngine) {
+  app.get('/api/competition/leaderboard', (req, res) => {
+    try {
+      const entries = competitionEngine!.getLeaderboard()
+      const stats = competitionEngine!.getStatistics()
+      res.json({
+        code: 200,
+        data: {
+          entries,
+          lastUpdated: competitionEngine!.getLastPollTime(),
+          competitionTitle: SPEED_CONFIG.name,
+          competitionTimeWindow: `${fmtTime(SPEED_CONFIG.startTime)} ~ ${fmtTime(SPEED_CONFIG.endTime)}`,
+          competitionDescription: SPEED_CONFIG.description,
+          totalSubmissions: stats.totalSubmissions,
+          totalValidEntries: stats.totalValid,
+          totalFinalEntries: stats.totalFinal,
+        },
+        msg: null,
+      })
+    }
+    catch (err) {
+      res.status(500).json({ code: 500, data: null, msg: String(err) })
+    }
+  })
 
-// 手动刷新排行榜
-app.post('/api/competition/refresh', async (req, res) => {
-  try {
-    await competitionEngine.poll()
-    res.json({ code: 200, data: { success: true }, msg: null })
-  }
-  catch (err) {
-    res.status(500).json({ code: 500, data: null, msg: String(err) })
-  }
-})
+  // 手动刷新排行榜
+  app.post('/api/competition/refresh', async (req, res) => {
+    try {
+      await competitionEngine!.poll()
+      res.json({ code: 200, data: { success: true }, msg: null })
+    }
+    catch (err) {
+      res.status(500).json({ code: 500, data: null, msg: String(err) })
+    }
+  })
+}
 
 // ======== 超越杯 API ========
 
-// 获取超越杯排行榜
-app.get('/api/tcup/leaderboards', (req, res) => {
-  try {
-    const data = tcupEngine.getLeaderboards()
-    res.json({
-      code: 200,
-      data: {
-        ...data,
-        lastUpdated: tcupEngine.getLastPollTime(),
-      },
-      msg: null,
-    })
-  }
-  catch (err) {
-    res.status(500).json({ code: 500, data: null, msg: String(err) })
-  }
-})
+if (tcupEngine) {
+  // 获取超越杯排行榜
+  app.get('/api/tcup/leaderboards', (req, res) => {
+    try {
+      const data = tcupEngine!.getLeaderboards()
+      res.json({
+        code: 200,
+        data: {
+          ...data,
+          lastUpdated: tcupEngine!.getLastPollTime(),
+        },
+        msg: null,
+      })
+    }
+    catch (err) {
+      res.status(500).json({ code: 500, data: null, msg: String(err) })
+    }
+  })
 
-// 手动刷新超越杯排行榜
-app.post('/api/tcup/refresh', async (req, res) => {
-  try {
-    await tcupEngine.poll()
-    res.json({ code: 200, data: { success: true }, msg: null })
-  }
-  catch (err) {
-    res.status(500).json({ code: 500, data: null, msg: String(err) })
-  }
-})
+  // 手动刷新超越杯排行榜
+  app.post('/api/tcup/refresh', async (req, res) => {
+    try {
+      await tcupEngine!.poll()
+      res.json({ code: 200, data: { success: true }, msg: null })
+    }
+    catch (err) {
+      res.status(500).json({ code: 500, data: null, msg: String(err) })
+    }
+  })
+}
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
@@ -410,26 +423,30 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`代理服务器运行在 http://localhost:${PORT}`)
 
   // 5 秒后首次轮询，之后每 15 分钟自动轮询
-  setTimeout(() => {
-    competitionEngine.poll().then(() => {
-      // eslint-disable-next-line no-console
-      console.log('[Competition] 首次轮询完成')
-    }).catch((err: Error) => {
-      console.error('[Competition] 首次轮询失败:', err)
-    })
-  }, 5000)
+  if (competitionEngine) {
+    setTimeout(() => {
+      competitionEngine!.poll().then(() => {
+        // eslint-disable-next-line no-console
+        console.log('[Competition] 首次轮询完成')
+      }).catch((err: Error) => {
+        console.error('[Competition] 首次轮询失败:', err)
+      })
+    }, 5000)
 
-  competitionEngine.startAutoPoll()
+    competitionEngine!.startAutoPoll()
+  }
 
   // 超越杯: 7 秒后首次轮询 (错开与全标速效的 API 请求)
-  setTimeout(() => {
-    tcupEngine.poll().then(() => {
-      // eslint-disable-next-line no-console
-      console.log('[TranscendenceCup] 首次轮询完成')
-    }).catch((err: Error) => {
-      console.error('[TranscendenceCup] 首次轮询失败:', err)
-    })
-  }, 7000)
+  if (tcupEngine) {
+    setTimeout(() => {
+      tcupEngine!.poll().then(() => {
+        // eslint-disable-next-line no-console
+        console.log('[TranscendenceCup] 首次轮询完成')
+      }).catch((err: Error) => {
+        console.error('[TranscendenceCup] 首次轮询失败:', err)
+      })
+    }, 7000)
 
-  tcupEngine.startAutoPoll()
+    tcupEngine!.startAutoPoll()
+  }
 })

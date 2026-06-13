@@ -25,6 +25,8 @@ export interface TcupDifficultyConfig {
 // ─── 比赛配置 ───
 
 export interface TcupConfig {
+  /** 是否启用 */
+  enabled: boolean
   /** 比赛名称 */
   name: string
   /** 规则简述 (支持 HTML) */

@@ -4,6 +4,8 @@ import type { CompetitionLeaderboardEntry, RecordGetData } from '@tapsss/shared'
  * 比赛配置 —— 描述一场比赛的所有规则参数
  */
 export interface CompetitionConfig {
+  /** 是否启用 */
+  enabled: boolean
   /** 比赛名称 */
   name: string
   /** 规则简述 (支持 HTML) */

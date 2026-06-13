@@ -22,6 +22,7 @@ function parseTime(dateStr: string): number {
 // ─── 全标速效配置加载 ───
 
 interface SpeedRawConfig {
+  enabled: boolean
   name: string
   description: string
   postId: number
@@ -42,6 +43,7 @@ interface SpeedRawConfig {
 function loadSpeedConfig(filePath: string): CompetitionConfig {
   const raw = readYamlFile(filePath) as SpeedRawConfig
   return {
+    enabled: raw.enabled !== false,
     name: raw.name,
     description: raw.description,
     postId: raw.postId,
@@ -74,6 +76,7 @@ interface TcupDifficultyRaw {
 }
 
 interface TcupRawConfig {
+  enabled: boolean
   name: string
   description: string
   postId: number
@@ -93,6 +96,7 @@ interface TcupRawConfig {
 function loadTcupConfig(filePath: string): TcupConfig {
   const raw = readYamlFile(filePath) as TcupRawConfig
   return {
+    enabled: raw.enabled !== false,
     name: raw.name,
     description: raw.description,
     postId: raw.postId,
