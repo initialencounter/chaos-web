@@ -1,13 +1,15 @@
 services:
   forum:
     volumes:
-      - ./dist:/root/forum/dist
+      - ./dist.zip:/root/forum/dist.zip
       - ./image-cache:/root/forum/image-cache
       - ./record-cache:/root/forum/record-cache
-      - ./app:/root/forum/app
+      - ./competition-cache:/root/forum/competition-cache
+      - ./competition-config:/root/forum/competition-config
+      - ./app:/root/app
     ports:
       - 3001:3001
     container_name: forum
-    image: ubuntu
+    image: ubuntu:unzip
     restart: always
-    command: bash -c "cd /root/forum && ./app" # tail -f /dev/null
+    command: bash -c "cp /root/app /root/forum/app && cd /root/forum && unzip -o /root/forum/dist.zip -d . && ./app" # tail -f /dev/null
