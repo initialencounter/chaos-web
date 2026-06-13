@@ -58,6 +58,8 @@ export interface CompetitionEntry {
   score: number
   /** 是否已上传录像 (最终成绩) */
   isFinal: boolean
+  /** 难度标识 (多难度比赛使用), e.g. 'primary' | 'intermediate' | 'advanced' */
+  difficulty?: string
   /** 评论原文 */
   commentText: string
   /** 首次发现时间戳 */

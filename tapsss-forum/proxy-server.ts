@@ -3,7 +3,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
-import { createCompetitionEngine, CURRENT_COMPETITION_CONFIG, executeRequest, LOGIN_CONFIG } from '@tapsss/server'
+import { createCompetitionEngine, createTranscendenceCupEngine, CURRENT_COMPETITION_CONFIG, executeRequest, LOGIN_CONFIG, TCUP_CONFIG } from '@tapsss/server'
 import cors from 'cors'
 import express from 'express'
 import { TOKEN, UID } from './secrets'
@@ -257,6 +257,18 @@ const competitionEngine = createCompetitionEngine(
 // 从磁盘恢复状态
 competitionEngine.loadFromDisk()
 
+// ======== 超越杯比赛引擎 ========
+const tcupEngine = createTranscendenceCupEngine(
+  TCUP_CONFIG,
+  {
+    executeRequest,
+    cacheDir: COMPETITION_CACHE_DIR,
+    recordCacheDir: RECORD_CACHE_DIR,
+    logger: console,
+  },
+)
+tcupEngine.loadFromDisk()
+
 // 获取排行榜
 app.get('/api/competition/leaderboard', (req, res) => {
   try {
@@ -285,6 +297,37 @@ app.get('/api/competition/leaderboard', (req, res) => {
 app.post('/api/competition/refresh', async (req, res) => {
   try {
     await competitionEngine.poll()
+    res.json({ code: 200, data: { success: true }, msg: null })
+  }
+  catch (err) {
+    res.status(500).json({ code: 500, data: null, msg: String(err) })
+  }
+})
+
+// ======== 超越杯 API ========
+
+// 获取超越杯排行榜
+app.get('/api/tcup/leaderboards', (req, res) => {
+  try {
+    const data = tcupEngine.getLeaderboards()
+    res.json({
+      code: 200,
+      data: {
+        ...data,
+        lastUpdated: tcupEngine.getLastPollTime(),
+      },
+      msg: null,
+    })
+  }
+  catch (err) {
+    res.status(500).json({ code: 500, data: null, msg: String(err) })
+  }
+})
+
+// 手动刷新超越杯排行榜
+app.post('/api/tcup/refresh', async (req, res) => {
+  try {
+    await tcupEngine.poll()
     res.json({ code: 200, data: { success: true }, msg: null })
   }
   catch (err) {
@@ -365,4 +408,16 @@ app.listen(PORT, '0.0.0.0', () => {
   }, 5000)
 
   competitionEngine.startAutoPoll()
+
+  // 超越杯: 7 秒后首次轮询 (错开与全标速效的 API 请求)
+  setTimeout(() => {
+    tcupEngine.poll().then(() => {
+      // eslint-disable-next-line no-console
+      console.log('[TranscendenceCup] 首次轮询完成')
+    }).catch((err: Error) => {
+      console.error('[TranscendenceCup] 首次轮询失败:', err)
+    })
+  }, 7000)
+
+  tcupEngine.startAutoPoll()
 })

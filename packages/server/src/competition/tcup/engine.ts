@@ -1,43 +1,31 @@
-import type { CompetitionLeaderboardEntry } from '@tapsss/shared'
-import type { DifficultyRequirement } from './shared'
-import type { CompetitionConfig, CompetitionEngine, CompetitionEntry, CompetitionState, EngineDeps } from './types'
+import type { TcupLeaderboard } from '@tapsss/shared'
+import type { DifficultyRequirement } from '../shared'
+import type { CompetitionEntry, EngineDeps } from '../types'
+import type { TcupConfig, TcupState, TranscendenceCupEngine } from './types'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
   buildKey,
+
   extractReplayIds,
   fetchAllComments,
   fetchAllReplies,
   round3,
   validateRecord,
-} from './shared'
+} from '../shared'
+import { buildLeaderboards, computePlayerBests } from './scoring'
 
 /**
- * 计算得分
- * 公式: IOE = bv / tap, score = IOE - time_s * timePenaltyCoefficient
- * 注意: recordData.time 单位是 ms，需转换为秒
+ * 创建超越杯比赛引擎
  */
-function computeScore(recordData: CompetitionEntry['recordData'], config: CompetitionConfig): { ioe: number, score: number, isFinal: boolean } {
-  const ioe = recordData.tap > 0
-    ? round3(recordData.bv / recordData.tap)
-    : 0
-  const timeInSeconds = recordData.time / 1000
-  const score = round3(ioe - timeInSeconds * config.timePenaltyCoefficient)
-  const isFinal = recordData.upload === true
-  return { ioe, score, isFinal }
-}
-
-/**
- * 创建比赛引擎
- */
-export function createCompetitionEngine(
-  config: CompetitionConfig,
+export function createTranscendenceCupEngine(
+  config: TcupConfig,
   deps: EngineDeps,
-): CompetitionEngine {
+): TranscendenceCupEngine {
   const { executeRequest, cacheDir, recordCacheDir, logger } = deps
-  const stateFilePath = path.join(cacheDir, 'competition-state.json')
+  const stateFilePath = path.join(cacheDir, 'tcup-state.json')
 
-  let state: CompetitionState = {
+  let state: TcupState = {
     config,
     entries: {},
     lastPollTime: null,
@@ -55,10 +43,10 @@ export function createCompetitionEngine(
   function saveToDisk(): void {
     try {
       fs.writeFileSync(stateFilePath, JSON.stringify(state, null, 2))
-      logger.log('[Competition] 状态已保存到磁盘')
+      logger.log('[TranscendenceCup] 状态已保存到磁盘')
     }
     catch (err) {
-      logger.error('[Competition] 保存状态失败:', err)
+      logger.error('[TranscendenceCup] 保存状态失败:', err)
     }
   }
 
@@ -66,21 +54,33 @@ export function createCompetitionEngine(
     try {
       if (fs.existsSync(stateFilePath)) {
         const raw = fs.readFileSync(stateFilePath, 'utf-8')
-        const loaded = JSON.parse(raw) as CompetitionState
-        // 合并 config（配置可能已更新）
+        const loaded = JSON.parse(raw) as TcupState
         state = { ...loaded, config }
+        // 恢复时补充缺失的 difficulty 字段
+        for (const entry of Object.values(state.entries)) {
+          if (!entry.difficulty) {
+            const area = entry.recordData.row * entry.recordData.column
+            const { mine } = entry.recordData
+            for (const diff of config.difficulties) {
+              if (diff.area === area && diff.mine === mine) {
+                entry.difficulty = diff.key
+                break
+              }
+            }
+          }
+        }
         recalcStatistics()
-        logger.log(`[Competition] 从磁盘加载了 ${Object.keys(state.entries).length} 条记录`)
+        logger.log(`[TranscendenceCup] 从磁盘加载了 ${Object.keys(state.entries).length} 条记录`)
       }
     }
     catch (err) {
-      logger.error('[Competition] 加载磁盘状态失败:', err)
+      logger.error('[TranscendenceCup] 加载磁盘状态失败:', err)
     }
   }
 
   async function poll(): Promise<void> {
     const now = Date.now()
-    logger.log(`[Competition] ===== 开始轮询 ${new Date(now).toISOString()} =====`)
+    logger.log(`[TranscendenceCup] ===== 开始轮询 ${new Date(now).toISOString()} =====`)
 
     try {
       // 1. 获取全部评论
@@ -100,7 +100,6 @@ export function createCompetitionEngine(
       const candidates: Candidate[] = []
 
       for (const comment of comments) {
-        // 从主评论中提取录像ID
         const mainIds = extractReplayIds(comment.comment, config.replayPrefix)
         for (const recordId of mainIds) {
           candidates.push({
@@ -115,7 +114,7 @@ export function createCompetitionEngine(
           })
         }
 
-        // 3. 获取该评论的全部回复
+        // 3. 获取回复
         if (comment.replyCount > 0) {
           const replies = await fetchAllReplies(comment.id, config, executeRequest, logger)
           for (const reply of replies) {
@@ -138,19 +137,19 @@ export function createCompetitionEngine(
         }
       }
 
-      logger.log(`[Competition] 共发现 ${candidates.length} 个录像候选`)
+      logger.log(`[TranscendenceCup] 共发现 ${candidates.length} 个录像候选`)
 
-      // 4. 验证每条候选记录
+      // 4. 构建难度需求 → 验证每条候选记录
+      const requirements: DifficultyRequirement[] = config.difficulties.map(d => ({
+        key: d.key,
+        area: d.area,
+        mine: d.mine,
+      }))
+
       const newEntries: Record<string, CompetitionEntry> = {}
       const totalSubmissions = candidates.length
 
-      // 构建难度需求: 用面积+雷数判定 (兼容横屏竖屏)
-      const requirements: DifficultyRequirement[] = [
-        { key: 'advanced', area: config.requiredArea, mine: config.requiredMine },
-      ]
-
       for (const candidate of candidates) {
-        // 跳过黑名单
         if (config.blacklist.includes(candidate.uid))
           continue
         const key = buildKey(candidate.uid, candidate.recordId)
@@ -167,9 +166,11 @@ export function createCompetitionEngine(
         if (!validated)
           continue
 
-        const { ioe, score, isFinal } = computeScore(validated.recordData, config)
+        // 计算 IOE (仅用于展示)
+        const ioe = validated.recordData.tap > 0
+          ? round3(validated.recordData.bv / validated.recordData.tap)
+          : 0
 
-        // 检查是否已存在（保留 firstSeen）
         const existing = state.entries[key]
         const firstSeen = existing ? existing.firstSeen : now
         const lastSeen = now
@@ -184,96 +185,74 @@ export function createCompetitionEngine(
           nickName: candidate.nickName,
           avatar: candidate.avatar,
           ioe,
-          score,
-          isFinal,
+          score: 0, // 超越杯不用单一分数，保留为 0
+          isFinal: validated.recordData.upload === true,
+          difficulty: validated.matchedRequirement || undefined,
           commentText: candidate.commentText,
           firstSeen,
           lastSeen,
         }
       }
 
-      // 5. 检测移除的条目（评论被删除 = 退出比赛）
+      // 5. 检测变化
       const oldKeys = Object.keys(state.entries)
       const newKeys = Object.keys(newEntries)
       const removedKeys = oldKeys.filter(k => !newKeys.includes(k))
 
       for (const key of removedKeys) {
         const entry = state.entries[key]!
-        logger.log(`[Competition] 移除: uid=${entry.uid} recordId=${entry.recordId} nickName=${entry.nickName} (评论已不存在)`)
+        logger.log(`[TranscendenceCup] 移除: uid=${entry.uid} recordId=${entry.recordId} nickName=${entry.nickName} (评论已不存在)`)
       }
 
-      // 6. 检测新增的条目
       const addedKeys = newKeys.filter(k => !oldKeys.includes(k))
       for (const key of addedKeys) {
         const entry = newEntries[key]!
-        logger.log(`[Competition] 新增: uid=${entry.uid} recordId=${entry.recordId} nickName=${entry.nickName} score=${entry.score} isFinal=${entry.isFinal}`)
+        logger.log(`[TranscendenceCup] 新增: uid=${entry.uid} recordId=${entry.recordId} nickName=${entry.nickName} difficulty=${entry.difficulty}`)
       }
 
-      // 7. 更新状态
+      // 6. 更新状态
       state.entries = newEntries
       state.lastPollTime = now
       state.statistics.totalSubmissions = totalSubmissions
       recalcStatistics()
 
-      logger.log(`[Competition] 轮询完成: 总候选=${totalSubmissions} 有效=${state.statistics.totalValid} 最终成绩=${state.statistics.totalFinal} 新增=${addedKeys.length} 移除=${removedKeys.length}`)
+      logger.log(`[TranscendenceCup] 轮询完成: 总候选=${totalSubmissions} 有效=${state.statistics.totalValid} 最终成绩=${state.statistics.totalFinal} 新增=${addedKeys.length} 移除=${removedKeys.length}`)
 
-      // 8. 持久化
+      // 7. 持久化
       saveToDisk()
     }
     catch (err) {
-      logger.error('[Competition] 轮询异常:', err)
+      logger.error('[TranscendenceCup] 轮询异常:', err)
     }
   }
 
-  function getLeaderboard(): CompetitionLeaderboardEntry[] {
+  function getLeaderboards(): { leaderboards: TcupLeaderboard[], competitionTitle: string, competitionTimeWindow: string, totalSubmissions: number, totalValidEntries: number, totalFinalEntries: number } {
     const entries = Object.values(state.entries)
-    // 按 score 降序，同分按 time 升序
-    entries.sort((a, b) => {
-      if (b.score !== a.score)
-        return b.score - a.score
-      return a.recordData.time - b.recordData.time
-    })
+    const players = computePlayerBests(entries, state.config)
+    const leaderboards = buildLeaderboards(players, state.config)
 
-    // 过滤黑名单 + 每个玩家只保留最佳成绩
-    const blacklistSet = new Set(state.config.blacklist)
-    const seenUids = new Set<string>()
-    const bestEntries = entries.filter((e) => {
-      if (blacklistSet.has(e.uid))
-        return false
-      if (seenUids.has(e.uid))
-        return false
-      seenUids.add(e.uid)
-      return true
-    })
+    // 格式化时间窗口用于展示
+    const fmtTime = (ts: number): string => {
+      const d = new Date(ts)
+      const pad = (n: number) => String(n).padStart(2, '0')
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+    }
 
-    return bestEntries.map((entry, index) => ({
-      rank: index + 1,
-      uid: entry.uid,
-      nickName: entry.nickName,
-      avatar: entry.avatar,
-      recordId: entry.recordId,
-      // 转换为秒，保留3位小数
-      time: round3(entry.recordData.time / 1000),
-      bv: entry.recordData.bv,
-      bvs: entry.recordData.bvs,
-      tap: entry.recordData.tap,
-      effectiveTap: entry.recordData.effectiveTap,
-      ioe: entry.ioe,
-      score: entry.score,
-      createTime: entry.recordData.createTime,
-      upload: entry.isFinal,
-      commentId: entry.commentId,
-      commentText: entry.commentText,
-      isReply: entry.isReply,
-      finished: entry.recordData.finished,
-    }))
+    return {
+      leaderboards,
+      competitionTitle: '超越杯',
+      competitionTimeWindow: `${fmtTime(config.startTime)} ~ ${fmtTime(config.endTime)}`,
+      totalSubmissions: state.statistics.totalSubmissions,
+      totalValidEntries: state.statistics.totalValid,
+      totalFinalEntries: state.statistics.totalFinal,
+    }
   }
 
   function getLastPollTime(): number | null {
     return state.lastPollTime
   }
 
-  function getStatistics(): CompetitionState['statistics'] {
+  function getStatistics(): TcupState['statistics'] {
     return { ...state.statistics }
   }
 
@@ -281,22 +260,22 @@ export function createCompetitionEngine(
     if (pollTimer)
       return
     pollTimer = setInterval(() => {
-      poll().catch(err => logger.error('[Competition] 定时轮询出错:', err))
+      poll().catch(err => logger.error('[TranscendenceCup] 定时轮询出错:', err))
     }, config.pollIntervalMs)
-    logger.log(`[Competition] 自动轮询已启动，间隔 ${config.pollIntervalMs / 1000}s`)
+    logger.log(`[TranscendenceCup] 自动轮询已启动，间隔 ${config.pollIntervalMs / 1000}s`)
   }
 
   function stopAutoPoll(): void {
     if (pollTimer) {
       clearInterval(pollTimer)
       pollTimer = null
-      logger.log('[Competition] 自动轮询已停止')
+      logger.log('[TranscendenceCup] 自动轮询已停止')
     }
   }
 
   return {
     poll,
-    getLeaderboard,
+    getLeaderboards,
     getLastPollTime,
     getStatistics,
     loadFromDisk,

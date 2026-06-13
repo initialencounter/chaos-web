@@ -63,6 +63,10 @@ function goToCompetition() {
   router.push({ name: 'competition' })
 }
 
+function goToTcup() {
+  router.push({ name: 'tcup' })
+}
+
 onMounted(async () => {
   if (posts.value.length === 0) {
     await loadPosts()
@@ -88,7 +92,8 @@ onMounted(async () => {
         </div>
       </div>
       <div class="nav-right">
-        <span class="competition-link" @click="goToCompetition">🏆</span>
+        <span class="competition-link" title="全标速效比赛" @click="goToCompetition">🏆</span>
+        <span class="competition-link" title="超越杯" @click="goToTcup">🥇</span>
       </div>
     </div>
 

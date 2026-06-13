@@ -4,6 +4,7 @@ import PostDetailView from '@tapsss/forum-shared/views/PostDetailView.vue'
 import ReplayDetailView from '@tapsss/forum-shared/views/ReplayDetailView.vue'
 import ReplyDetailView from '@tapsss/forum-shared/views/ReplyDetailView.vue'
 import SearchView from '@tapsss/forum-shared/views/SearchView.vue'
+import TranscendenceCupView from '@tapsss/forum-shared/views/TranscendenceCupView.vue'
 import UserDetailView from '@tapsss/forum-shared/views/UserDetailView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
@@ -42,6 +43,11 @@ const router = createRouter({
       path: '/forum/competition',
       name: 'competition',
       component: CompetitionView,
+    },
+    {
+      path: '/forum/tcup',
+      name: 'tcup',
+      component: TranscendenceCupView,
     },
     {
       path: '/forum/user/:uid',
