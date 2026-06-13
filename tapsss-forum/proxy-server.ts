@@ -246,6 +246,12 @@ for (const [apiPath, recordType] of Object.entries(recordPaths)) {
 const COMPETITION_CONFIG_DIR = path.join(rootDir, 'competition-config')
 
 // ======== 全标速效比赛引擎 ========
+function fmtTime(ts: number): string {
+  const d = new Date(ts)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 const SPEED_CONFIG = loadSpeedCompetitionConfig(COMPETITION_CONFIG_DIR)
 const competitionEngine = createCompetitionEngine(
   SPEED_CONFIG,
@@ -283,8 +289,8 @@ app.get('/api/competition/leaderboard', (req, res) => {
       data: {
         entries,
         lastUpdated: competitionEngine.getLastPollTime(),
-        competitionTitle: '全标速效比赛',
-        competitionTimeWindow: '2026-06-10 20:00 ~ 2026-06-18 00:00',
+        competitionTitle: SPEED_CONFIG.name,
+        competitionTimeWindow: `${fmtTime(SPEED_CONFIG.startTime)} ~ ${fmtTime(SPEED_CONFIG.endTime)}`,
         totalSubmissions: stats.totalSubmissions,
         totalValidEntries: stats.totalValid,
         totalFinalEntries: stats.totalFinal,

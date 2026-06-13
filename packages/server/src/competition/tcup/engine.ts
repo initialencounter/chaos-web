@@ -240,7 +240,7 @@ export function createTranscendenceCupEngine(
 
     return {
       leaderboards,
-      competitionTitle: '超越杯',
+      competitionTitle: config.name,
       competitionTimeWindow: `${fmtTime(config.startTime)} ~ ${fmtTime(config.endTime)}`,
       totalSubmissions: state.statistics.totalSubmissions,
       totalValidEntries: state.statistics.totalValid,

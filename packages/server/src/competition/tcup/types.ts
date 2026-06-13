@@ -25,6 +25,8 @@ export interface TcupDifficultyConfig {
 // ─── 比赛配置 ───
 
 export interface TcupConfig {
+  /** 比赛名称 */
+  name: string
   postId: number
   startTime: number
   endTime: number

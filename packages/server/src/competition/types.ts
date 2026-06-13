@@ -4,6 +4,8 @@ import type { CompetitionLeaderboardEntry, RecordGetData } from '@tapsss/shared'
  * 比赛配置 —— 描述一场比赛的所有规则参数
  */
 export interface CompetitionConfig {
+  /** 比赛名称 */
+  name: string
   /** 比赛帖子 ID */
   postId: number
   /** 比赛开始时间 (UTC epoch ms) */
