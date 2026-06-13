@@ -7,6 +7,9 @@ import { useRouter } from 'vue-router'
 defineOptions({ name: 'CompetitionView' })
 
 const router = useRouter()
+const competitionTitle = ref('')
+const competitionTimeWindow = ref('')
+const competitionDescription = ref('')
 const entries = ref<CompetitionLeaderboardEntry[]>([])
 const lastUpdated = ref(0)
 const totalSubmissions = ref(0)
@@ -79,6 +82,9 @@ async function fetchLeaderboard() {
     const res = await fetch('/api/competition/leaderboard')
     const json: CompetitionLeaderboardResponse = await res.json()
     if (json.code === 200 && json.data) {
+      competitionTitle.value = json.data.competitionTitle
+      competitionTimeWindow.value = json.data.competitionTimeWindow
+      competitionDescription.value = json.data.competitionDescription
       entries.value = json.data.entries
       lastUpdated.value = json.data.lastUpdated
       totalSubmissions.value = json.data.totalSubmissions
@@ -135,18 +141,12 @@ onUnmounted(() => {
     <!-- 头部 -->
     <div class="header">
       <h1 class="title">
-        随星杯 🏆 全标速效比赛
+        🏆 {{ competitionTitle }}
       </h1>
       <p class="subtitle">
-        经典 · 高级 — 比赛时间: 2026-06-10 20:00 ~ 2026-06-18 00:00
+        经典 · 高级 — 比赛时间: {{ competitionTimeWindow }}
       </p>
-      <div class="rules-summary">
-        <span>评分公式: <strong>IOE - 时间 × 0.005</strong></span>
-        <span class="divider">|</span>
-        <span>IOE = 3BV / 点击次数</span>
-        <span class="divider">|</span>
-        <span>得分高者胜，同分取时间短者</span>
-      </div>
+      <div class="rules-summary" v-html="competitionDescription" />
     </div>
 
     <!-- 统计栏 -->

@@ -23,6 +23,7 @@ function parseTime(dateStr: string): number {
 
 interface SpeedRawConfig {
   name: string
+  description: string
   postId: number
   startTime: string
   endTime: string
@@ -42,6 +43,7 @@ function loadSpeedConfig(filePath: string): CompetitionConfig {
   const raw = readYamlFile(filePath) as SpeedRawConfig
   return {
     name: raw.name,
+    description: raw.description,
     postId: raw.postId,
     startTime: parseTime(raw.startTime),
     endTime: parseTime(raw.endTime),
@@ -73,6 +75,7 @@ interface TcupDifficultyRaw {
 
 interface TcupRawConfig {
   name: string
+  description: string
   postId: number
   startTime: string
   endTime: string
@@ -91,6 +94,7 @@ function loadTcupConfig(filePath: string): TcupConfig {
   const raw = readYamlFile(filePath) as TcupRawConfig
   return {
     name: raw.name,
+    description: raw.description,
     postId: raw.postId,
     startTime: parseTime(raw.startTime),
     endTime: parseTime(raw.endTime),

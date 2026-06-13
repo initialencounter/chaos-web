@@ -226,7 +226,7 @@ export function createTranscendenceCupEngine(
     }
   }
 
-  function getLeaderboards(): { leaderboards: TcupLeaderboard[], competitionTitle: string, competitionTimeWindow: string, totalSubmissions: number, totalValidEntries: number, totalFinalEntries: number } {
+  function getLeaderboards(): { leaderboards: TcupLeaderboard[], competitionTitle: string, competitionTimeWindow: string, competitionDescription: string, totalSubmissions: number, totalValidEntries: number, totalFinalEntries: number } {
     const entries = Object.values(state.entries)
     const players = computePlayerBests(entries, state.config)
     const leaderboards = buildLeaderboards(players, state.config)
@@ -242,6 +242,7 @@ export function createTranscendenceCupEngine(
       leaderboards,
       competitionTitle: config.name,
       competitionTimeWindow: `${fmtTime(config.startTime)} ~ ${fmtTime(config.endTime)}`,
+      competitionDescription: config.description,
       totalSubmissions: state.statistics.totalSubmissions,
       totalValidEntries: state.statistics.totalValid,
       totalFinalEntries: state.statistics.totalFinal,

@@ -11,6 +11,7 @@ const leaderboards = ref<TcupLeaderboard[]>([])
 const lastUpdated = ref(0)
 const competitionTitle = ref('超越杯')
 const competitionTimeWindow = ref('')
+const competitionDescription = ref('')
 const totalSubmissions = ref(0)
 const totalValid = ref(0)
 const totalFinal = ref(0)
@@ -134,6 +135,7 @@ async function fetchLeaderboards() {
       lastUpdated.value = json.data.lastUpdated
       competitionTitle.value = json.data.competitionTitle
       competitionTimeWindow.value = json.data.competitionTimeWindow
+      competitionDescription.value = json.data.competitionDescription
       totalSubmissions.value = json.data.totalSubmissions
       totalValid.value = json.data.totalValidEntries
       totalFinal.value = json.data.totalFinalEntries
@@ -192,11 +194,7 @@ onUnmounted(() => {
       <p class="subtitle">
         经典 · 初/中/高级 — 比赛时间: {{ competitionTimeWindow }}
       </p>
-      <div class="rules-summary">
-        <span>积分制 | 三难度 | 15个排行榜</span>
-        <span class="divider">|</span>
-        <span>各项取个人最佳，递减1分至0</span>
-      </div>
+      <div class="rules-summary" v-html="competitionDescription" />
     </div>
 
     <!-- 统计栏 -->

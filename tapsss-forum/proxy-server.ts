@@ -291,6 +291,7 @@ app.get('/api/competition/leaderboard', (req, res) => {
         lastUpdated: competitionEngine.getLastPollTime(),
         competitionTitle: SPEED_CONFIG.name,
         competitionTimeWindow: `${fmtTime(SPEED_CONFIG.startTime)} ~ ${fmtTime(SPEED_CONFIG.endTime)}`,
+        competitionDescription: SPEED_CONFIG.description,
         totalSubmissions: stats.totalSubmissions,
         totalValidEntries: stats.totalValid,
         totalFinalEntries: stats.totalFinal,

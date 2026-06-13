@@ -49,6 +49,7 @@ export interface TcupLeaderboardResponse {
     lastUpdated: number
     competitionTitle: string
     competitionTimeWindow: string
+    competitionDescription: string
     totalSubmissions: number
     totalValidEntries: number
     totalFinalEntries: number
