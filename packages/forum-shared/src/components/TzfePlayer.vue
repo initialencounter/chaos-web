@@ -31,9 +31,18 @@ const api = useForumApi()
 type TzfeData = TzfeRecordGetResponse['data']
 type Grid = number[][]
 
+interface TileData {
+  key: string
+  row: number
+  col: number
+  value: number
+  anim: 'idle' | 'new' | 'merged'
+}
+
 interface PlayData extends TzfeData {
   parsedActions: TzfeActionRecord[]
   boardSnapshots: Grid[]
+  tileFrames: TileData[][]
   isReplaying: boolean
 }
 
@@ -41,8 +50,11 @@ const loading = ref(true)
 const errorMsg = ref('')
 const replayData = shallowRef<PlayData | null>(null)
 
+// Canvas
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const ctx = shallowRef<CanvasRenderingContext2D | null>(null)
+const cellSize = ref(100)
+const BOARD_GAP = 8
 
 // Playback state
 const isPlaying = ref(false)
@@ -50,24 +62,24 @@ const currentTime = ref(0)
 const playbackSpeed = ref(1.0)
 const totalTime = ref(0)
 
-const cellSize = ref(100)
-const BOARD_GAP = 8
-
 // Speed control
 const SPEED_OPTIONS = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0]
 
 // Web Audio API
 let audioCtx: AudioContext | null = null
 let openBuffer: AudioBuffer | null = null
-
 let mixedAudioBuffer: AudioBuffer | null = null
 let audioSourceNode: AudioBufferSourceNode | null = null
 
 let rafId: number | null = null
-let lastRenderedFrameIndex = -1
 let tickStartTime = 0
 let tickStartOffset = 0
 const audioReady = ref(false)
+
+// Animation state
+let animStartTime = 0
+let animRaf: number | null = null
+const ANIM_DURATION = 150 // ms
 
 // ========== Tile color scheme (2048verse-inspired) ==========
 const TILE_BG_COLORS: Record<number, string> = {
@@ -101,7 +113,6 @@ const currentFrameIndex = computed(() => {
   const actions = replayData.value.parsedActions
   if (!replayData.value.isReplaying)
     return 0
-  // At time 0 or below, always show beginMap (first action may have time=0)
   if (currentTime.value <= 0)
     return 0
   let lo = 0
@@ -149,27 +160,96 @@ function gridsEqual(a: Grid, b: Grid): boolean {
   return true
 }
 
-// ========== Game simulation ==========
+// ========== Game simulation with tile identity tracking ==========
+
+interface ExpTile {
+  exp: number
+  row: number
+  col: number
+  key: string
+  consumed?: boolean
+}
 
 /**
- * 模拟完整的 TZFE 游戏过程，生成每步的棋盘快照。
- *
- * 与 Java 端完全对齐：
- * - beginMap 中的格值是指数表示（0=空, 1=2, 2=4, ...），与 Java TZFECell.g() 一致
- * - API 回放记录总是从新游戏开始，因此 seedCount=0（无需 skip 初始 RNG 调用）
- * - 初始棋盘由 Java 端 TZFEUtil.a() 使用无种子 Random 生成，
- *   因此 beginMap 中已包含初始局面，直接作为 initialGrid 传入
+ * Process a single row/column line to detect moves and merges.
  */
-function computeBoardSnapshots(
+function processLine(
+  prevLine: ExpTile[],
+  beforeLineVals: number[],
+  lineIdx: number,
+  isRow: boolean,
+  reverse: boolean,
+  stepIndex: number,
+): { matched: ExpTile[], merged: ExpTile[] } {
+  const size = beforeLineVals.length
+  const matched: ExpTile[] = []
+  const merged: ExpTile[] = []
+
+  const sortedPrev = [...prevLine].sort((a, b) => {
+    const posA = isRow ? a.col : a.row
+    const posB = isRow ? b.col : b.row
+    return reverse ? posB - posA : posA - posB
+  })
+  const available = sortedPrev.filter(t => !t.consumed)
+
+  let srcIdx = 0
+  let col = 0
+  while (col < size) {
+    const val = beforeLineVals[col]
+    if (val === 0) {
+      col++
+      continue
+    }
+
+    const cellIdx = reverse ? size - 1 - col : col
+
+    if (srcIdx < available.length) {
+      const src = available[srcIdx]!
+      if (
+        srcIdx + 1 < available.length
+        && available[srcIdx + 1]!.exp === src.exp
+        && val === src.exp + 1
+      ) {
+        const src2 = available[srcIdx + 1]!
+        src.consumed = true
+        src2.consumed = true
+        const r = isRow ? lineIdx : cellIdx
+        const c = isRow ? cellIdx : lineIdx
+        merged.push({ exp: val, row: r, col: c, key: `merge-${stepIndex}-${r}-${c}` })
+        srcIdx += 2
+        col++
+        continue
+      }
+
+      if (src.exp === val) {
+        src.consumed = true
+        const r = isRow ? lineIdx : cellIdx
+        const c = isRow ? cellIdx : lineIdx
+        matched.push({ exp: val, row: r, col: c, key: src.key })
+        srcIdx++
+        col++
+        continue
+      }
+    }
+
+    const r = isRow ? lineIdx : cellIdx
+    const c = isRow ? cellIdx : lineIdx
+    matched.push({ exp: val, row: r, col: c, key: `move-${stepIndex}-${r}-${c}` })
+    col++
+  }
+
+  return { matched, merged }
+}
+
+/**
+ * Build tile frames during game simulation.
+ */
+function computeTileFrames(
   seed: number,
   size: number,
   beginMapStr: string | null,
   actions: TzfeActionRecord[],
-  finalMapStr: string,
-): { snapshots: Grid[], initialCount: number } | null {
-  const finalExpGrid = parseMapToGrid(finalMapStr)
-  const finalGrid = exponentGridToValues(finalExpGrid)
-
+): { tileFrames: TileData[][], valueSnapshots: Grid[], initialCount: number } | null {
   let beginExpGrid: Grid
   if (beginMapStr) {
     beginExpGrid = parseMapToGrid(beginMapStr)
@@ -179,44 +259,359 @@ function computeBoardSnapshots(
       Array.from<number>({ length: size }).fill(0)) as Grid
   }
 
-  // API 回放记录总是从新游戏开始，seedCount=0
   const initialCount = 0
 
   try {
-    // 将指数格值的 beginMap 直接作为 initialGrid 传入
-    // （初始方块由 Java 端无种子 RNG 生成，不消耗游戏 RNG）
     let state = createState(BigInt(seed), [], size, initialCount, beginExpGrid)
-    // exponentGridToValues 内部使用 .map() 已创建新数组，无需前置 cloneGrid
-    const snapshots: Grid[] = [exponentGridToValues(state.grid)]
+    const valueSnapshots: Grid[] = [exponentGridToValues(state.grid)]
+    const tileFrames: TileData[][] = []
 
+    // Build initial tile frame
+    let prevExpTiles: ExpTile[] = []
+    {
+      const initTiles: TileData[] = []
+      let keyId = 0
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          const exp = state.grid[r]![c]!
+          if (exp > 0) {
+            const key = `init-${keyId++}`
+            initTiles.push({ key, row: r, col: c, value: 2 ** exp, anim: 'idle' })
+            prevExpTiles.push({ exp, row: r, col: c, key, consumed: false })
+          }
+        }
+      }
+      tileFrames.push(initTiles)
+    }
+
+    // Process each action
     for (let i = 0; i < actions.length; i++) {
       const act = actions[i]!
       const result = applyMove(state, act.action)
-      state = result.state
-      if (i === actions.length - 1) {
-        // 最后一步：只合并、不生成新方块，取 gridBeforeSpawn
-        snapshots.push(exponentGridToValues(result.gridBeforeSpawn))
+      const { gridBeforeSpawn, state: nextState } = result
+
+      // Last action: only merge, no random spawn (game ends at target tile)
+      const isLastAction = i === actions.length - 1
+      const finalGrid = isLastAction ? gridBeforeSpawn : nextState.grid
+
+      // Detect new tiles (skip for last action)
+      const newTilePositions: Set<string> = new Set()
+      if (!isLastAction) {
+        for (let r = 0; r < size; r++) {
+          for (let c = 0; c < size; c++) {
+            if (nextState.grid[r]![c]! > 0 && gridBeforeSpawn[r]![c] === 0) {
+              newTilePositions.add(`${r},${c}`)
+            }
+          }
+        }
+      }
+
+      // Reset consumed flags
+      for (const t of prevExpTiles)
+        t.consumed = false
+
+      const allResultTiles: ExpTile[] = []
+      const animFlags: Map<string, 'new' | 'merged'> = new Map()
+
+      if (act.action === 0 || act.action === 2) {
+        const reverse = act.action === 2
+        for (let r = 0; r < size; r++) {
+          const prevLine = prevExpTiles.filter(t => t.row === r && !t.consumed)
+          const beforeLine = gridBeforeSpawn[r]!
+          const workBeforeLine = reverse ? [...beforeLine].reverse() : [...beforeLine]
+          const { matched, merged } = processLine(prevLine, workBeforeLine, r, true, reverse, i)
+
+          for (const t of matched)
+            allResultTiles.push(t)
+          for (const t of merged) {
+            allResultTiles.push(t)
+            animFlags.set(`${t.row},${t.col}`, 'merged')
+          }
+        }
       }
       else {
-        snapshots.push(exponentGridToValues(state.grid))
+        const reverse = act.action === 3
+        for (let c = 0; c < size; c++) {
+          const prevLine = prevExpTiles.filter(t => t.col === c && !t.consumed)
+          const beforeLine = gridBeforeSpawn.map(row => row[c]!)
+          const workBeforeLine = reverse ? [...beforeLine].reverse() : [...beforeLine]
+          const { matched, merged } = processLine(prevLine, workBeforeLine, c, false, reverse, i)
+
+          for (const t of matched)
+            allResultTiles.push(t)
+          for (const t of merged) {
+            allResultTiles.push(t)
+            animFlags.set(`${t.row},${t.col}`, 'merged')
+          }
+        }
       }
+
+      // Add new spawned tiles (skip for last action)
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (newTilePositions.has(`${r},${c}`)) {
+            const exp = nextState.grid[r]![c]!
+            allResultTiles.push({ exp, row: r, col: c, key: `spawn-${i}-${r}-${c}` })
+            animFlags.set(`${r},${c}`, 'new')
+          }
+        }
+      }
+
+      // Build TileData array
+      const tileData: TileData[] = []
+      for (const t of allResultTiles) {
+        tileData.push({
+          key: t.key,
+          row: t.row,
+          col: t.col,
+          value: 2 ** t.exp,
+          anim: animFlags.get(`${t.row},${t.col}`) ?? 'idle',
+        })
+      }
+      tileFrames.push(tileData)
+
+      valueSnapshots.push(exponentGridToValues(finalGrid))
+      prevExpTiles = allResultTiles.map(t => ({ ...t, consumed: false }))
+      state = nextState
     }
 
-    const lastSnapshot = snapshots[snapshots.length - 1]!
-    if (!gridsEqual(lastSnapshot, finalGrid)) {
-      console.warn('Expected final grid:', finalGrid, 'but got:', lastSnapshot)
-      errorMsg.value = '录像数据异常：模拟结果与记录的最终局面不符'
-      console.warn('[TzfePlayer] Simulation final board does not match recorded final board')
-      return null
-    }
-    return { snapshots, initialCount }
+    return { tileFrames, valueSnapshots, initialCount }
   }
-  catch {
-    // fall through to failure
+  catch (err) {
+    console.error('[TzfePlayer] Tile frame computation failed:', err)
+    return null
+  }
+}
+
+function computeBoardSnapshots(
+  seed: number,
+  size: number,
+  beginMapStr: string | null,
+  actions: TzfeActionRecord[],
+  finalMapStr: string,
+): { snapshots: Grid[], tileFrames: TileData[][], initialCount: number } | null {
+  const result = computeTileFrames(seed, size, beginMapStr, actions)
+  if (!result)
+    return null
+
+  const { valueSnapshots } = result
+  const finalExpGrid = parseMapToGrid(finalMapStr)
+  const finalGrid = exponentGridToValues(finalExpGrid)
+  const lastSnapshot = valueSnapshots[valueSnapshots.length - 1]!
+
+  if (!gridsEqual(lastSnapshot, finalGrid)) {
+    console.warn('[TzfePlayer] Expected final grid:', finalGrid, 'but got:', lastSnapshot)
+    errorMsg.value = '录像数据异常：模拟结果与记录的最终局面不符'
+    return null
   }
 
-  console.warn('[TzfePlayer] Simulation failed')
-  return null
+  return { snapshots: valueSnapshots, tileFrames: result.tileFrames, initialCount: result.initialCount }
+}
+
+// ========== Canvas rendering ==========
+
+function drawRoundRect(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  g.beginPath()
+  g.moveTo(x + r, y)
+  g.lineTo(x + w - r, y)
+  g.arcTo(x + w, y, x + w, y + r, r)
+  g.lineTo(x + w, y + h - r)
+  g.arcTo(x + w, y + h, x + w - r, y + h, r)
+  g.lineTo(x + r, y + h)
+  g.arcTo(x, y + h, x, y + h - r, r)
+  g.lineTo(x, y + r)
+  g.arcTo(x, y, x + r, y, r)
+  g.closePath()
+}
+
+function easeOut(t: number): number {
+  return 1 - (1 - t) * (1 - t)
+}
+
+function easeBackOut(t: number): number {
+  const c1 = 1.70158
+  const c3 = c1 + 1
+  return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2
+}
+
+/**
+ * Draw the board with animation interpolation between two tile frames.
+ * @param progress 0..1 animation progress (1 = final state)
+ * @param fromTiles previous frame tiles
+ * @param toTiles current frame tiles
+ */
+function drawBoard(progress: number, fromTiles: TileData[], toTiles: TileData[]) {
+  const g = ctx.value
+  const data = replayData.value
+  if (!g || !data)
+    return
+
+  const rows = data.row
+  const cols = data.column
+  const cs = cellSize.value
+  const gap = BOARD_GAP
+  const borderRadius = Math.max(2, Math.floor(cs * 0.06))
+
+  // Clear background
+  g.fillStyle = '#bbada0'
+  g.fillRect(0, 0, g.canvas.width, g.canvas.height)
+
+  // Draw grid cells
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = gap + c * (cs + gap)
+      const y = gap + r * (cs + gap)
+      g.fillStyle = '#cdc1b4'
+      drawRoundRect(g, x, y, cs, cs, borderRadius)
+      g.fill()
+    }
+  }
+
+  // Build from-tile lookup by key
+  const fromByKey = new Map<string, TileData>()
+  for (const t of fromTiles)
+    fromByKey.set(t.key, t)
+
+  // Eased progress for movement
+  const moveProgress = easeOut(progress)
+
+  // Draw tiles
+  for (const tile of toTiles) {
+    const from = fromByKey.get(tile.key)
+    // If tile existed in previous frame, interpolate position; otherwise start from target
+    const fromRow = from ? from.row : tile.row
+    const fromCol = from ? from.col : tile.col
+
+    const fromX = gap + fromCol * (cs + gap)
+    const fromY = gap + fromRow * (cs + gap)
+    const toX = gap + tile.col * (cs + gap)
+    const toY = gap + tile.row * (cs + gap)
+
+    const x = fromX + (toX - fromX) * moveProgress
+    const y = fromY + (toY - fromY) * moveProgress
+
+    // Scale animation for new / merged tiles
+    let scale = 1.0
+    if (tile.anim === 'new') {
+      scale = Math.min(progress * 1.3, easeBackOut(progress))
+      scale = Math.max(0, Math.min(scale, 1.0))
+    }
+    else if (tile.anim === 'merged') {
+      // Pop: quickly scale up to ~1.15 then settle to 1.0
+      if (progress < 0.4) {
+        scale = progress / 0.4 * 1.15
+      }
+      else {
+        scale = 1.15 - (progress - 0.4) / 0.6 * 0.15
+      }
+      scale = Math.max(0, Math.min(scale, 1.15))
+    }
+
+    const exp = tile.value === 0 ? 0 : Math.log2(tile.value)
+    const { bg, fg } = getTileColor(exp)
+
+    g.save()
+    // Translate to center, apply scale around center
+    const cx = x + cs / 2
+    const cy = y + cs / 2
+    g.translate(cx, cy)
+    if (scale !== 1.0)
+      g.scale(scale, scale)
+
+    // Draw tile background
+    g.fillStyle = bg
+    drawRoundRect(g, -cs / 2, -cs / 2, cs, cs, borderRadius)
+    g.fill()
+
+    // Draw tile number
+    if (tile.value > 0) {
+      g.fillStyle = fg
+      let fontSize: number
+      if (tile.value < 100) {
+        fontSize = cs * 0.45
+      }
+      else if (tile.value < 1000) {
+        fontSize = cs * 0.35
+      }
+      else if (tile.value < 10000) {
+        fontSize = cs * 0.28
+      }
+      else {
+        fontSize = cs * 0.22
+      }
+      g.font = `bold ${fontSize}px Arial, sans-serif`
+      g.textAlign = 'center'
+      g.textBaseline = 'middle'
+      g.fillText(String(tile.value), 0, 0)
+    }
+
+    g.restore()
+  }
+}
+
+function cancelAnimLoop() {
+  if (animRaf !== null) {
+    cancelAnimationFrame(animRaf)
+    animRaf = null
+  }
+}
+
+/** Render the board at a specific frame index without animation. */
+function renderStatic(fi: number) {
+  const data = replayData.value
+  if (!data)
+    return
+  const tiles = data.tileFrames[fi] ?? []
+  drawBoard(1.0, tiles, tiles)
+}
+
+/** Start an animated transition between two frame indices. */
+function animateTransition(fromFi: number, toFi: number) {
+  const data = replayData.value
+  if (!data)
+    return
+
+  cancelAnimLoop()
+
+  const fromTiles = data.tileFrames[fromFi] ?? []
+  const toTiles = data.tileFrames[toFi] ?? []
+
+  animStartTime = performance.now()
+
+  const loop = () => {
+    const elapsed = performance.now() - animStartTime
+    const progress = Math.min(elapsed / ANIM_DURATION, 1.0)
+    drawBoard(progress, fromTiles, toTiles)
+    if (progress < 1.0) {
+      animRaf = requestAnimationFrame(loop)
+    }
+    else {
+      animRaf = null
+    }
+  }
+  animRaf = requestAnimationFrame(loop)
+}
+
+function initCanvas() {
+  const canvas = canvasRef.value
+  const data = replayData.value
+  if (!canvas || !data)
+    return
+
+  ctx.value = canvas.getContext('2d')
+  const cs = cellSize.value
+  const gap = BOARD_GAP
+  canvas.width = data.column * cs + (data.column - 1) * gap + gap * 2
+  canvas.height = data.row * cs + (data.row - 1) * gap + gap * 2
+
+  renderStatic(currentFrameIndex.value)
 }
 
 // ========== Audio ==========
@@ -277,111 +672,28 @@ function stopAudioPlayback() {
   }
 }
 
-// ========== Canvas rendering ==========
-function drawRoundRect(
-  g: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  g.beginPath()
-  g.moveTo(x + r, y)
-  g.lineTo(x + w - r, y)
-  g.arcTo(x + w, y, x + w, y + r, r)
-  g.lineTo(x + w, y + h - r)
-  g.arcTo(x + w, y + h, x + w - r, y + h, r)
-  g.lineTo(x + r, y + h)
-  g.arcTo(x, y + h, x, y + h - r, r)
-  g.lineTo(x, y + r)
-  g.arcTo(x, y, x + r, y, r)
-  g.closePath()
-}
-
-function drawFrame() {
-  if (!ctx.value)
-    return
-  const data = replayData.value
-  if (!data)
+// ========== Frame transition trigger ==========
+watch(currentFrameIndex, (newFi, oldFi) => {
+  if (oldFi === undefined || oldFi === newFi)
     return
 
-  const fi = currentFrameIndex.value
-  if (fi === lastRenderedFrameIndex)
-    return
-  lastRenderedFrameIndex = fi
+  // Instant render for: large jumps or fast playback
+  const instant = Math.abs(newFi - oldFi) > 1 || playbackSpeed.value >= 4
 
-  const g = ctx.value
-  const rows = data.row
-  const cols = data.column
-  const cs = cellSize.value
-  const gap = BOARD_GAP
-
-  // Clear with board background
-  g.fillStyle = '#bbada0'
-  g.fillRect(0, 0, g.canvas.width, g.canvas.height)
-
-  // Get current board snapshot
-  const board = data.boardSnapshots[fi]!
-  const borderRadius = Math.max(2, Math.floor(cs * 0.06))
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const value = board[r]![c]!
-      const exp = value === 0 ? 0 : Math.log2(value)
-      const x = gap + c * (cs + gap)
-      const y = gap + r * (cs + gap)
-      const { bg, fg } = getTileColor(exp)
-
-      g.fillStyle = bg
-      drawRoundRect(g, x, y, cs, cs, borderRadius)
-      g.fill()
-
-      if (value > 0) {
-        g.fillStyle = fg
-        let fontSize: number
-        if (value < 100) {
-          fontSize = cs * 0.45
-        }
-        else if (value < 1000) {
-          fontSize = cs * 0.35
-        }
-        else if (value < 10000) {
-          fontSize = cs * 0.28
-        }
-        else {
-          fontSize = cs * 0.22
-        }
-        g.font = `bold ${fontSize}px Arial, sans-serif`
-        g.textAlign = 'center'
-        g.textBaseline = 'middle'
-        g.fillText(String(value), x + cs / 2, y + cs / 2)
-      }
-    }
+  if (instant) {
+    cancelAnimLoop()
+    renderStatic(newFi)
   }
-}
-
-function initCanvas() {
-  const canvas = canvasRef.value
-  const data = replayData.value
-  if (!canvas || !data)
-    return
-
-  ctx.value = canvas.getContext('2d')
-  const cs = cellSize.value
-  const gap = BOARD_GAP
-  canvas.width = data.column * cs + (data.column - 1) * gap + gap * 2
-  canvas.height = data.row * cs + (data.row - 1) * gap + gap * 2
-
-  drawFrame()
-}
+  else {
+    animateTransition(oldFi, newFi)
+  }
+})
 
 // ========== Playback controls ==========
 function tick() {
   if (!isPlaying.value)
     return
 
-  // 使用 performance.now() 统一计时，音频就绪与否都能正常播放
   const elapsed = (performance.now() - tickStartTime) / 1000
   currentTime.value = tickStartOffset + elapsed * playbackSpeed.value
 
@@ -389,16 +701,13 @@ function tick() {
     currentTime.value = totalTime.value
     isPlaying.value = false
     stopTicker()
-    return
   }
-  drawFrame()
 }
 
 function startTicker() {
   stopTicker()
   tickStartTime = performance.now()
   tickStartOffset = currentTime.value
-  // 音频为辅助叠加层，仅在就绪时启动
   if (audioReady.value) {
     startAudioPlayback(currentTime.value, playbackSpeed.value)
   }
@@ -424,7 +733,6 @@ function togglePlay() {
   }
   if (currentTime.value >= totalTime.value) {
     currentTime.value = 0
-    lastRenderedFrameIndex = -1
   }
   isPlaying.value = !isPlaying.value
   if (isPlaying.value) {
@@ -438,17 +746,13 @@ function togglePlay() {
 function seek(e: Event) {
   const target = e.target as HTMLInputElement
   currentTime.value = Number.parseFloat(target.value)
-  lastRenderedFrameIndex = -1
+  cancelAnimLoop()
   if (isPlaying.value) {
-    // 重置时钟基准，避免 time 跳动
     tickStartTime = performance.now()
     tickStartOffset = currentTime.value
     if (audioReady.value) {
       startAudioPlayback(currentTime.value, playbackSpeed.value)
     }
-  }
-  else {
-    drawFrame()
   }
 }
 
@@ -469,8 +773,6 @@ function stepFrame(direction: number) {
   }
   else {
     currentTime.value = data.parsedActions[targetIndex - 1]?.time ?? 0
-    // Edge case: action at time=0 would be treated as "before first action"
-    // by currentFrameIndex's <=0 guard; bump to a tiny positive value
     if (currentTime.value === 0) {
       currentTime.value = Number.EPSILON
     }
@@ -478,8 +780,6 @@ function stepFrame(direction: number) {
 
   isPlaying.value = false
   stopTicker()
-  lastRenderedFrameIndex = -1
-  drawFrame()
 }
 
 function jumpToAction(idx: number) {
@@ -487,15 +787,11 @@ function jumpToAction(idx: number) {
   if (!data)
     return
   currentTime.value = data.parsedActions[idx]?.time ?? 0
-  // Edge case: action at time=0 would be treated as "before first action"
-  // by currentFrameIndex's <=0 guard; bump to a tiny positive value
   if (currentTime.value === 0) {
     currentTime.value = Number.EPSILON
   }
   isPlaying.value = false
   stopTicker()
-  lastRenderedFrameIndex = -1
-  drawFrame()
 }
 
 function changeSpeed(delta: number) {
@@ -511,7 +807,6 @@ function changeSpeed(delta: number) {
 
 watch(playbackSpeed, () => {
   if (isPlaying.value) {
-    // 重置时钟基准以适配新播放速率
     tickStartTime = performance.now()
     tickStartOffset = currentTime.value
     if (audioReady.value) {
@@ -520,7 +815,6 @@ watch(playbackSpeed, () => {
   }
 })
 
-// 音频后台就绪后，若正在播放则自动同步音频轨道
 watch(audioReady, (ready) => {
   if (ready && isPlaying.value && mixedAudioBuffer) {
     startAudioPlayback(currentTime.value, playbackSpeed.value)
@@ -624,12 +918,10 @@ async function loadReplay() {
       let isReplaying = data.actions != null && data.actions !== ''
       let parsedActions: TzfeActionRecord[] = []
       let boardSnapshots: Grid[] = []
+      let tileFrames: TileData[][] = []
 
       if (isReplaying) {
-        console.warn('[TzfePlayer] Loaded replay data:', data)
         parsedActions = parseTzfeReplayHandle(data.actions!)
-        console.warn('[TzfePlayer] parsedActions count:', parsedActions.length)
-
         const seed = data.seed ?? 0
         const result = computeBoardSnapshots(
           seed,
@@ -641,29 +933,27 @@ async function loadReplay() {
 
         if (result) {
           boardSnapshots = result.snapshots
-          console.warn('[TzfePlayer] Simulation OK — initialCount:', result.initialCount, 'snapshots:', result.snapshots.length)
+          tileFrames = result.tileFrames
         }
         else {
-          // Fallback: show beginMap and final map without simulation
-          console.warn('[TzfePlayer] Simulation failed — falling back to static display')
-          const beginExpGrid = data.beginMap ? parseMapToGrid(data.beginMap) : undefined
+          // Fallback: show static board
           const finalExpGrid = parseMapToGrid(data.map)
-          boardSnapshots = beginExpGrid
-            ? [exponentGridToValues(beginExpGrid), exponentGridToValues(finalExpGrid)]
-            : [exponentGridToValues(finalExpGrid)]
+          boardSnapshots = [exponentGridToValues(finalExpGrid)]
+          tileFrames = [buildStaticTileFrame(boardSnapshots[0]!)]
           parsedActions = []
           isReplaying = false
         }
       }
       else {
-        // Static replay
         boardSnapshots = [exponentGridToValues(parseMapToGrid(data.map))]
+        tileFrames = [buildStaticTileFrame(boardSnapshots[0]!)]
       }
 
       replayData.value = {
         ...data,
         parsedActions,
         boardSnapshots,
+        tileFrames,
         isReplaying,
       }
 
@@ -673,7 +963,6 @@ async function loadReplay() {
         Math.floor(500 / Math.max(data.row, data.column)),
       )
 
-      // 先展示 UI 和棋盘，音频在后台延迟加载，不阻塞首帧渲染
       loading.value = false
       await nextTick()
       initCanvas()
@@ -704,6 +993,22 @@ async function loadReplay() {
   }
 }
 
+/** Build a static tile frame from a value grid (for non-replaying displays). */
+function buildStaticTileFrame(valueGrid: Grid): TileData[] {
+  const tiles: TileData[] = []
+  let keyId = 0
+  for (let r = 0; r < valueGrid.length; r++) {
+    const row = valueGrid[r]!
+    for (let c = 0; c < row.length; c++) {
+      const val = row[c]!
+      if (val > 0) {
+        tiles.push({ key: `static-${keyId++}`, row: r, col: c, value: val, anim: 'idle' })
+      }
+    }
+  }
+  return tiles
+}
+
 // ========== Computed display info ==========
 const currentFrameActionInfo = computed(() => {
   if (!replayData.value)
@@ -729,13 +1034,12 @@ function getActionName(action: number): string {
 
 // ========== Lifecycle ==========
 onMounted(() => {
-  loadReplay().then(() => {
-    drawFrame()
-  })
+  loadReplay()
 })
 
 onUnmounted(() => {
   stopTicker()
+  cancelAnimLoop()
 })
 
 defineExpose({ replayData })
@@ -805,7 +1109,7 @@ defineExpose({ replayData })
         </div>
       </div>
 
-      <!-- Canvas -->
+      <!-- Canvas board -->
       <div class="canvas-wrapper">
         <canvas ref="canvasRef" />
       </div>
