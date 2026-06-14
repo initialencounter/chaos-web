@@ -1,15 +1,8 @@
-import type { ActionRecord, PuzzleActionRecord, SchulteActionRecord } from '../types/record'
+import type { ActionRecord, PuzzleActionRecord, SchulteActionRecord, TzfeActionRecord } from '../types/record'
 import pako from 'pako'
 
 export function parseReplayHandle(base64Str: string): ActionRecord[] {
-  const binaryString = window.atob(base64Str)
-  const len = binaryString.length
-  const bytes = new Uint8Array(len)
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i)
-  }
-
-  const decompressed = pako.inflate(bytes, { to: 'string' }) as string
+  const decompressed = decompressBase64(base64Str)
   const segments = decompressed.split('-')
   const actions: ActionRecord[] = []
 
@@ -31,14 +24,7 @@ export function parseReplayHandle(base64Str: string): ActionRecord[] {
 }
 
 export function parseSchulteReplayHandle(base64Str: string): SchulteActionRecord[] {
-  const binaryString = window.atob(base64Str)
-  const len = binaryString.length
-  const bytes = new Uint8Array(len)
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i)
-  }
-
-  const decompressed = pako.inflate(bytes, { to: 'string' }) as string
+  const decompressed = decompressBase64(base64Str)
   const segments = decompressed.split('-')
   const actions: SchulteActionRecord[] = []
   for (const seg of segments) {
@@ -57,14 +43,7 @@ export function parseSchulteReplayHandle(base64Str: string): SchulteActionRecord
 }
 
 export function parsePuzzleReplayHandle(base64Str: string): PuzzleActionRecord[] {
-  const binaryString = window.atob(base64Str)
-  const len = binaryString.length
-  const bytes = new Uint8Array(len)
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i)
-  }
-
-  const decompressed = pako.inflate(bytes, { to: 'string' }) as string
+  const decompressed = decompressBase64(base64Str)
   const segments = decompressed.split('-')
   const actions: PuzzleActionRecord[] = []
   for (const seg of segments) {
@@ -83,14 +62,7 @@ export function parsePuzzleReplayHandle(base64Str: string): PuzzleActionRecord[]
 }
 
 export function parseNonoReplayHandle(base64Str: string): ActionRecord[] {
-  const binaryString = window.atob(base64Str)
-  const len = binaryString.length
-  const bytes = new Uint8Array(len)
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i)
-  }
-
-  const decompressed = pako.inflate(bytes, { to: 'string' }) as string
+  const decompressed = decompressBase64(base64Str)
   const segments = decompressed.split('|')
   const actions: ActionRecord[] = []
 
@@ -109,4 +81,39 @@ export function parseNonoReplayHandle(base64Str: string): ActionRecord[] {
   }
 
   return actions
+}
+
+export function parseTzfeReplayHandle(base64Str: string): TzfeActionRecord[] {
+  const decompressed = decompressBase64(base64Str)
+  const segments = decompressed.split('-')
+  const actions: TzfeActionRecord[] = []
+
+  for (const seg of segments) {
+    if (!seg)
+      continue
+    const parts = seg.split(':')
+    if (parts.length >= 2) {
+      const action = Number.parseInt(parts[0]!, 10)
+      const time = Number.parseInt(parts[1]!, 10)
+      if (!Number.isNaN(action) && !Number.isNaN(time)) {
+        actions.push({
+          action, // 0左, 1上, 2右, 3下
+          time: time / 1000,
+        })
+      }
+    }
+  }
+
+  return actions
+}
+
+function decompressBase64(base64Str: string): string {
+  const binaryString = window.atob(base64Str)
+  const len = binaryString.length
+  const bytes = new Uint8Array(len)
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i)
+  }
+
+  return pako.inflate(bytes, { to: 'string' }) as string
 }

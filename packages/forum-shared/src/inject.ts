@@ -23,6 +23,7 @@ export interface ForumApi {
   schulteRecordListFilter: (...args: any[]) => Promise<any>
   puzzleRecordListFilter: (...args: any[]) => Promise<any>
   tzfeRecordListFilter: (...args: any[]) => Promise<any>
+  tzfeRecordGet: (...args: any[]) => Promise<any>
   nonoRecordGet: (...args: any[]) => Promise<any>
   nonoRecordListFilter: (...args: any[]) => Promise<any>
   minesweeperCareer: (...args: any[]) => Promise<any>

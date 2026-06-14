@@ -37,6 +37,7 @@ export const {
   puzzleRecordGetResponse,
   schulteRecordGet,
   nonoRecordGet,
+  tzfeRecordGet,
   minesweeperRecordList,
   schulteRecordListFilter,
   puzzleRecordListFilter,

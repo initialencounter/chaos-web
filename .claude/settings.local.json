@@ -14,7 +14,12 @@
       "Bash(npx --yes prettier --check \"src/render/components/ScoreBoard.vue\")",
       "Bash(node -e \"require\\('prettier'\\)\")",
       "Bash(ls node_modules/.bin/prettier*)",
-      "Bash(bun run *)"
+      "Bash(bun run *)",
+      "mcp__jadx-mcp-server__get_smali_of_class",
+      "mcp__jadx-mcp-server__get_xrefs_to_class",
+      "mcp__jadx-mcp-server__get_method_by_name",
+      "mcp__jadx-mcp-server__get_class_source",
+      "mcp__jadx-mcp-server__search_classes_by_keyword"
     ]
   }
 }

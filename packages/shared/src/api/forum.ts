@@ -30,6 +30,7 @@ import type {
   RecordGetResponse,
   SchulteRecordGetResponse,
   SchulteRecordListFilterResponse,
+  TzfeRecordGetResponse,
   TzfeRecordListFilterResponse,
 } from '../types/record'
 import type {
@@ -118,6 +119,10 @@ export function createForumApi(fetchFn: FetchFn) {
 
     nonoRecordGet(recordId: number): Promise<NonoRecordGetResponse> {
       return fetchFn<NonoRecordGetResponse>('/nono/record/get', { recordId })
+    },
+
+    tzfeRecordGet(recordId: number): Promise<TzfeRecordGetResponse> {
+      return fetchFn<TzfeRecordGetResponse>('/tzfe/record/get', { recordId })
     },
 
     // ========== 记录列表 ==========

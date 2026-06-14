@@ -152,6 +152,11 @@ export interface PuzzleActionRecord {
   time: number
 }
 
+export interface TzfeActionRecord {
+  action: number // 0左, 1上, 2右, 3下
+  time: number
+}
+
 export interface PuzzleRecordListUser extends BaseUser {
   background: null
   country: null
@@ -236,6 +241,30 @@ export interface TzfeRecordListDatum {
 }
 
 export type TzfeRecordListFilterResponse = ApiResponse<TzfeRecordListDatum[]>
+
+export type TzfeRecordGetResponse = ApiResponse<{
+  actions: string | null
+  beginMap: string | null
+  collect: boolean
+  column: number
+  createTime: number
+  id: number
+  map: string
+  maxValue: number
+  playCount: number
+  postId: number
+  row: number
+  score: number
+  scoreRank: number
+  scoreRankPercent: number
+  seed: number
+  stageTimes: string | null
+  time: number
+  timeRankPercent: number
+  timeTank: number
+  uid: string
+  user: FullUser
+}>
 
 // ========== 数织记录 ==========
 export interface NonoRecordListUser extends BaseUser {

@@ -2,7 +2,7 @@
 # 经典 · 高级 (30x16=480, 99雷)
 # 评分公式: IOE - 时间 × 0.005
 
-enabled: true
+enabled: false
 
 name: 随星杯全标速效比赛
 description: "评分公式: <strong>IOE - 时间 × 0.005</strong> | IOE = 3BV / 点击次数 | 得分高者胜，同分取时间短者"

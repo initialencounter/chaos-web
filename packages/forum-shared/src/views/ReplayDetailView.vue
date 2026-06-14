@@ -5,6 +5,7 @@ import MinesweeperPlayer from '../components/MinesweeperPlayer.vue'
 import NonoPlayer from '../components/NonoPlayer.vue'
 import PuzzlePlayer from '../components/PuzzlePlayer.vue'
 import SchultePlayer from '../components/SchultePlayer.vue'
+import TzfePlayer from '../components/TzfePlayer.vue'
 
 defineOptions({ name: 'ReplayDetailView' })
 
@@ -18,9 +19,10 @@ const minesweeperRef = ref<InstanceType<typeof MinesweeperPlayer> | null>(null)
 const nonoRef = ref<InstanceType<typeof NonoPlayer> | null>(null)
 const puzzleRef = ref<InstanceType<typeof PuzzlePlayer> | null>(null)
 const schulteRef = ref<InstanceType<typeof SchultePlayer> | null>(null)
+const tzfeRef = ref<InstanceType<typeof TzfePlayer> | null>(null)
 
 const postId = computed(() => {
-  const ref = minesweeperRef.value || nonoRef.value || puzzleRef.value || schulteRef.value
+  const ref = minesweeperRef.value || nonoRef.value || puzzleRef.value || schulteRef.value || tzfeRef.value
   return (ref?.replayData as any)?.postId ?? null
 })
 
@@ -57,6 +59,9 @@ function goToPost() {
     </div>
     <div v-else-if="recordType === '3'">
       <SchultePlayer ref="schulteRef" :record-id="recordId" />
+    </div>
+    <div v-else-if="recordType === '2'">
+      <TzfePlayer ref="tzfeRef" :record-id="recordId" />
     </div>
     <div v-else>
       <p>未知的录像类型: {{ recordType }}</p>
