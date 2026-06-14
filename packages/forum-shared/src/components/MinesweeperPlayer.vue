@@ -649,8 +649,11 @@ defineExpose({ replayData })
           <span>3BV/s: </span>{{ replayData.bvs.toFixed(3) }}
         </div>
         <div class="stat-item">
-          <span>点击数: </span>{{ replayData.effectiveTap }} /
+          <span>Tap: </span>{{ replayData.effectiveTap }} /
           {{ replayData.tap }}
+        </div>
+        <div class="stat-item">
+          <span>▷</span>{{ replayData.playCount }}
         </div>
         <div class="stat-item">
           <span>创建时间: </span>{{ new Date(replayData.createTime).toISOString() }}

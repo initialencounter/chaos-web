@@ -539,10 +539,13 @@ defineExpose({ replayData })
           <span>时长: </span>{{ (replayData.time / 1000).toFixed(3) }}s
         </div>
         <div class="stat-item">
-          <span>点击: </span>{{ replayData.tapCorrect }}/{{ replayData.tap }}
+          <span>Tap: </span>{{ replayData.tapCorrect }}/{{ replayData.tap }}
         </div>
         <div class="stat-item">
           <span>反应时间: </span>{{ replayData.reactionTime }}ms
+        </div>
+        <div class="stat-item">
+          <span>▷</span>{{ replayData.playCount }}
         </div>
         <div class="stat-item">
           <span>创建时间: </span>{{ new Date(replayData.createTime).toISOString() }}

@@ -667,13 +667,13 @@ defineExpose({ replayData })
       <!-- Stats panel -->
       <div class="info-panel">
         <div class="stat-item">
-          <span class="stat-label">尺寸:</span> {{ replayData.row }}x{{ replayData.column }}
+          <span class="stat-label">模式</span> {{ replayData.row }}x{{ replayData.column }}
         </div>
         <div class="stat-item">
           <span class="stat-label">分数:</span> {{ replayData.score }}
         </div>
         <div class="stat-item">
-          <span class="stat-label">最大值:</span> {{ Math.pow(2, replayData.maxValue) }}
+          <span class="stat-label">最大数:</span> {{ Math.pow(2, replayData.maxValue) }}
         </div>
         <div class="stat-item">
           <span class="stat-label">时长:</span> {{ (replayData.time / 1000).toFixed(3) }}s
@@ -688,7 +688,7 @@ defineExpose({ replayData })
           <span class="stat-label">操作数:</span> {{ replayData.parsedActions.length }}
         </div>
         <div class="stat-item">
-          <span class="stat-label">游玩次数:</span> {{ replayData.playCount }}
+          <span class="stat-label">▷</span> {{ replayData.playCount }}
         </div>
         <div class="stat-item">
           <span class="stat-label">创建时间:</span> {{ new Date(replayData.createTime).toISOString() }}
@@ -706,7 +706,7 @@ defineExpose({ replayData })
             :key="idx"
             class="stage-item"
           >
-            <span class="stage-milestone">{{ Math.pow(2, idx + 2) }}</span>
+            <span class="stage-milestone">{{ Math.pow(2, idx + 5) }}</span>
             <span class="stage-time">{{ (time / 1000).toFixed(1) }}s</span>
           </div>
         </div>
@@ -718,7 +718,7 @@ defineExpose({ replayData })
       </div>
 
       <!-- Controls -->
-      <div class="controls">
+      <div v-if="replayData.isReplaying" class="controls">
         <button class="play-btn" @click="togglePlay">
           {{ isPlaying ? '⏸ 暂停' : currentTime >= totalTime ? '↺ 重播' : '▶ 播放' }}
         </button>
@@ -776,7 +776,7 @@ defineExpose({ replayData })
       </div>
 
       <!-- Current action info -->
-      <div class="current-action">
+      <div v-if="replayData.isReplaying" class="current-action">
         <strong>当前操作:</strong> {{ currentFrameActionInfo }}
       </div>
 

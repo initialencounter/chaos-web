@@ -620,6 +620,9 @@ defineExpose({ replayData })
           }}%)
         </div>
         <div class="stat-item">
+          <span>▷</span>{{ replayData.playCount }}
+        </div>
+        <div class="stat-item">
           <span>创建时间: </span>{{ new Date(replayData.createTime).toLocaleString() }}
         </div>
       </div>

@@ -684,7 +684,7 @@ defineExpose({ replayData })
           <span>完成: </span>{{ getFinishModeText(replayData.finishMode) }}
         </div>
         <div class="stat-item">
-          <span>游玩次数: </span>{{ replayData.playCount }}
+          <span>▷</span>{{ replayData.playCount }}
         </div>
         <div class="stat-item">
           <span>创建时间: </span>{{ new Date(replayData.createTime).toISOString() }}
