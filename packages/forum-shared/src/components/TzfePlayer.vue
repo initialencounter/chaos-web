@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TzfeActionRecord, TzfeRecordGetResponse } from '@tapsss/shared'
 import {
-  applyMoves,
+  applyMove,
   cacheRecord,
   createState,
   exponentGridToValues,
@@ -61,11 +61,12 @@ let openBuffer: AudioBuffer | null = null
 
 let mixedAudioBuffer: AudioBuffer | null = null
 let audioSourceNode: AudioBufferSourceNode | null = null
-let audioNodeStartedAt = 0
-let audioNodeOffset = 0
 
 let rafId: number | null = null
 let lastRenderedFrameIndex = -1
+let tickStartTime = 0
+let tickStartOffset = 0
+const audioReady = ref(false)
 
 // ========== Tile color scheme (2048verse-inspired) ==========
 const TILE_BG_COLORS: Record<number, string> = {
@@ -147,10 +148,6 @@ function gridsEqual(a: Grid, b: Grid): boolean {
   return true
 }
 
-function cloneGrid(grid: Grid): Grid {
-  return grid.map(row => [...row])
-}
-
 // ========== Game simulation ==========
 
 /**
@@ -188,15 +185,25 @@ function computeBoardSnapshots(
     // 将指数格值的 beginMap 直接作为 initialGrid 传入
     // （初始方块由 Java 端无种子 RNG 生成，不消耗游戏 RNG）
     let state = createState(BigInt(seed), [], size, initialCount, beginExpGrid)
-    const snapshots: Grid[] = [exponentGridToValues(cloneGrid(state.grid))]
+    // exponentGridToValues 内部使用 .map() 已创建新数组，无需前置 cloneGrid
+    const snapshots: Grid[] = [exponentGridToValues(state.grid)]
 
-    for (const act of actions) {
-      state = applyMoves(state, [act.action])
-      snapshots.push(exponentGridToValues(cloneGrid(state.grid)))
+    for (let i = 0; i < actions.length; i++) {
+      const act = actions[i]!
+      const result = applyMove(state, act.action)
+      state = result.state
+      if (i === actions.length - 1) {
+        // 最后一步：只合并、不生成新方块，取 gridBeforeSpawn
+        snapshots.push(exponentGridToValues(result.gridBeforeSpawn))
+      }
+      else {
+        snapshots.push(exponentGridToValues(state.grid))
+      }
     }
 
     const lastSnapshot = snapshots[snapshots.length - 1]!
     if (!gridsEqual(lastSnapshot, finalGrid)) {
+      console.warn('Expected final grid:', finalGrid, 'but got:', lastSnapshot)
       errorMsg.value = '录像数据异常：模拟结果与记录的最终局面不符'
       console.warn('[TzfePlayer] Simulation final board does not match recorded final board')
       return null
@@ -254,8 +261,6 @@ function startAudioPlayback(offset: number, speed: number) {
   audioSourceNode.playbackRate.value = speed
   audioSourceNode.connect(audioCtx.destination)
   audioSourceNode.start(0, offset)
-  audioNodeStartedAt = audioCtx.currentTime
-  audioNodeOffset = offset
 }
 
 function stopAudioPlayback() {
@@ -372,23 +377,30 @@ function initCanvas() {
 
 // ========== Playback controls ==========
 function tick() {
-  if (!isPlaying.value || !audioCtx)
+  if (!isPlaying.value)
     return
 
-  const audioElapsed = audioCtx.currentTime - audioNodeStartedAt
-  currentTime.value = audioNodeOffset + audioElapsed * playbackSpeed.value
+  // 使用 performance.now() 统一计时，音频就绪与否都能正常播放
+  const elapsed = (performance.now() - tickStartTime) / 1000
+  currentTime.value = tickStartOffset + elapsed * playbackSpeed.value
 
   if (currentTime.value >= totalTime.value) {
     currentTime.value = totalTime.value
     isPlaying.value = false
     stopTicker()
+    return
   }
   drawFrame()
 }
 
 function startTicker() {
   stopTicker()
-  startAudioPlayback(currentTime.value, playbackSpeed.value)
+  tickStartTime = performance.now()
+  tickStartOffset = currentTime.value
+  // 音频为辅助叠加层，仅在就绪时启动
+  if (audioReady.value) {
+    startAudioPlayback(currentTime.value, playbackSpeed.value)
+  }
   const loop = () => {
     tick()
     if (isPlaying.value)
@@ -406,7 +418,7 @@ function stopTicker() {
 }
 
 function togglePlay() {
-  if (audioCtx?.state === 'suspended') {
+  if (audioReady.value && audioCtx?.state === 'suspended') {
     audioCtx.resume()
   }
   if (currentTime.value >= totalTime.value) {
@@ -427,7 +439,12 @@ function seek(e: Event) {
   currentTime.value = Number.parseFloat(target.value)
   lastRenderedFrameIndex = -1
   if (isPlaying.value) {
-    startAudioPlayback(currentTime.value, playbackSpeed.value)
+    // 重置时钟基准，避免 time 跳动
+    tickStartTime = performance.now()
+    tickStartOffset = currentTime.value
+    if (audioReady.value) {
+      startAudioPlayback(currentTime.value, playbackSpeed.value)
+    }
   }
   else {
     drawFrame()
@@ -493,6 +510,18 @@ function changeSpeed(delta: number) {
 
 watch(playbackSpeed, () => {
   if (isPlaying.value) {
+    // 重置时钟基准以适配新播放速率
+    tickStartTime = performance.now()
+    tickStartOffset = currentTime.value
+    if (audioReady.value) {
+      startAudioPlayback(currentTime.value, playbackSpeed.value)
+    }
+  }
+})
+
+// 音频后台就绪后，若正在播放则自动同步音频轨道
+watch(audioReady, (ready) => {
+  if (ready && isPlaying.value && mixedAudioBuffer) {
     startAudioPlayback(currentTime.value, playbackSpeed.value)
   }
 })
@@ -544,7 +573,6 @@ async function loadReplay() {
       if (isReplaying) {
         console.warn('[TzfePlayer] Loaded replay data:', data)
         parsedActions = parseTzfeReplayHandle(data.actions!)
-        console.warn('[TzfePlayer] Parsed actions:', parsedActions)
         console.warn('[TzfePlayer] parsedActions count:', parsedActions.length)
 
         const seed = data.seed ?? 0
@@ -590,23 +618,33 @@ async function loadReplay() {
         Math.floor(500 / Math.max(data.row, data.column)),
       )
 
+      // 先展示 UI 和棋盘，音频在后台延迟加载，不阻塞首帧渲染
       loading.value = false
-      await initAudio()
-      if (isReplaying) {
-        await renderAudioTrack()
-      }
       await nextTick()
       initCanvas()
+
+      if (isReplaying) {
+        initAudio()
+          .then(() => {
+            audioReady.value = true
+            return renderAudioTrack()
+          })
+          .catch((err) => {
+            console.warn('[TzfePlayer] Audio init failed:', err)
+          })
+      }
+      else {
+        audioReady.value = true
+      }
     }
     else {
       errorMsg.value = res.msg || '无法获取录像数据'
+      loading.value = false
     }
   }
   catch (error: any) {
     console.error(error)
     errorMsg.value = error.message || '加载失败'
-  }
-  finally {
     loading.value = false
   }
 }
