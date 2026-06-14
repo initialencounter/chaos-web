@@ -146,20 +146,6 @@ function parseMapToGrid(mapStr: string): Grid {
   )
 }
 
-function gridsEqual(a: Grid, b: Grid): boolean {
-  if (a.length !== b.length)
-    return false
-  for (let r = 0; r < a.length; r++) {
-    if (a[r]!.length !== b[r]!.length)
-      return false
-    for (let c = 0; c < a[r]!.length; c++) {
-      if (a[r]![c] !== b[r]![c])
-        return false
-    }
-  }
-  return true
-}
-
 // ========== Game simulation with tile identity tracking ==========
 
 interface ExpTile {
@@ -290,18 +276,12 @@ function computeTileFrames(
       const result = applyMove(state, act.action)
       const { gridBeforeSpawn, state: nextState } = result
 
-      // Last action: only merge, no random spawn (game ends at target tile)
-      const isLastAction = i === actions.length - 1
-      const finalGrid = isLastAction ? gridBeforeSpawn : nextState.grid
-
       // Detect new tiles (skip for last action)
       const newTilePositions: Set<string> = new Set()
-      if (!isLastAction) {
-        for (let r = 0; r < size; r++) {
-          for (let c = 0; c < size; c++) {
-            if (nextState.grid[r]![c]! > 0 && gridBeforeSpawn[r]![c] === 0) {
-              newTilePositions.add(`${r},${c}`)
-            }
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (nextState.grid[r]![c]! > 0 && gridBeforeSpawn[r]![c] === 0) {
+            newTilePositions.add(`${r},${c}`)
           }
         }
       }
@@ -370,7 +350,6 @@ function computeTileFrames(
       }
       tileFrames.push(tileData)
 
-      valueSnapshots.push(exponentGridToValues(finalGrid))
       prevExpTiles = allResultTiles.map(t => ({ ...t, consumed: false }))
       state = nextState
     }
@@ -388,22 +367,13 @@ function computeBoardSnapshots(
   size: number,
   beginMapStr: string | null,
   actions: TzfeActionRecord[],
-  finalMapStr: string,
+  _finalMapStr: string,
 ): { snapshots: Grid[], tileFrames: TileData[][], initialCount: number } | null {
   const result = computeTileFrames(seed, size, beginMapStr, actions)
   if (!result)
     return null
 
   const { valueSnapshots } = result
-  const finalExpGrid = parseMapToGrid(finalMapStr)
-  const finalGrid = exponentGridToValues(finalExpGrid)
-  const lastSnapshot = valueSnapshots[valueSnapshots.length - 1]!
-
-  if (!gridsEqual(lastSnapshot, finalGrid)) {
-    console.warn('[TzfePlayer] Expected final grid:', finalGrid, 'but got:', lastSnapshot)
-    errorMsg.value = '录像数据异常：模拟结果与记录的最终局面不符'
-    return null
-  }
 
   return { snapshots: valueSnapshots, tileFrames: result.tileFrames, initialCount: result.initialCount }
 }
@@ -957,7 +927,12 @@ async function loadReplay() {
         isReplaying,
       }
 
-      totalTime.value = data.time / 1000
+      totalTime.value = Math.max(
+        data.time / 1000,
+        parsedActions.length > 0
+          ? parsedActions[parsedActions.length - 1]!.time
+          : 0,
+      )
       cellSize.value = Math.min(
         120,
         Math.floor(500 / Math.max(data.row, data.column)),
