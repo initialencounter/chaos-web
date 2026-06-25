@@ -6,6 +6,7 @@ const props = defineProps<{
   modelValue: boolean
   initialError?: string
   prefillId?: string
+  prefillPassword?: string
 }>()
 
 const emit = defineEmits<{
@@ -16,12 +17,25 @@ const emit = defineEmits<{
 }>()
 
 const loading = ref(false)
-const form = ref({ id: '', password: '' })
+const mode = ref<'password' | 'token'>('password')
+const form = ref({ id: '', password: '', uid: '', token: '' })
 const error = ref(props.initialError || '')
 
 watch(() => props.prefillId, (val) => {
   if (val) {
     form.value.id = val
+  }
+})
+
+watch(() => props.prefillPassword, (val) => {
+  if (val) {
+    form.value.password = val
+  }
+})
+
+watch(() => props.modelValue, () => {
+  if (props.modelValue) {
+    error.value = props.initialError || ''
   }
 })
 
@@ -45,6 +59,27 @@ async function handleSubmit() {
     loading.value = false
   }
 }
+
+async function handleTokenSubmit() {
+  loading.value = true
+  error.value = ''
+  try {
+    const result = await window.electronAPI.saveCredentials(form.value.uid, form.value.token)
+    if (result.success) {
+      emit('success')
+    }
+    else {
+      error.value = result.msg || '保存失败'
+      ElMessage.error(error.value)
+    }
+  }
+  catch (e: any) {
+    error.value = e.message
+  }
+  finally {
+    loading.value = false
+  }
+}
 </script>
 
 <template>
@@ -58,20 +93,51 @@ async function handleSubmit() {
     center
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <el-form @submit.prevent="handleSubmit">
-      <el-form-item label="ID">
-        <el-input v-model="form.id" placeholder="ID" />
-      </el-form-item>
-      <el-form-item label="密码">
-        <el-input v-model="form.password" type="password" placeholder="密码" show-password />
-      </el-form-item>
+    <el-form @submit.prevent="mode === 'password' ? handleSubmit() : handleTokenSubmit()">
+      <div style="display: flex; justify-content: center; margin-bottom: 16px; gap: 24px">
+        <el-button
+          link
+          :type="mode === 'password' ? 'primary' : 'default'"
+          :style="{ fontWeight: mode === 'password' ? 'bold' : 'normal' }"
+          @click="mode = 'password'"
+        >
+          密码登录
+        </el-button>
+        <el-button
+          link
+          :type="mode === 'token' ? 'primary' : 'default'"
+          :style="{ fontWeight: mode === 'token' ? 'bold' : 'normal' }"
+          @click="mode = 'token'"
+        >
+          Token 登录
+        </el-button>
+      </div>
+
+      <template v-if="mode === 'password'">
+        <el-form-item label="ID">
+          <el-input v-model="form.id" placeholder="ID" />
+        </el-form-item>
+        <el-form-item label="密码">
+          <el-input v-model="form.password" type="password" placeholder="密码" show-password />
+        </el-form-item>
+      </template>
+
+      <template v-else>
+        <el-form-item label="UID">
+          <el-input v-model="form.uid" placeholder="UID" />
+        </el-form-item>
+        <el-form-item label="Token">
+          <el-input v-model="form.token" type="password" placeholder="Token" show-password />
+        </el-form-item>
+      </template>
+
       <div v-if="error" style="color: #e44; margin-bottom: 12px; font-size: 13px">
         {{ error }}
       </div>
-      <el-button type="primary" :loading="loading" style="width: 100%" @click="handleSubmit">
-        登录
+      <el-button type="primary" :loading="loading" style="width: 100%" @click="mode === 'password' ? handleSubmit() : handleTokenSubmit()">
+        {{ mode === 'password' ? '登录' : '保存并连接' }}
       </el-button>
-      <div style="display: flex; justify-content: space-between; margin-top: 12px">
+      <div v-if="mode === 'password'" style="display: flex; justify-content: space-between; margin-top: 12px">
         <el-button link type="primary" @click="emit('navigateToRegister')">
           注册账号
         </el-button>

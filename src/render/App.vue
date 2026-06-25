@@ -13,6 +13,7 @@ const showForgotPassword = ref(false)
 const gameStarted = ref(false)
 const loginInitialError = ref('')
 const prefillId = ref('')
+const prefillPassword = ref('')
 const currentUid = ref('')
 
 onMounted(async () => {
@@ -24,6 +25,14 @@ onMounted(async () => {
       router.push({ name: 'game' })
     }
     else {
+      if (status.reason === 'token_expired') {
+        if (status.id) {
+          prefillId.value = status.id
+        }
+        if (status.password) {
+          prefillPassword.value = status.password
+        }
+      }
       if (status.msg) {
         loginInitialError.value = status.msg
       }
@@ -83,6 +92,7 @@ async function handleLogout() {
     v-model="showLogin"
     :initial-error="loginInitialError"
     :prefill-id="prefillId"
+    :prefill-password="prefillPassword"
     @success="onLoginSuccess"
     @navigate-to-register="navigateToRegister"
     @navigate-to-forgot-password="navigateToForgotPassword"

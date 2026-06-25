@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getLoginStatus: () => ipcRenderer.invoke('login:check'),
   login: (id: string, password: string) => ipcRenderer.invoke('login:submit', id, password),
   getStoredCredentials: () => ipcRenderer.invoke('login:get-credentials'),
+  saveCredentials: (uid: string, token: string) => ipcRenderer.invoke('login:save-credentials', uid, token),
 
   // Brawl room prompt
   onAskJoinBrawl: (callback: (data: any) => void) => {

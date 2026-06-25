@@ -110,18 +110,6 @@ function saveCredentials(creds: Credentials): void {
   }
 }
 
-function deleteCredentials(): void {
-  try {
-    const p = getCredPath()
-    if (fs.existsSync(p)) {
-      fs.unlinkSync(p)
-    }
-  }
-  catch (e) {
-    console.error('[Main] Failed to delete credentials:', e)
-  }
-}
-
 function clearCredentials(): void {
   LOGIN_CONFIG.uid = ''
   LOGIN_CONFIG.token = ''
@@ -283,8 +271,11 @@ function setupIPC(): void {
 
   ipcMain.handle('login:check', async () => {
     const creds = loadCredentials()
-    if (!creds || !creds.uid || !creds.token) {
-      return { loggedIn: false, reason: 'no_credentials' }
+    if (!creds || !creds.token) {
+      if (creds && creds.password && creds.id) {
+        return { loggedIn: false, reason: 'token_expired', id: creds.id, password: creds.password }
+      }
+      return { loggedIn: false, reason: '请先登录' }
     }
 
     applyCredentials(creds.uid, creds.token)
@@ -295,7 +286,7 @@ function setupIPC(): void {
       return { loggedIn: true, uid: creds.uid }
     }
 
-    return { loggedIn: false, reason: 'token_expired' }
+    return { loggedIn: false, reason: 'token_expired', id: creds.id, password: creds.password }
   })
 
   ipcMain.handle('login:submit', async (_event, id: string, password: string) => {
@@ -315,10 +306,24 @@ function setupIPC(): void {
     return true
   })
 
+  ipcMain.handle('login:save-credentials', async (_event, uid: string, token: string) => {
+    applyCredentials(uid, token)
+    saveCredentials({ id: '', uid, token, password: '' })
+
+    const online = await checkOnlineStatus()
+    if (online) {
+      return { success: true }
+    }
+    return { success: false, msg: '在线状态检查失败，UID 或 Token 可能已过期' }
+  })
+
   ipcMain.handle('login:logout', () => {
     disposeChaosWs()
+    const creds = loadCredentials()
+    if (creds) {
+      saveCredentials({ id: creds.id, uid: '', token: '', password: creds.password })
+    }
     clearCredentials()
-    deleteCredentials()
     return true
   })
 

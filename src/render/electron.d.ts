@@ -14,6 +14,7 @@ declare global {
         reason?: string
         uid?: string
         id?: string
+        password?: string
         msg?: string
       }>
       login: (id: string, password: string) => Promise<{
@@ -27,6 +28,7 @@ declare global {
         id: string
         password: string
       } | null>
+      saveCredentials: (uid: string, token: string) => Promise<{ success: boolean, msg?: string }>
       onAskJoinBrawl: (callback: (data: any) => void) => void
       sendJoinBrawlResponse: (join: boolean) => Promise<boolean>
       onStartGame: (callback: () => void) => void
