@@ -25,7 +25,6 @@ defineOptions({ name: 'TzfePlayer' })
 const props = defineProps<{
   recordId: string
 }>()
-const isDev = import.meta.env.DEV
 const api = useForumApi()
 
 type TzfeData = TzfeRecordGetResponse['data']
@@ -823,60 +822,7 @@ async function loadReplay() {
     errorMsg.value = ''
     const recordIdNum = Number(props.recordId)
 
-    let cached
-    if (isDev) {
-      cached = {
-        url: null,
-        code: 200,
-        msg: null,
-        data: {
-          id: 209464,
-          uid: '65617',
-          postId: 975729,
-          row: 4,
-          column: 4,
-          time: 55696,
-          score: 20204,
-          maxValue: 11,
-          map: '0:0:0:2-0:0:2:3-1:3:4:2-0:0:2:11',
-          beginMap: '0:0:0:0-0:0:0:0-1:0:0:0-0:0:0:1',
-          seed: 1667011994673,
-          actions: 'H4sIAAAAAAAAAE2ZW5JlKwhER9QRKiJa8x/YTVbuE3H7o/PgeyNCQo2/8S/+zr/xd/+tv9k/1tav\n07/mnuqcO7prv27JUssaRy3rDbXE6AX6//UXmq/fZ6t976vfO6N/a9bS/7d/qzf+cvWaZ/QuZ2b/\nXqt/qz34Xy27j1S71F63V6v7+P3Ufmev82Kq5e3e952l9nd6hVc98t0+7RyvjzvnyJb0rz9kzoW0\nLC1LOxnJqec8fP4qVLNeopJVaCMKaQca2hvpsNgZKOwMGs9sBf2gTn/mrOJIVRywXqt8vmD3l61X\nwbTUXy54SNVD1hy9ypqzkNZGWv19QDdysrUOV7XuRuIbBMfSa+i761v31e7DmhfFChjS0FK6r1j6\nFYd4lyEPaxCUzaEPIcAgxurpMbmmmJlIXFfMO5E4UizuISJ6IwCpDSeCy5HQContvv3ahCJnqydy\nYYwZNJ7zMMdih4Ouowbb1gikwobvZM272OgmQ66nXz5Tu/YdxRsY9Lyt6724h73WRno9T8AQnbel\nza3sNv5laKnoO7ydfSKQglXO7k/ZdVohux7SHX343UavpW9aKja6vIfdpqFG30MGNp+FCecNpBe9\npszTD25OIFs9pziZlNRrnr5w9T0/zceRarBtTV6/wNLqj66FodS6E+kuJA5R2307E4lHWYcd6mAT\ndbGXujzK8nHLz7peBhLXeMfsL7qTb9C94boawqDGNRi5VvukG9HmdmO3dq+N6MpgkHhj2u4xhCu+\n+7UiATUmpnHPXgDP6Z5i28Pl3JrtC+7FB96LEwS6kdd4L+/vPlzg7cfc0g0kVnkDYwDkuQZeWNbW\nQ97EIb5ZlrjwN3m+LzYTNvp8MpFu3HfRyGt8yR1Jj+yQu0/2jh3owae+Kha77nu8vzmsbKG93WjH\n2PJ8uDa9640c5yLv9PjcONBx7GRHTa9Xyw65vv46X/v1OnXxsePy9UJsuvFYvt73LVzy0MdbDs//\nPOh4DlbDipbn9z5awI59cNPCZ+/fGB92++QSOlQcBwmvByJzj0bLeGcQudL9j3MqjqI/+eSFfJ7n\nVToyVTn8yHQZJ3sBHxc3FW/R+xr4Wj05DF1WgcPSsQbzVxbfKafPdy2HC70VwuoMh9oZxd3PuATg\nGS84zx6bdffyftuvRZhp+Z0v6nlc4lCEPCBheZ3EBcrfD69zrucV/rnR8z972BVff/xkB1m7YGE5\n2j4H0RyL8TlMTcD4kHbbTc7DvLS7bmTfbA/R8iJyyqrD82Mvyxu9Z/ieM4rvzD0s7+vx2/aT2pDx\nudLyHpa/+aYywuf1a/gcReAQbq/TUbfly5tu9LxG5DKlGL6/M5aZxiQiC/EMiqyLdc4qE5Kw3Zw9\nOJ+cGfZy0uzntGdo/FGWY+KkAOr2+to7Mnb7Lbdfv1cNc/tb6LsGocWI7HsWXsu4dCF+eyqWeJxW\ntHz4jvr8jMyG8yvKcO8Vy/PC77+CiC385n/+qOKjWXuYde3HOSsn568kOBvXh7TjdkXWTIPr/Oia\n/YLQ++igbk9/37U9CX2+m9iB0OPv8foKC92uqM493gEJEhUibgof87Qc3yFzYL27Z1q2XxCGZTx7\nI3q/Jzy/7EfkNvnO2+S4299lvMK7iaduwvI1Aw3r+e35kc+PfR6/G+EnW1/v89PPEW2NgZ/UK8Ou\nhfhXsaUBjxxr/Wgs49rBm8+abn4EvPntNLOF860Zw+2x3G4WvqY5xdIDc3s+U+GDP11t4MgFF1h9\n0aAUTfvzuXTMadnj1sB/6DWNCYuWZ+n+tbC7xrQMO5D4sW2RTcvldeKj3/HYZ23et7QQnpfWk/Ax\nP7fH5TFRz3eRHTfWMuMQhs91j89z4ZXCb9x9Xu9N97/l/Z73jUFytWLi/xVO8O8rwuPl/lkv/M47\nzHAemSHnlXnwXXtNpxCL5Ghts0hZ70ZfIume3+RUco7BvvLXrJNOLpf8MvPT8ULRFT+haASvWMdx\ndJ3EDyvMbbfLISCX7Uz+yOMefl3o/aU+zlsDP9qYln0vNT2+FnFRuDze8X/Ba3WeSuutEkrb6PEJ\nixI6z6rDO2vknkDa4QVL/sP7NXa7GDMJ1sTPajfip9Iv4poQf6lkbjo727zrBUklP4tP9ju4SWIp\n80incWU713NFT/em573h/kdcXR9BVYJvO30D/yUsJ/7T7/s5fgrxYzKrh17e9r0/p/zCrz+vU0bz\nD6H1+OrLKO9XWHjoRenjJPca08nemM72xuKdCvED8fFQeYfj8Rv9xchwGnrQTwx/dyjsFPIlvoR4\nIhmfzIB5IrBOWJcLGjP2JFdN7EqpK8UN5a5OV6dT4ZCj49zLfFmI/5a3cuYrdPvkvUY/WNoDexPi\nx4XwqdCDYh8l5V7/y3bhed1+vv5zOMcyfxYrPG1fes7wmc6cnU8ndh7x0L8yh0vZRu+Xc28XBpQq\nUfKIfZxP7+NcfZ9y7t38oOVL3BdO91/n7Uo7PO/Bt/R6p/PyGV+2Dp8Swuc7bV9O33mfyt/xJ43P\nMv6483r2z038EOJ3hdhZfLxMbHW4HOC4JfzWdbz6H4bHn9if/I1L7688mPmO+1If/kk4k3HOj4XE\nYSGZfIj2YmdC9H+cOTde98P3hXe4Hz8teo5/NLa8vL6O6fXC9iR/6EJbfKWNryYCv+vx+Y3P8LqJ\nnxAm33eO713oeQd/1SUSn+/6/oSef20X5xGXhba38+Dljcwrx3MhybZOB+9qpHiisHXd7v3kVz1u\npccFvFHo84rH8X2ix5xX/M1Vm/zkJB6L5aXn2c8JyT+i6nm+U3Mh8VRIXiT0ey/HQ6VD5J1C/JfQ\ndnVd9hQSN+J+93QXfFv4yTE8PuwfRLuwf9F33t3N4l7ugYc3ut/Fz4C30U880a3aP9xHfBCG13Ut\nRGkb5Z1O39Ky9fMcD+SN4S3xrvX08bM9pguyY/PdQs6/pwt1ii7EsS2e1Xrbc2M3Cvu8Z0Xh437n\nZVuEr88hhHfLnfAuRQdmGcmr9Wp5n0oveUdC3qHwevzBH+zV/Lr765tf4cqa8yQh/EbeEb+5O+BZ\nLipp637rva//na9Adz7Z36uAQekshovVcsPU5cLvT9rBL27Kkl3SW+F5YjhgkC8LvX4EZWelzdyz\n0uby+ocK5qbquMBP/tYv610G7vXqm3+P973fOvdb/z7v91UjdaH070E+LiQ+7L4o2udzEdKVMaXv\nxMG9N/no3of8WegSvfx8Mu+4prjt//a+LlhqGnpK1012Tus5p/UgWuuyf8Qn429kRdt/CNi+v0yq\nzELqDXot/n7RXuwgXQ+Qd39uN38VUpcQet5x3WKf8f2JwfnMPp/9yk9+8vuVWF1/TepTwuV5+fV3\nPbj7n/V4Hu9KaoCH6XbJ68RqXPittF7F+9hH+SL3XOe6/8DfpT7yry1eh17vgr8L07L5076XeChv\n53f1wvchHuUar3mN0Pf4HKeE+DOFX7+bd6mzCIlzQniYaLjf/3vkC6Lj5F36CvyRkPgm5N3l5y9y\nLPyg8Lo9qDMIn/udp3YZZlomTuRwPUToP/58dUHh9bxaHu+6j9g9fyJo2sC4aX4g9H5zUfcRwnNE\nK9CfEbncvskrm2Z43oPHCfFDRmRKqaIhj/lrYuf5/S0lO8EEF/E8l/12KiFgnS8PE8LzshMCUISd\n9vvNf8Pt734yeUA2Ye11m3B2v4jmtQzvamSfWNaHaCL3Rp6GnJa3y/3hfFhW8tzuOlw2sQArvW75\nfjow9n57YV8pB4NetuOJni3xM/tBG7HzFC9EP/vA55QVUQ8RDZtuv/D9zEVVujEt+7uV9nJ+4bPM\n+xZts94y8bNdRmP//Owmj/WXIiT/Ac60tpHBHAAA\n',
-          stageTimes: '648|2284|2990|8136|14263|26984|55695',
-          playCount: 223,
-          createTime: 1667012050000,
-          user: {
-            id: 65617,
-            uid: '65617',
-            avatar: 'https://minesweeper.oss-cn-hongkong.aliyuncs.com/1686290721141.jpeg',
-            background: 'https://minesweeper.oss-cn-hongkong.aliyuncs.com/1707647520897.png',
-            nickName: 'mochuannnn',
-            sex: 1,
-            sign: '退坑了',
-            vip: false,
-            mark: 'golden',
-            timingLevel: 9,
-            timingRank: 10,
-            puzzleRank: 48,
-            relation: 0,
-            country: 'CN',
-            chaosInGame: false,
-            chaosInView: false,
-            pvpInGame: false,
-            pvpInWait: false,
-            online: false,
-          },
-          collect: false,
-          scoreRank: 36375,
-          timeTank: 219,
-          scoreRankPercent: 0.8005,
-          timeRankPercent: 0.9989,
-        },
-      }
-    }
-    else {
-      cached = await getCachedRecord<TzfeRecordGetResponse>('tzfe', recordIdNum)
-    }
+    const cached = await getCachedRecord<TzfeRecordGetResponse>('tzfe', recordIdNum)
 
     const res: TzfeRecordGetResponse = cached ?? await api.tzfeRecordGet(recordIdNum)
     if (!cached && res.code === 200) {
