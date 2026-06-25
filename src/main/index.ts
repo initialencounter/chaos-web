@@ -78,6 +78,7 @@ async function downloadAndCache(url: string): Promise<string> {
 // ==================== Credential Storage ====================
 
 interface Credentials {
+  id: string
   uid: string
   token: string
   password: string
@@ -230,20 +231,21 @@ async function checkOnlineStatus(): Promise<boolean> {
 }
 
 async function doLogin(
-  targetUid: string,
+  id: string,
   password: string,
 ): Promise<{ success: boolean, code?: number, msg?: string, data?: any }> {
   try {
-    const resp: any = await executeRequest('/Minesweeper/user/home', 'POST', {
-      targetUid,
+    const passwordMD = computeMD5(password)
+    const resp: any = await executeRequest('/Minesweeper/user/login', 'POST', {
+      id,
+      password: passwordMD,
+      platform: 0,
     })
 
     if (resp.code === 200 && resp.data) {
-      if (resp.data.user.password !== password)
-        return { success: false, code: resp.code, msg: 'uid或密码错误' }
-      const { uid, token } = resp.data.user
+      const { uid, token } = resp.data
       applyCredentials(uid, token)
-      saveCredentials({ uid, token, password })
+      saveCredentials({ id, uid, token, password })
       return { success: true, data: resp.data }
     }
     return { success: false, code: resp.code, msg: resp.msg ?? '' }
