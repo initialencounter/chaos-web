@@ -107,6 +107,33 @@ export function parseTzfeReplayHandle(base64Str: string): TzfeActionRecord[] {
   return actions
 }
 
+/**
+ * Encode action records into a base64-encoded, gzip-compressed handle string.
+ * Reverse of parseReplayHandle.
+ * Format: "action:row:column:time-action:row:column:time-..."
+ * row/col are 0-indexed internally; time is in milliseconds.
+ */
+export function encodeReplayHandle(actions: ActionRecord[]): string {
+  const parts = actions.map((a) => {
+    const row = a.row - 1 // convert back to 0-indexed
+    const col = a.column - 1 // convert back to 0-indexed
+    const time = Math.round(a.time * 1000) // convert to ms
+    return `${a.action}:${row}:${col}:${time}`
+  })
+  const raw = parts.join('-') + (parts.length > 0 ? '-' : '')
+  return compressBase64(raw)
+}
+
+function compressBase64(raw: string): string {
+  // 使用 gzip 格式（与 Android 端 GZIPOutputStream 兼容）
+  const compressed = pako.gzip(raw)
+  let binary = ''
+  for (let i = 0; i < compressed.length; i++) {
+    binary += String.fromCharCode(compressed[i]!)
+  }
+  return window.btoa(binary)
+}
+
 function decompressBase64(base64Str: string): string {
   const binaryString = window.atob(base64Str)
   const len = binaryString.length

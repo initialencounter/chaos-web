@@ -44,6 +44,36 @@ export interface ReplyData extends RecordGetData {
 
 export type RecordGetResponse = ApiResponse<RecordGetData>
 
+/** 经典模式提交成功后的返回值 */
+export interface TimingSuccessData {
+  recordId: number
+  postId: number
+  rankPercent: number
+  newRank: number
+  oldRank: number
+  newTime: number
+  timeDay: number
+  timeDayNew: number
+  timeWeek: number
+  timeWeekNew: number
+  timeMonth: number
+  timeMonthNew: number
+  newBvs: number
+  bvsDay: number
+  bvsDayNew: number
+  bvsWeek: number
+  bvsWeekNew: number
+  bvsMonth: number
+  bvsMonthNew: number
+  coin: number
+  times: number[]
+  bvs: number[]
+  timeRefreshes: boolean[]
+  bvsRefreshes: boolean[]
+}
+
+export type TimingSuccessResponse = ApiResponse<TimingSuccessData>
+
 export interface MinesweeperRecordListUser extends BaseUser {
   background: null
   country: null

@@ -53,6 +53,11 @@ const router = createRouter({
       component: () => import('@tapsss/forum-shared/views/UserDetailView.vue'),
       props: true,
     },
+    {
+      path: '/minesweeper',
+      name: 'minesweeper',
+      component: () => import('../views/MinesweeperGameView.vue'),
+    },
   ],
   scrollBehavior(_to, _from, savedPosition) {
     if (savedPosition) {

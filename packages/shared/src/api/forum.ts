@@ -30,6 +30,7 @@ import type {
   RecordGetResponse,
   SchulteRecordGetResponse,
   SchulteRecordListFilterResponse,
+  TimingSuccessData,
   TzfeRecordGetResponse,
   TzfeRecordListFilterResponse,
 } from '../types/record'
@@ -107,6 +108,10 @@ export function createForumApi(fetchFn: FetchFn) {
     // ========== 记录详情 ==========
     minesweeperRecordGet(recordId: number): Promise<RecordGetResponse> {
       return fetchFn<RecordGetResponse>('/minesweeper/record/get', { recordId })
+    },
+
+    minesweeperTimingSuccess(level: number, record: string, countPercent: boolean): Promise<ApiResponse<TimingSuccessData>> {
+      return fetchFn<ApiResponse<TimingSuccessData>>('/minesweeper/timing/success', { level, record, countPercent })
     },
 
     puzzleRecordGetResponse(recordId: number): Promise<PuzzleRecordGetResponse> {

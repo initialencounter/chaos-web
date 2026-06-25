@@ -22,6 +22,9 @@ const showCareer = ref(false)
     <div class="app-header">
       <span class="app-title">Mines Client Lite</span>
       <div class="header-actions">
+        <el-button size="small" plain @click="$router.push({ name: 'minesweeper' })">
+          扫雷
+        </el-button>
         <el-button size="small" plain @click="showRankBoard = true">
           排行榜
         </el-button>
