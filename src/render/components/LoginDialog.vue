@@ -34,7 +34,7 @@ async function handleSubmit() {
       emit('success')
     }
     else {
-      error.value = result.code === 10316 ? 'uid或密码错误' : (result.msg || '登录失败')
+      error.value = result.code === 10316 ? 'ID或密码错误' : (result.msg || '登录失败')
       ElMessage.error(error.value)
     }
   }
@@ -59,8 +59,8 @@ async function handleSubmit() {
     @update:model-value="emit('update:modelValue', $event)"
   >
     <el-form @submit.prevent="handleSubmit">
-      <el-form-item label="UID">
-        <el-input v-model="form.id" placeholder="UID" />
+      <el-form-item label="ID">
+        <el-input v-model="form.id" placeholder="ID" />
       </el-form-item>
       <el-form-item label="密码">
         <el-input v-model="form.password" type="password" placeholder="密码" show-password />

@@ -291,15 +291,8 @@ function setupIPC(): void {
 
     const online = await checkOnlineStatus()
     if (online) {
+      applyCredentials(creds.uid, creds.token)
       return { loggedIn: true, uid: creds.uid }
-    }
-
-    if (creds.uid && creds.password) {
-      const result = await doLogin(creds.uid, creds.password)
-      if (result.success) {
-        return { loggedIn: true, uid: LOGIN_CONFIG.uid }
-      }
-      return { loggedIn: false, reason: 'login_failed', msg: result.msg }
     }
 
     return { loggedIn: false, reason: 'token_expired' }
