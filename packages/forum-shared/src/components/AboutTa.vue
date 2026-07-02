@@ -194,11 +194,11 @@ function goMessage() {
     </div>
 
     <div class="details-section">
-      <div class="details-title">
-        个人信息
-      </div>
       <div class="profile-content">
         <div class="detail-grid">
+          <div class="details-title">
+            个人信息
+          </div>
           <div class="detail-item">
             <span class="lbl">UID&nbsp;&nbsp;&nbsp;{{ user.uid }}</span>
           </div>
@@ -394,8 +394,8 @@ h3 {
 
 @media (max-width: 768px) {
   .profile-content {
-    flex-direction: column-reverse;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
   }
   .radar-chart-area {
     flex: 0 0 auto;

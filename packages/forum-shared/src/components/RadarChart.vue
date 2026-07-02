@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import iconMinesweeper from '../../../../icons/ic_game_minesweeper.webp'
+import iconNonosweeper from '../../../../icons/ic_game_nonosweeper.png'
+import iconPuzzle from '../../../../icons/ic_game_puzzle.webp'
+import iconSchulte from '../../../../icons/ic_game_schulte.webp'
+import icon2048 from '../../../../icons/ic_game_sudoku_small.webp'
+import iconTzfe from '../../../../icons/ic_game_tzfe.webp'
 
 const props = withDefaults(defineProps<{
   ranks?: number[]
@@ -8,6 +14,8 @@ const props = withDefaults(defineProps<{
 })
 
 const LABELS = ['扫雷', '舒尔特', '华容道', '2048', '数独', '数织']
+const GAME_ICONS = [iconMinesweeper, iconSchulte, iconPuzzle, iconTzfe, icon2048, iconNonosweeper]
+const ICON_SIZE = 24
 
 // ---- layout constants ----
 const CX = 150
@@ -18,6 +26,9 @@ const GRID_LEVELS = [1, 2, 3, 4, 5]
 // ---- score computation ----
 function computeScore(rank: number): number {
   let r = rank
+  if (r === 0) {
+    r = 3000
+  }
   if (r < 1) {
     r = 1
   }
@@ -28,6 +39,7 @@ function computeScore(rank: number): number {
 }
 
 const scores = computed(() => props.ranks.map(r => computeScore(r)))
+const totalScore = computed(() => scores.value.reduce((a, b) => a + b, 0))
 
 // ---- geometry helpers ----
 /** 第 i 个轴的角度（弧度），从12点方向顺时针 */
@@ -103,17 +115,19 @@ function getLabelDy(i: number): string {
 
 // 单个标签微调偏移（像素）
 const LABEL_R_OFFSETS: Record<number, number> = {
-  1: 35, // 舒尔特：往右移
-  2: -10, // 华容道：往左移
-  4: 30, // 数独：往左移
+  1: 0, // 舒尔特：往右移
+  2: 0, // 华容道：往左移
+  4: 20, // 数独：往左移
+  5: 20, // 数织：往右移
 }
 
 const LABEL_Y_OFFSETS: Record<number, number> = {
-  0: 10, // 扫雷：不动
-  1: 20, // 舒尔特：往上移
-  2: 2, // 华容道：往下移
-  4: -20, // 数独：往上移
-  3: -10, // 2048：往下移
+  0: 0, // 扫雷：不动
+  1: 10, // 舒尔特：往上移
+  2: 10, // 华容道：往下移
+  3: 0, // 2048：往下移
+  4: 0, // 数独：往上移
+  5: 10, // 数织：不动
 }
 
 const labelItems = computed(() =>
@@ -122,6 +136,8 @@ const labelItems = computed(() =>
     const { x, y } = polarToCartesian(r, i)
     return {
       label,
+      index: i,
+      icon: GAME_ICONS[i],
       x: x.toFixed(1),
       y: (y + (LABEL_Y_OFFSETS[i] || 0)).toFixed(1),
       anchor: getLabelAnchor(i),
@@ -151,7 +167,7 @@ function onPointLeave() {
   <div class="radar-section">
     <div class="radar-wrapper">
       <svg
-        viewBox="0 0 300 300"
+        viewBox="0 0 300 360"
         xmlns="http://www.w3.org/2000/svg"
         class="radar-svg"
       >
@@ -216,19 +232,49 @@ function onPointLeave() {
           @mouseleave="onPointLeave"
         />
 
-        <!-- 轴标签 -->
+        <!-- 轴标签（图标 + 分数） -->
+        <g v-for="item in labelItems" :key="`label-${item.label}`">
+          <image
+            v-if="item.icon"
+            :href="item.icon"
+            :x="(Number(item.x) - ICON_SIZE / 2).toFixed(1)"
+            :y="(Number(item.y) - ICON_SIZE / 2).toFixed(1)"
+            :width="ICON_SIZE"
+            :height="ICON_SIZE"
+          />
+          <text
+            v-else
+            :x="item.x"
+            :y="item.y"
+            :text-anchor="item.anchor"
+            :dy="item.dy"
+            fill="#cccccc"
+            font-weight="bold"
+            font-size="13"
+          >
+            {{ item.label }}
+          </text>
+          <text
+            :x="(Number(item.x) + ICON_SIZE / 2 + 4).toFixed(1)"
+            :y="item.y"
+            text-anchor="start"
+            dy="0.35em"
+            fill="#cccccc"
+            font-size="11"
+          >
+            {{ (scores[item.index]).toFixed(2) }}
+          </text>
+        </g>
+        <!-- 总分 -->
         <text
-          v-for="item in labelItems"
-          :key="`label-${item.label}`"
-          :x="item.x"
-          :y="item.y"
-          :text-anchor="item.anchor"
-          :dy="item.dy"
-          fill="#cccccc"
+          x="150"
+          y="340"
+          text-anchor="middle"
+          fill="#fa7299"
           font-weight="bold"
-          font-size="13"
+          font-size="15"
         >
-          {{ item.label }}
+          综合评分 {{ (totalScore * 100 / 30).toFixed(2) }}
         </text>
       </svg>
 
@@ -241,7 +287,7 @@ function onPointLeave() {
           top: `${(tooltipCy / 300) * 100}%`,
         }"
       >
-        {{ hoveredIndex !== null ? `${LABELS[hoveredIndex]} : ${scores[hoveredIndex].toFixed(2)} / 5.00` : '' }}
+        {{ hoveredIndex !== null ? `${LABELS[hoveredIndex]} : ${(scores[hoveredIndex]).toFixed(2)} / 5` : '' }}
       </div>
     </div>
   </div>
@@ -249,14 +295,14 @@ function onPointLeave() {
 
 <style scoped>
 .radar-section {
-  padding: 16px 20px;
+  padding: 8px 10px;
   border-bottom: 8px solid #1e1e1e;
 }
 
 .radar-wrapper {
   position: relative;
   width: 100%;
-  max-width: 360px;
+  max-width: 350px;
   margin: 0 auto;
   aspect-ratio: 1 / 1;
 }
