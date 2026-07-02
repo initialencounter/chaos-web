@@ -303,11 +303,11 @@ onBeforeUnmount(() => {
             <th class="col-player">
               玩家
             </th>
-            <th v-for="key in gameKeys" :key="key" class="col-game">
-              {{ gameLabels[key] }}
-            </th>
             <th class="col-composite">
               综合评分
+            </th>
+            <th v-for="key in gameKeys" :key="key" class="col-game">
+              {{ gameLabels[key] }}
             </th>
           </tr>
         </thead>
@@ -337,12 +337,12 @@ onBeforeUnmount(() => {
                 <span class="player-name">{{ entry.nickName || `UID:${entry.uid}` }}</span>
               </div>
             </td>
+            <td class="col-composite">
+              <strong>{{ entry.compositePercent.toFixed(2) }}</strong>
+            </td>
             <td v-for="key in gameKeys" :key="key" class="col-game">
               <span class="game-score">{{ entry.games[key]?.score?.toFixed(2) ?? '-' }}</span>
               <span class="game-rank-sub">#{{ entry.games[key]?.rank || '-' }}</span>
-            </td>
-            <td class="col-composite">
-              <strong>{{ entry.compositePercent.toFixed(2) }}</strong>
             </td>
           </tr>
           <tr v-if="matchCount === 0 && searchQuery">
