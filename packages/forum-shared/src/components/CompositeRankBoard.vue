@@ -61,6 +61,21 @@ const sortedEntries = computed(() => {
   })
 })
 
+// ---- 分页 ----
+const currentPage = ref(1)
+const itemsPerPage = ref(100)
+const totalPages = computed(() => Math.max(1, Math.ceil(sortedEntries.value.length / itemsPerPage.value)))
+
+const paginatedEntries = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  return sortedEntries.value.slice(start, start + itemsPerPage.value)
+})
+
+// 切换 tab 或搜索时重置页码
+watch([activeTab, searchQuery], () => {
+  currentPage.value = 1
+})
+
 // ---- 搜索匹配（不改变列表，只记录匹配 uid 集合） ----
 const matchedUids = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
@@ -109,6 +124,21 @@ function goToUser(uid: string) {
   router.push({ name: 'user', params: { uid } })
 }
 
+// ---- 分页辅助 ----
+function displayRank(idx: number): number {
+  return (currentPage.value - 1) * itemsPerPage.value + idx + 1
+}
+
+function goToPage(page: number) {
+  currentPage.value = Math.max(1, Math.min(page, totalPages.value))
+  nextTick(() => {
+    const table = document.querySelector('.leaderboard-table')
+    if (table) {
+      table.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  })
+}
+
 // ---- 搜索跳转 ----
 function doSearch() {
   const q = searchQuery.value.trim()
@@ -116,8 +146,8 @@ function doSearch() {
     highlightedUid.value = ''
     return
   }
-  // 在完整列表中找到第一个匹配项的索引，高亮并滚动到该位置
-  const idx = entries.value.findIndex(e =>
+  // 在当前排序列表中查找第一个匹配项
+  const idx = sortedEntries.value.findIndex(e =>
     e.nickName.toLowerCase().includes(q.toLowerCase())
     || e.uid.includes(q),
   )
@@ -125,7 +155,9 @@ function doSearch() {
     highlightedUid.value = ''
     return
   }
-  highlightedUid.value = entries.value[idx]!.uid
+  // 跳转到匹配项所在页
+  currentPage.value = Math.floor(idx / itemsPerPage.value) + 1
+  highlightedUid.value = sortedEntries.value[idx]!.uid
 
   nextTick(() => {
     const row = document.querySelector('.row-highlight')
@@ -313,10 +345,10 @@ onBeforeUnmount(() => {
         </thead>
         <tbody>
           <tr
-            v-for="(entry, idx) in entries"
+            v-for="(entry, idx) in paginatedEntries"
             :key="entry.uid"
             :class="[
-              getRankClass(idx + 1),
+              getRankClass(displayRank(idx)),
               {
                 'is-self': entry.uid === currentUid,
                 'row-highlight': entry.uid === highlightedUid,
@@ -325,7 +357,7 @@ onBeforeUnmount(() => {
             ]"
           >
             <td class="col-rank">
-              <span class="rank-badge">{{ getRankBadge(idx + 1) }}</span>
+              <span class="rank-badge">{{ getRankBadge(displayRank(idx)) }}</span>
             </td>
             <td class="col-player">
               <div class="player-cell" @click="goToUser(entry.uid)">
@@ -373,10 +405,10 @@ onBeforeUnmount(() => {
         </thead>
         <tbody>
           <tr
-            v-for="(entry, idx) in sortedEntries"
+            v-for="(entry, idx) in paginatedEntries"
             :key="entry.uid"
             :class="[
-              getRankClass(idx + 1),
+              getRankClass(displayRank(idx)),
               {
                 'is-self': entry.uid === currentUid,
                 'row-highlight': entry.uid === highlightedUid,
@@ -385,7 +417,7 @@ onBeforeUnmount(() => {
             ]"
           >
             <td class="col-rank">
-              <span class="rank-badge">{{ getRankBadge(idx + 1) }}</span>
+              <span class="rank-badge">{{ getRankBadge(displayRank(idx)) }}</span>
             </td>
             <td class="col-player">
               <div class="player-cell" @click="goToUser(entry.uid)">
@@ -411,6 +443,41 @@ onBeforeUnmount(() => {
           </tr>
         </tbody>
       </table>
+
+      <!-- 分页控件 -->
+      <div v-if="totalPages > 1" class="pagination">
+        <button
+          class="page-btn"
+          :disabled="currentPage <= 1"
+          @click="goToPage(1)"
+        >
+          首页
+        </button>
+        <button
+          class="page-btn"
+          :disabled="currentPage <= 1"
+          @click="goToPage(currentPage - 1)"
+        >
+          上一页
+        </button>
+        <span class="page-info">
+          第 {{ currentPage }} / {{ totalPages }} 页（共 {{ sortedEntries.length }} 条）
+        </span>
+        <button
+          class="page-btn"
+          :disabled="currentPage >= totalPages"
+          @click="goToPage(currentPage + 1)"
+        >
+          下一页
+        </button>
+        <button
+          class="page-btn"
+          :disabled="currentPage >= totalPages"
+          @click="goToPage(totalPages)"
+        >
+          末页
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -790,6 +857,42 @@ onBeforeUnmount(() => {
 .col-game-score-col strong {
   color: #fa7299;
   font-size: 15px;
+}
+
+/* ---- 分页 ---- */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 0;
+  flex-wrap: wrap;
+}
+
+.page-btn {
+  padding: 6px 14px;
+  background-color: #252525;
+  color: #ccc;
+  border: 1px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.2s;
+}
+
+.page-btn:hover:not(:disabled) {
+  background-color: #3a3a3a;
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-info {
+  color: #999;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 /* ---- 响应式 ---- */

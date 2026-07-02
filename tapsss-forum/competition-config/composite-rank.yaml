@@ -10,4 +10,4 @@ name: 综合游戏排行榜
 pollIntervalMs: 900000 # 15分钟
 
 # 每页拉取数量
-pageSize: 100
+pageSize: 500
