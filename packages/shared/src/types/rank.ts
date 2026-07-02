@@ -33,3 +33,34 @@ export type RankChaosScoreList = ApiResponse<RankDatum[]>
 
 // ========== 财富排行榜 ==========
 export type RankCoinList = ApiResponse<RankDatum[]>
+
+// ========== 综合游戏排行榜 ==========
+export interface CompositeRankGameScore {
+  /** 排名 */
+  rank: number
+  /** 0-5 评分 */
+  score: number
+}
+
+export interface CompositeRankEntry {
+  uid: string
+  nickName: string
+  avatar: string
+  /** 各游戏排名与评分 */
+  games: Record<string, CompositeRankGameScore>
+  /** 综合总分 (0-30) */
+  totalScore: number
+  /** 综合百分比 */
+  compositePercent: number
+}
+
+export interface CompositeRankResponse {
+  code: number
+  data: {
+    entries: CompositeRankEntry[]
+    lastUpdated: number
+    configName: string
+    gameLabels: Record<string, string>
+  }
+  msg: string | null
+}

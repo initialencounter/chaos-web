@@ -342,6 +342,21 @@ function setupIPC(): void {
   ipcMain.handle('cache:image', async (_event, url: string) => {
     return downloadAndCache(url)
   })
+
+  // Proxy server request — for endpoints NOT on the Minesweeper API (e.g., /api/rank/composite)
+  // The proxy server URL defaults to localhost:3001 for local dev
+  const PROXY_BASE_URL = 'http://localhost:3001'
+
+  ipcMain.handle('proxy:request', async (_event, path: string) => {
+    try {
+      const res = await fetch(`${PROXY_BASE_URL}${path}`)
+      const json = await res.json()
+      return { success: true, code: (json as any).code, msg: (json as any).msg, data: (json as any).data }
+    }
+    catch (e: any) {
+      return { success: false, msg: e.message }
+    }
+  })
 }
 
 // ==================== App Lifecycle ====================

@@ -34,6 +34,7 @@ declare global {
       onStartGame: (callback: () => void) => void
       logout: () => Promise<boolean>
       apiRequest: (path: string, method: string, params: Record<string, any>) => Promise<{ success: boolean, code?: number, msg?: string, data?: any }>
+      proxyRequest: (path: string) => Promise<{ success: boolean, code?: number, msg?: string, data?: any }>
       cacheImage: (url: string) => Promise<string>
     }
   }

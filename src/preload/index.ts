@@ -38,6 +38,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Generic API request
   apiRequest: (path: string, method: string, params: Record<string, any>) => ipcRenderer.invoke('api:request', path, method, params),
 
+  // Proxy server request (for non-Minesweeper endpoints like /api/rank/composite)
+  proxyRequest: (path: string) => ipcRenderer.invoke('proxy:request', path),
+
   // Image cache
   cacheImage: (url: string) => ipcRenderer.invoke('cache:image', url),
 })

@@ -1,3 +1,4 @@
+import CompositeRankBoard from '@tapsss/forum-shared/components/CompositeRankBoard.vue'
 import CompetitionView from '@tapsss/forum-shared/views/CompetitionView.vue'
 import HomeView from '@tapsss/forum-shared/views/HomeView.vue'
 import PostDetailView from '@tapsss/forum-shared/views/PostDetailView.vue'
@@ -54,6 +55,11 @@ const router = createRouter({
       name: 'user',
       component: UserDetailView,
       props: true,
+    },
+    {
+      path: '/forum/rank',
+      name: 'rank',
+      component: CompositeRankBoard,
     },
   ],
   scrollBehavior(to, from, savedPosition) {

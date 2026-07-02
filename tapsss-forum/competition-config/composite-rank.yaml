@@ -1,0 +1,13 @@
+# 综合游戏排行榜配置
+# 聚合 5 款小游戏的排名数据，按 RadarChart 评分算法计算综合评分
+
+enabled: true
+
+# 排行榜名称
+name: 综合游戏排行榜
+
+# 轮询间隔 (毫秒)
+pollIntervalMs: 900000 # 15分钟
+
+# 每页拉取数量
+pageSize: 100

@@ -1,4 +1,5 @@
 export { createCompetitionEngine } from './engine'
-export { loadSpeedCompetitionConfig, loadTranscendenceCupConfig } from './loadConfig'
+export { loadCompositeRankConfig, loadSpeedCompetitionConfig, loadTranscendenceCupConfig } from './loadConfig'
+export * from './rank'
 export * from './tcup'
 export * from './types'

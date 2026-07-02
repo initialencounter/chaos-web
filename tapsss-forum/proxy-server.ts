@@ -3,7 +3,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
-import { createCompetitionEngine, createTranscendenceCupEngine, executeRequest, loadSpeedCompetitionConfig, loadTranscendenceCupConfig, LOGIN_CONFIG } from '@tapsss/server'
+import { createCompetitionEngine, createCompositeRankEngine, createTranscendenceCupEngine, executeRequest, loadCompositeRankConfig, loadSpeedCompetitionConfig, loadTranscendenceCupConfig, LOGIN_CONFIG } from '@tapsss/server'
 import cors from 'cors'
 import express from 'express'
 import { TOKEN, UID } from './secrets'
@@ -85,6 +85,7 @@ const apiPaths = [
   '/Minesweeper/rank/schulte/list',
   '/Minesweeper/rank/tzfe/list',
   '/Minesweeper/rank/nono/list',
+  '/Minesweeper/rank/sudoku/list',
   '/Minesweeper/rank/all',
   '/Minesweeper/game/news/user',
 ]
@@ -289,6 +290,22 @@ if (TCUP_CONFIG.enabled) {
   tcupEngine.loadFromDisk()
 }
 
+// ======== 综合游戏排行榜引擎 ========
+const COMPOSITE_RANK_CONFIG = loadCompositeRankConfig(COMPETITION_CONFIG_DIR)
+let compositeRankEngine: ReturnType<typeof createCompositeRankEngine> | null = null
+
+if (COMPOSITE_RANK_CONFIG.enabled) {
+  compositeRankEngine = createCompositeRankEngine(
+    COMPOSITE_RANK_CONFIG,
+    {
+      executeRequest,
+      cacheDir: COMPETITION_CACHE_DIR,
+      logger: console,
+    },
+  )
+  compositeRankEngine.loadFromDisk()
+}
+
 // 获取排行榜
 if (competitionEngine) {
   app.get('/api/competition/leaderboard', (req, res) => {
@@ -356,6 +373,49 @@ if (tcupEngine) {
     }
     catch (err) {
       res.status(500).json({ code: 500, data: null, msg: String(err) })
+    }
+  })
+}
+
+// ======== 综合游戏排行榜 API ========
+
+if (compositeRankEngine) {
+  // 获取综合排行榜
+  app.get('/api/rank/composite', (req, res) => {
+    try {
+      const entries = compositeRankEngine!.getLeaderboard()
+      res.json({
+        code: 200,
+        data: {
+          entries,
+          lastUpdated: compositeRankEngine!.getLastPollTime(),
+          configName: compositeRankEngine!.getConfig().name,
+          gameLabels: compositeRankEngine!.getGameLabels(),
+        },
+        msg: null,
+      })
+    }
+    catch (err) {
+      res.status(500).json({ code: 500, data: null, msg: String(err) })
+    }
+  })
+
+  // 手动刷新综合排行榜（带防抖，避免并发轮询）
+  let compositeRankPolling = false
+  app.post('/api/rank/composite/refresh', async (req, res) => {
+    if (compositeRankPolling) {
+      return res.json({ code: 200, data: { success: true, skipped: true }, msg: '轮询进行中，跳过重复请求' })
+    }
+    try {
+      compositeRankPolling = true
+      await compositeRankEngine!.poll()
+      res.json({ code: 200, data: { success: true }, msg: null })
+    }
+    catch (err) {
+      res.status(500).json({ code: 500, data: null, msg: String(err) })
+    }
+    finally {
+      compositeRankPolling = false
     }
   })
 }
@@ -448,5 +508,19 @@ app.listen(PORT, '0.0.0.0', () => {
     }, 7000)
 
     tcupEngine!.startAutoPoll()
+  }
+
+  // 综合排行榜: 9 秒后首次轮询 (错开与其他引擎的 API 请求)
+  if (compositeRankEngine) {
+    setTimeout(() => {
+      compositeRankEngine!.poll().then(() => {
+        // eslint-disable-next-line no-console
+        console.log('[CompositeRank] 首次轮询完成')
+      }).catch((err: Error) => {
+        console.error('[CompositeRank] 首次轮询失败:', err)
+      })
+    }, 9000)
+
+    compositeRankEngine!.startAutoPoll()
   }
 })

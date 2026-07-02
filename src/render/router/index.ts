@@ -58,6 +58,11 @@ const router = createRouter({
       name: 'minesweeper',
       component: () => import('../views/MinesweeperGameView.vue'),
     },
+    {
+      path: '/rank',
+      name: 'rank',
+      component: () => import('../views/RankView.vue'),
+    },
   ],
   scrollBehavior(_to, _from, savedPosition) {
     if (savedPosition) {

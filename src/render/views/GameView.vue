@@ -28,6 +28,9 @@ const showCareer = ref(false)
         <el-button size="small" plain @click="showRankBoard = true">
           排行榜
         </el-button>
+        <el-button size="small" plain @click="$router.push({ name: 'rank' })">
+          综合排行
+        </el-button>
         <el-button size="small" plain @click="showCareer = true">
           生涯
         </el-button>

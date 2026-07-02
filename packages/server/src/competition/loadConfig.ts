@@ -1,3 +1,4 @@
+import type { CompositeRankConfig } from './rank/types'
 import type { TcupConfig } from './tcup/types'
 import type { CompetitionConfig } from './types'
 import fs from 'node:fs'
@@ -128,4 +129,30 @@ export function loadSpeedCompetitionConfig(configDir: string): CompetitionConfig
  */
 export function loadTranscendenceCupConfig(configDir: string): TcupConfig {
   return loadTcupConfig(path.join(configDir, 'tcup.yaml'))
+}
+
+// ─── 综合排行榜配置加载 ───
+
+interface CompositeRankRawConfig {
+  enabled: boolean
+  name: string
+  pollIntervalMs: number
+  pageSize: number
+}
+
+function loadCompRankConfig(filePath: string): CompositeRankConfig {
+  const raw = readYamlFile(filePath) as CompositeRankRawConfig
+  return {
+    enabled: raw.enabled !== false,
+    name: raw.name,
+    pollIntervalMs: raw.pollIntervalMs,
+    pageSize: raw.pageSize,
+  }
+}
+
+/**
+ * 根据 configDir 加载综合游戏排行榜配置
+ */
+export function loadCompositeRankConfig(configDir: string): CompositeRankConfig {
+  return loadCompRankConfig(path.join(configDir, 'composite-rank.yaml'))
 }

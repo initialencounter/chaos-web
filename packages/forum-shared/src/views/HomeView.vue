@@ -67,6 +67,10 @@ function goToTcup() {
   router.push({ name: 'tcup' })
 }
 
+function goToRank() {
+  router.push({ name: 'rank' })
+}
+
 onMounted(async () => {
   if (posts.value.length === 0) {
     await loadPosts()
@@ -78,7 +82,7 @@ onMounted(async () => {
   <div class="home">
     <div class="header-nav">
       <div class="nav-left">
-        <!-- <div class="avatar-placeholder" /> -->
+        <span class="competition-link" title="综合排行榜" @click="goToRank">📊</span>
       </div>
       <div class="nav-center">
         <div class="nav-tab" :class="{ active: postType === 0 }" @click="changeType(0)">
