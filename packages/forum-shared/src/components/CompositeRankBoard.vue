@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { CompositeRankEntry, CompositeRankResponse } from '@tapsss/shared'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 withDefaults(defineProps<{
@@ -19,6 +19,8 @@ const gameLabels = ref<Record<string, string>>({})
 const gameKeys = computed(() => Object.keys(gameLabels.value))
 
 const activeTab = ref<'composite' | string>('composite')
+const searchQuery = ref('')
+const highlightedUid = ref('')
 
 const tabLabelMap = computed<Record<string, string>>(() => ({
   composite: '综合排行',
@@ -26,6 +28,21 @@ const tabLabelMap = computed<Record<string, string>>(() => ({
 }))
 
 const allTabKeys = computed(() => ['composite', ...gameKeys.value])
+
+// ---- 搜索匹配（不改变列表，只记录匹配 uid 集合） ----
+const matchedUids = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q)
+    return new Set<string>()
+
+  return new Set(
+    entries.value
+      .filter(e => e.nickName.toLowerCase().includes(q) || e.uid.includes(q))
+      .map(e => e.uid),
+  )
+})
+
+const matchCount = computed(() => matchedUids.value.size)
 
 // ---- 工具函数 ----
 function formatDate(ts: number): string {
@@ -60,6 +77,37 @@ function goToUser(uid: string) {
   router.push({ name: 'user', params: { uid } })
 }
 
+// ---- 搜索跳转 ----
+function doSearch() {
+  const q = searchQuery.value.trim()
+  if (!q) {
+    highlightedUid.value = ''
+    return
+  }
+  // 在完整列表中找到第一个匹配项的索引，高亮并滚动到该位置
+  const idx = entries.value.findIndex(e =>
+    e.nickName.toLowerCase().includes(q.toLowerCase())
+    || e.uid.includes(q),
+  )
+  if (idx === -1) {
+    highlightedUid.value = ''
+    return
+  }
+  highlightedUid.value = entries.value[idx]!.uid
+
+  nextTick(() => {
+    const row = document.querySelector('.row-highlight')
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  })
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+  highlightedUid.value = ''
+}
+
 // ---- API ----
 const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
 
@@ -86,6 +134,10 @@ async function fetchData() {
       lastUpdated.value = json.data.lastUpdated
       gameLabels.value = json.data.gameLabels
       error.value = ''
+      // 重新搜索（数据更新后保持搜索状态）
+      if (searchQuery.value.trim()) {
+        doSearch()
+      }
     }
     else {
       error.value = String(json.msg || '获取数据失败')
@@ -157,6 +209,25 @@ onBeforeUnmount(() => {
         <span class="stat-label">最后更新</span>
         <span class="stat-value stat-time">{{ lastUpdated ? formatDate(lastUpdated) : '未更新' }}</span>
       </div>
+      <!-- 搜索框 -->
+      <div class="search-box">
+        <input
+          v-model.trim="searchQuery"
+          class="search-input"
+          type="text"
+          placeholder="搜索玩家昵称或UID"
+          @keyup.enter="doSearch"
+        >
+        <button v-if="searchQuery" class="search-clear" @click="clearSearch">
+          ✕
+        </button>
+        <button class="search-btn" @click="doSearch">
+          🔍
+        </button>
+      </div>
+      <span v-if="searchQuery" class="search-hint">
+        找到 {{ matchCount }} 名玩家
+      </span>
       <button class="refresh-btn" :disabled="refreshing" @click="manualRefresh">
         {{ refreshing ? '刷新中...' : '🔄 手动刷新' }}
       </button>
@@ -212,7 +283,14 @@ onBeforeUnmount(() => {
           <tr
             v-for="(entry, idx) in entries"
             :key="entry.uid"
-            :class="[getRankClass(idx + 1), { 'is-self': entry.uid === currentUid }]"
+            :class="[
+              getRankClass(idx + 1),
+              {
+                'is-self': entry.uid === currentUid,
+                'row-highlight': entry.uid === highlightedUid,
+                'row-dimmed': searchQuery && !matchedUids.has(entry.uid),
+              },
+            ]"
           >
             <td class="col-rank">
               <span class="rank-badge">{{ getRankBadge(idx + 1) }}</span>
@@ -233,6 +311,11 @@ onBeforeUnmount(() => {
             </td>
             <td class="col-composite">
               <strong>{{ entry.compositePercent.toFixed(2) }}</strong>
+            </td>
+          </tr>
+          <tr v-if="matchCount === 0 && searchQuery">
+            <td :colspan="gameKeys.length + 3" class="empty-row">
+              未找到匹配 "{{ searchQuery }}" 的玩家
             </td>
           </tr>
         </tbody>
@@ -260,7 +343,14 @@ onBeforeUnmount(() => {
           <tr
             v-for="entry in entries"
             :key="entry.uid"
-            :class="[getRankClass(entry.games[activeTab]?.rank || 0), { 'is-self': entry.uid === currentUid }]"
+            :class="[
+              getRankClass(entry.games[activeTab]?.rank || 0),
+              {
+                'is-self': entry.uid === currentUid,
+                'row-highlight': entry.uid === highlightedUid,
+                'row-dimmed': searchQuery && !matchedUids.has(entry.uid),
+              },
+            ]"
           >
             <td class="col-rank">
               <span class="rank-badge">{{ getRankBadge(entry.games[activeTab]?.rank || 0) }}</span>
@@ -280,6 +370,11 @@ onBeforeUnmount(() => {
             </td>
             <td class="col-game-score-col">
               <strong>{{ entry.games[activeTab]?.score?.toFixed(2) ?? '-' }}</strong>
+            </td>
+          </tr>
+          <tr v-if="matchCount === 0 && searchQuery">
+            <td :colspan="4" class="empty-row">
+              未找到匹配 "{{ searchQuery }}" 的玩家
             </td>
           </tr>
         </tbody>
@@ -352,8 +447,70 @@ onBeforeUnmount(() => {
   color: #999;
 }
 
-.refresh-btn {
+/* ---- 搜索框 ---- */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin-left: auto;
+}
+
+.search-input {
+  width: 200px;
+  padding: 7px 12px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background-color: #252525;
+  color: #e0e0e0;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-input::placeholder {
+  color: #666;
+}
+
+.search-input:focus {
+  border-color: #fa7299;
+}
+
+.search-clear {
+  padding: 2px 6px;
+  border: none;
+  background: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.search-clear:hover {
+  color: #e0e0e0;
+}
+
+.search-btn {
+  padding: 7px 12px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background-color: #333;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.2s;
+}
+
+.search-btn:hover {
+  background-color: #444;
+}
+
+.search-hint {
+  font-size: 12px;
+  color: #fa7299;
+  white-space: nowrap;
+}
+
+.refresh-btn {
+  margin-left: 0;
   padding: 8px 16px;
   background-color: #333;
   color: #e0e0e0;
@@ -383,6 +540,12 @@ onBeforeUnmount(() => {
 
 .status-msg.error {
   color: #f44336;
+}
+
+.empty-row {
+  text-align: center;
+  color: #666;
+  padding: 32px 0;
 }
 
 /* ---- Tab 外层 ---- */
@@ -475,6 +638,22 @@ onBeforeUnmount(() => {
 
 .leaderboard-table tbody tr.is-self:hover {
   background-color: rgba(250, 114, 153, 0.14);
+}
+
+/* ---- 搜索高亮行 ---- */
+.leaderboard-table tbody tr.row-highlight {
+  background-color: rgba(250, 114, 153, 0.18) !important;
+  outline: 1px solid rgba(250, 114, 153, 0.4);
+  outline-offset: -1px;
+}
+
+.leaderboard-table tbody tr.row-highlight:hover {
+  background-color: rgba(250, 114, 153, 0.25) !important;
+}
+
+/* ---- 搜索时非匹配行变暗 ---- */
+.leaderboard-table tbody tr.row-dimmed {
+  opacity: 0.35;
 }
 
 /* ---- 排名 ---- */
@@ -594,6 +773,10 @@ onBeforeUnmount(() => {
   .stats-bar {
     gap: 12px;
     padding: 10px 14px;
+  }
+
+  .search-input {
+    width: 140px;
   }
 
   .tab-btn {
