@@ -29,6 +29,19 @@ const tabLabelMap = computed<Record<string, string>>(() => ({
 
 const allTabKeys = computed(() => ['composite', ...gameKeys.value])
 
+// ---- 单项游戏排行：按该游戏的分数降序排列 ----
+const sortedEntries = computed(() => {
+  if (activeTab.value === 'composite')
+    return entries.value
+
+  const key = activeTab.value
+  return [...entries.value].sort((a, b) => {
+    const scoreA = a.games[key]?.score ?? -1
+    const scoreB = b.games[key]?.score ?? -1
+    return scoreB - scoreA
+  })
+})
+
 // ---- 搜索匹配（不改变列表，只记录匹配 uid 集合） ----
 const matchedUids = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
@@ -341,10 +354,10 @@ onBeforeUnmount(() => {
         </thead>
         <tbody>
           <tr
-            v-for="entry in entries"
+            v-for="(entry, idx) in sortedEntries"
             :key="entry.uid"
             :class="[
-              getRankClass(entry.games[activeTab]?.rank || 0),
+              getRankClass(idx + 1),
               {
                 'is-self': entry.uid === currentUid,
                 'row-highlight': entry.uid === highlightedUid,
@@ -353,7 +366,7 @@ onBeforeUnmount(() => {
             ]"
           >
             <td class="col-rank">
-              <span class="rank-badge">{{ getRankBadge(entry.games[activeTab]?.rank || 0) }}</span>
+              <span class="rank-badge">{{ getRankBadge(idx + 1) }}</span>
             </td>
             <td class="col-player">
               <div class="player-cell" @click="goToUser(entry.uid)">
