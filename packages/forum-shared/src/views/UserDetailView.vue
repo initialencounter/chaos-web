@@ -1,10 +1,5 @@
 <script setup lang="ts">
 import type { UserHomeResponse } from '@tapsss/shared'
-import {
-  TIMING_LEVELS_COLOR,
-  TIMING_LEVELS_MAP,
-  TIMING_LEVELS_TEXT_COLOR,
-} from '@tapsss/shared/utils'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AboutTa from '../components/AboutTa.vue'
@@ -48,26 +43,6 @@ onMounted(async () => {
 
 const user = computed(() => userData.value?.user)
 const saolei = computed(() => userData.value?.saoleiOauth)
-
-const levelIndex = computed(() => {
-  if (!user.value)
-    return 0
-  return user.value.timingLevel === -1 ? 0 : user.value.timingLevel
-})
-const levelColor = computed(
-  () => TIMING_LEVELS_COLOR[levelIndex.value] || '#000',
-)
-const textColor = computed(
-  () => TIMING_LEVELS_TEXT_COLOR[levelIndex.value] || '#FFF',
-)
-const rankText = computed(() => {
-  if (!user.value || !user.value.timingRank)
-    return ''
-  const r = user.value.timingRank
-  if (r === 1)
-    return '雷帝'
-  return `${TIMING_LEVELS_MAP[levelIndex.value] || ''}${r <= 300 ? ` ${r}` : ''}`
-})
 
 const sexMap: Record<number, string> = { 0: '', 1: '♂', 2: '♀' }
 
@@ -149,13 +124,6 @@ const zodiac = computed(() => {
             <h2>
               {{ user.nickName }}
               <span v-if="user.vip" class="badge vip-badge">VIP</span>
-              <span
-                v-if="rankText"
-                class="badge rank-badge"
-                :style="{ backgroundColor: levelColor, color: textColor }"
-              >
-                {{ rankText }}
-              </span>
             </h2>
 
             <!-- Follow & Fans -->

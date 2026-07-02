@@ -10,7 +10,7 @@ import type {
   TzfeCareerResponse,
   UserMatchMedal,
 } from '@tapsss/shared'
-import { formatTime, replaceEmojiStrings } from '@tapsss/shared/utils'
+import { formatTime, replaceEmojiStrings, TIMING_LEVELS_COLOR, TIMING_LEVELS_MAP, TIMING_LEVELS_TEXT_COLOR } from '@tapsss/shared/utils'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { resolveAsset } from '../inject'
@@ -36,6 +36,25 @@ const cachedSaoleiAvatar = ref('')
 const cachedMedalIcons = ref<Record<number, string>>({})
 const togglingFollow = ref(false)
 const togglingBlock = ref(false)
+
+function getLevelColor(timingLevel: number) {
+  const levelIndex = timingLevel === -1 ? 0 : timingLevel
+  return TIMING_LEVELS_COLOR[levelIndex] || '#000'
+}
+function getTextColor(timingLevel: number) {
+  const levelIndex = timingLevel === -1 ? 0 : timingLevel
+  return TIMING_LEVELS_TEXT_COLOR[levelIndex] || '#FFF'
+}
+
+function getRankText(timingLevel: number, timingRank: number) {
+  const levelIndex = timingLevel === -1 ? 0 : timingLevel
+  if (!timingRank)
+    return ''
+  const r = timingRank
+  if (r === 1)
+    return '雷帝'
+  return `${TIMING_LEVELS_MAP[levelIndex] || ''}${r <= 300 ? ` ${r}` : ''}`
+}
 
 // ---- 生涯数据（用于雷达图） ----
 const minesweeperData = ref<MinesweeperCareerResponse['data'] | null>(null)
@@ -175,43 +194,45 @@ function goMessage() {
     </div>
 
     <div class="details-section">
-      <h3>基本资料</h3>
+      <div class="details-title">
+        个人信息
+      </div>
       <div class="profile-content">
         <div class="detail-grid">
           <div class="detail-item">
-            <span class="lbl">UID</span>
-            <span class="val">{{ user.uid }}</span>
+            <span class="lbl">UID&nbsp;&nbsp;&nbsp;{{ user.uid }}</span>
           </div>
           <div class="detail-item">
-            <span class="lbl">注册时间</span>
-            <span class="val">{{
+            <span class="lbl">称号&nbsp;&nbsp;&nbsp;<span
+              v-if="getRankText(user.timingLevel, user.timingRank)"
+              class="lbl badge rank-badge"
+              :style="{ backgroundColor: getLevelColor(user.timingLevel), color: getTextColor(user.timingLevel) }"
+            >
+              {{ getRankText(user.timingLevel, user.timingRank) }}
+            </span></span>
+          </div>
+          <div class="detail-item">
+            <span class="lbl">性别&nbsp;&nbsp;&nbsp;{{ ['', '男', '女'][user.sex] }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="lbl">人气&nbsp;&nbsp;&nbsp;{{ user.visits }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="lbl">地区&nbsp;&nbsp;&nbsp;{{ user.country || "暂无" }}
+              {{ user.province ? `- ${user.province}` : "" }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="lbl">注册时间&nbsp;&nbsp;&nbsp;{{
               new Date(user.createTime)
                 .toISOString()
                 .substring(0, 10)
-                .replace(/-/g, "/")
             }}</span>
           </div>
-          <div class="detail-item">
-            <span class="lbl">人气</span>
-            <span class="val">{{ user.visits }}</span>
+          <div class="details-title">
+            简介
           </div>
           <div class="detail-item">
-            <span class="lbl">地区</span>
-            <span class="val">{{ user.country || "暂无" }}
-              {{ user.province ? `- ${user.province}` : "" }}</span>
-          </div>
-
-          <div class="detail-item">
-            <span class="lbl">账号状态</span>
-            <span class="val">
-              <span v-if="user.accountStatus === 0">正常</span>
-              <span v-else class="danger-text">异常 (状态码: {{ user.accountStatus }})</span>
-            </span>
-          </div>
-
-          <div class="detail-item">
-            <span class="lbl">简介</span>
-            <span class="val">{{
+            <span class="lbl">{{
               replaceEmojiStrings(user.sign || "这个人很懒，什么都没有留下")
             }}</span>
           </div>
@@ -328,15 +349,23 @@ h3 {
 .saolei-section,
 .medals-section {
   background: #252525;
-  padding: 20px;
+  padding: 30px;
   border-radius: 8px;
   margin-bottom: 20px;
 }
 
+.details-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #ddd;
+  padding-bottom: 10px;
+  margin-top: 8px;
+  letter-spacing: 0.02em;
+}
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 15px;
+  gap: 16px 20px;
   flex: 1;
   min-width: 0;
 }
@@ -349,8 +378,8 @@ h3 {
 }
 
 .radar-chart-area {
-  flex: 0 0 280px;
-  width: 280px;
+  flex: 0 0 380px;
+  width: 380px;
 }
 
 /* 覆盖 RadarChart 在侧栏中的多余样式 */
@@ -383,12 +412,14 @@ h3 {
   flex-direction: column;
 }
 .detail-item .lbl {
-  color: #aaa;
-  font-size: 0.85rem;
-  margin-bottom: 4px;
+  color: #999;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 8px;
 }
 .detail-item .val {
   font-size: 1rem;
+  line-height: 1.6;
 }
 .danger-text {
   color: #f44336;
@@ -452,5 +483,19 @@ h3 {
   font-size: 0.85rem;
   color: #ff9800;
   margin-top: 3px;
+}
+
+.badge {
+  margin-left: auto;
+  font-size: 0.3rem;
+  padding: 1px 6px;
+  border-radius: 1px;
+  background-color: rgba(250, 114, 153, 0.15);
+  color: #fa7299;
+}
+
+.badge.dark {
+  background-color: transparent;
+  color: #666;
 }
 </style>
