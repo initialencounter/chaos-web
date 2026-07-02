@@ -1,10 +1,22 @@
 <script setup lang="ts">
-import type { HomeUser, SaoleiOauth, UserMatchMedal } from '@tapsss/shared'
+import type {
+  HomeUser,
+  MinesweeperCareerResponse,
+  NonoCareerResponse,
+  PuzzleCareerResponse,
+  SaoleiOauth,
+  SchulteCareerResponse,
+  SudokuCareerResponse,
+  TzfeCareerResponse,
+  UserMatchMedal,
+} from '@tapsss/shared'
 import { formatTime, replaceEmojiStrings } from '@tapsss/shared/utils'
-import { ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { resolveAsset } from '../inject'
+import { useCareerStore } from '../stores/career'
 import { useUserStore } from '../stores/user'
+import RadarChart from './RadarChart.vue'
 
 const props = defineProps<{
   user: HomeUser
@@ -18,11 +30,60 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const userStore = useUserStore()
+const careerStore = useCareerStore()
 
 const cachedSaoleiAvatar = ref('')
 const cachedMedalIcons = ref<Record<number, string>>({})
 const togglingFollow = ref(false)
 const togglingBlock = ref(false)
+
+// ---- 生涯数据（用于雷达图） ----
+const minesweeperData = ref<MinesweeperCareerResponse['data'] | null>(null)
+const puzzleData = ref<PuzzleCareerResponse['data'] | null>(null)
+const nonoData = ref<NonoCareerResponse['data'] | null>(null)
+const sudokuData = ref<SudokuCareerResponse['data'] | null>(null)
+const tzfeData = ref<TzfeCareerResponse['data'] | null>(null)
+const schulteData = ref<SchulteCareerResponse['data'] | null>(null)
+
+onMounted(async () => {
+  const uid = props.user.id
+  if (!uid)
+    return
+  try {
+    await Promise.all([
+      careerStore.fetchMinesweeperCareer(uid),
+      careerStore.fetchPuzzleCareer(uid),
+      careerStore.fetchNonoCareer(uid),
+      careerStore.fetchSudokuCareer(uid),
+      careerStore.fetchTzfeCareer(uid),
+      careerStore.fetchSchulteCareer(uid),
+    ])
+    if (careerStore.minesweeper?.code === 200)
+      minesweeperData.value = careerStore.minesweeper.data
+    if (careerStore.puzzle?.code === 200)
+      puzzleData.value = careerStore.puzzle.data
+    if (careerStore.nono?.code === 200)
+      nonoData.value = careerStore.nono.data
+    if (careerStore.sudoku?.code === 200)
+      sudokuData.value = careerStore.sudoku.data
+    if (careerStore.tzfe?.code === 200)
+      tzfeData.value = careerStore.tzfe.data
+    if (careerStore.schulte?.code === 200)
+      schulteData.value = careerStore.schulte.data
+  }
+  catch (err) {
+    console.error('获取生涯数据失败:', err)
+  }
+})
+
+const radarRanks = computed<number[]>(() => [
+  minesweeperData.value?.totalTimeRank?.rank ?? 3000,
+  schulteData.value?.rank ?? 3000,
+  puzzleData.value?.infoTotal?.rank ?? 3000,
+  tzfeData.value?.rankTime ?? tzfeData.value?.rankScore ?? 3000,
+  sudokuData.value?.rank ?? 3000,
+  nonoData.value?.totalTimeRank?.rank ?? 3000,
+])
 
 watch(() => props.saolei?.avatar, async (url) => {
   cachedSaoleiAvatar.value = await resolveAsset(url)
@@ -115,43 +176,48 @@ function goMessage() {
 
     <div class="details-section">
       <h3>基本资料</h3>
-      <div class="detail-grid">
-        <div class="detail-item">
-          <span class="lbl">UID</span>
-          <span class="val">{{ user.uid }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="lbl">注册时间</span>
-          <span class="val">{{
-            new Date(user.createTime)
-              .toISOString()
-              .substring(0, 10)
-              .replace(/-/g, "/")
-          }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="lbl">人气</span>
-          <span class="val">{{ user.visits }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="lbl">地区</span>
-          <span class="val">{{ user.country || "暂无" }}
-            {{ user.province ? `- ${user.province}` : "" }}</span>
-        </div>
+      <div class="profile-content">
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="lbl">UID</span>
+            <span class="val">{{ user.uid }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="lbl">注册时间</span>
+            <span class="val">{{
+              new Date(user.createTime)
+                .toISOString()
+                .substring(0, 10)
+                .replace(/-/g, "/")
+            }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="lbl">人气</span>
+            <span class="val">{{ user.visits }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="lbl">地区</span>
+            <span class="val">{{ user.country || "暂无" }}
+              {{ user.province ? `- ${user.province}` : "" }}</span>
+          </div>
 
-        <div class="detail-item">
-          <span class="lbl">账号状态</span>
-          <span class="val">
-            <span v-if="user.accountStatus === 0">正常</span>
-            <span v-else class="danger-text">异常 (状态码: {{ user.accountStatus }})</span>
-          </span>
-        </div>
+          <div class="detail-item">
+            <span class="lbl">账号状态</span>
+            <span class="val">
+              <span v-if="user.accountStatus === 0">正常</span>
+              <span v-else class="danger-text">异常 (状态码: {{ user.accountStatus }})</span>
+            </span>
+          </div>
 
-        <div class="detail-item">
-          <span class="lbl">简介</span>
-          <span class="val">{{
-            replaceEmojiStrings(user.sign || "这个人很懒，什么都没有留下")
-          }}</span>
+          <div class="detail-item">
+            <span class="lbl">简介</span>
+            <span class="val">{{
+              replaceEmojiStrings(user.sign || "这个人很懒，什么都没有留下")
+            }}</span>
+          </div>
+        </div>
+        <div class="radar-chart-area">
+          <RadarChart :ranks="radarRanks" />
         </div>
       </div>
     </div>
@@ -269,8 +335,48 @@ h3 {
 
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 15px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 基本资料 + 雷达图 左右布局 */
+.profile-content {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.radar-chart-area {
+  flex: 0 0 280px;
+  width: 280px;
+}
+
+/* 覆盖 RadarChart 在侧栏中的多余样式 */
+:deep(.radar-section) {
+  padding: 0;
+  border-bottom: none;
+}
+
+:deep(.radar-wrapper) {
+  max-width: 280px;
+}
+
+@media (max-width: 768px) {
+  .profile-content {
+    flex-direction: column-reverse;
+    align-items: center;
+  }
+  .radar-chart-area {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 320px;
+  }
+  :deep(.radar-wrapper) {
+    max-width: 320px;
+    margin: 0 auto;
+  }
 }
 .detail-item {
   display: flex;

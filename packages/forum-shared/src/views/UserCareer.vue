@@ -88,7 +88,6 @@ function getScore(score: number) {
     <div v-else-if="error" class="error">
       {{ error }}
     </div>
-
     <div v-else class="sections">
       <!-- 扫雷 -->
       <div v-if="minesweeperData" class="game-section">
