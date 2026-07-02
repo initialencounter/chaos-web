@@ -83,22 +83,34 @@ export function createCompositeRankEngine(
   }
 
   async function fetchGameRanks(api: GameApi): Promise<RankDatum[]> {
-    try {
-      const res = await executeRequest<{ code: number, data: RankDatum[] }>(
-        api.path,
-        'POST',
-        { page: 0, count: config.pageSize, ...api.params },
-      )
-      if (res && res.code === 200 && Array.isArray(res.data)) {
-        return res.data
+    const allData: RankDatum[] = []
+    let page = 0
+
+    while (true) {
+      try {
+        const res = await executeRequest<{ code: number, data: RankDatum[] }>(
+          api.path,
+          'POST',
+          { page, count: config.pageSize, ...api.params },
+        )
+        if (res && res.code === 200 && Array.isArray(res.data) && res.data.length > 0) {
+          allData.push(...res.data)
+          page++
+          if (allData.length >= 3000)
+            break
+        }
+        else {
+          break
+        }
       }
-      logger.warn(`[CompositeRank] ${api.label} 排行获取异常:`, res)
-      return []
+      catch (err) {
+        logger.error(`[CompositeRank] ${api.label} 排行请求失败 (page=${page}):`, err)
+        break
+      }
     }
-    catch (err) {
-      logger.error(`[CompositeRank] ${api.label} 排行请求失败:`, err)
-      return []
-    }
+
+    logger.log(`[CompositeRank] ${api.label} 共拉取 ${allData.length} 条记录 (${page} 页)`)
+    return allData
   }
 
   async function poll(): Promise<void> {
