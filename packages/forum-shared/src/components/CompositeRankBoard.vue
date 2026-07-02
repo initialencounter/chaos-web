@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { CompositeRankEntry, CompositeRankResponse } from '@tapsss/shared'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { resolveAsset } from '../inject'
 
 withDefaults(defineProps<{
   currentUid?: string
@@ -17,6 +18,24 @@ const lastUpdated = ref(0)
 const entries = ref<CompositeRankEntry[]>([])
 const gameLabels = ref<Record<string, string>>({})
 const gameKeys = computed(() => Object.keys(gameLabels.value))
+
+// ---- 头像 URL 解析缓存 ----
+const resolvedAvatars = ref<Record<string, string>>({})
+
+watch(entries, async (newEntries) => {
+  const urls = [...new Set(newEntries.map(e => e.avatar).filter(Boolean))] as string[]
+  const map: Record<string, string> = {}
+  await Promise.all(urls.map(async (url) => {
+    map[url] = await resolveAsset(url)
+  }))
+  resolvedAvatars.value = map
+}, { immediate: true })
+
+function getAvatar(url: string | undefined | null): string {
+  if (!url)
+    return '/icon/0.png'
+  return resolvedAvatars.value[url] || '/icon/0.png'
+}
 
 const activeTab = ref<'composite' | string>('composite')
 const searchQuery = ref('')
@@ -311,7 +330,7 @@ onBeforeUnmount(() => {
             <td class="col-player">
               <div class="player-cell" @click="goToUser(entry.uid)">
                 <img
-                  :src="entry.avatar || '/icon/0.png'"
+                  :src="getAvatar(entry.avatar)"
                   class="player-avatar"
                   @error="(e: Event) => { (e.target as HTMLImageElement).src = '/icon/0.png' }"
                 >
@@ -371,7 +390,7 @@ onBeforeUnmount(() => {
             <td class="col-player">
               <div class="player-cell" @click="goToUser(entry.uid)">
                 <img
-                  :src="entry.avatar || '/icon/0.png'"
+                  :src="getAvatar(entry.avatar)"
                   class="player-avatar"
                   @error="(e: Event) => { (e.target as HTMLImageElement).src = '/icon/0.png' }"
                 >

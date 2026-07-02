@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { CompetitionLeaderboardEntry, CompetitionLeaderboardResponse } from '@tapsss/shared/types'
 import { escapeHtml, replaceMentionAndReplayLinks } from '@tapsss/shared/utils'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { resolveAsset } from '../inject'
 
 defineOptions({ name: 'CompetitionView' })
 
@@ -18,6 +19,24 @@ const totalFinal = ref(0)
 const loading = ref(false)
 const refreshing = ref(false)
 const error = ref('')
+
+// ---- 头像 URL 解析缓存 ----
+const resolvedAvatars = ref<Record<string, string>>({})
+
+watch(entries, async (newEntries) => {
+  const urls = [...new Set(newEntries.map(e => e.avatar).filter(Boolean))] as string[]
+  const map: Record<string, string> = {}
+  await Promise.all(urls.map(async (url) => {
+    map[url] = await resolveAsset(url)
+  }))
+  resolvedAvatars.value = map
+}, { immediate: true })
+
+function getAvatar(url: string | undefined | null): string {
+  if (!url)
+    return '/icon/0.png'
+  return resolvedAvatars.value[url] || '/icon/0.png'
+}
 
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
@@ -229,7 +248,7 @@ onUnmounted(() => {
             <td class="col-player">
               <div class="player-cell" @click="goToUser(entry.uid)">
                 <img
-                  :src="entry.avatar || '/icon/0.png'"
+                  :src="getAvatar(entry.avatar)"
                   class="player-avatar"
                   @error="(e: Event) => { (e.target as HTMLImageElement).src = '/icon/0.png' }"
                 >
