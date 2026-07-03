@@ -256,11 +256,8 @@ onBeforeUnmount(() => {
     <!-- 头部 -->
     <div class="header">
       <h1 class="title">
-        🏆 综合游戏排行榜
+        🏆 全能榜
       </h1>
-      <p class="subtitle">
-        聚合 6 款小游戏排名 · 综合评分算法
-      </p>
     </div>
 
     <!-- 统计栏 -->

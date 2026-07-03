@@ -48,9 +48,9 @@ export interface CompositeRankEntry {
   avatar: string
   /** 各游戏排名与评分 */
   games: Record<string, CompositeRankGameScore>
-  /** 综合总分 (0-30) */
+  /** 最终得分 s_final = 10√(S^T·w)，范围 0-100 */
   totalScore: number
-  /** 综合百分比 */
+  /** 综合百分比（同 totalScore，范围 0-100） */
   compositePercent: number
 }
 
