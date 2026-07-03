@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computeScore, computeTotalScore } from '@tapsss/shared'
 import { computed, ref } from 'vue'
 import iconMinesweeper from '../../../../icons/ic_game_minesweeper.webp'
 import iconNonosweeper from '../../../../icons/ic_game_nonosweeper.png'
@@ -23,23 +24,11 @@ const CY = 150
 const MAX_R = 110
 const GRID_LEVELS = [1, 2, 3, 4, 5]
 
-// ---- score computation ----
-function computeScore(rank: number): number {
-  let r = rank
-  if (r === 0) {
-    r = 3000
-  }
-  if (r < 1) {
-    r = 1
-  }
-  if (r <= 10) {
-    return 5 - (r - 1) / 36
-  }
-  return Math.max(0, 5 - 0.25 * (Math.log10(r)) ** 2)
-}
+// ---- score computation（从 @tapsss/shared 导入 computeScore） ----
 
 const scores = computed(() => props.ranks.map(r => computeScore(r)))
-const totalScore = computed(() => scores.value.reduce((a, b) => a + b, 0))
+// 加权得分 s_w = S^T · w，最终得分 s_final = 10√(s_w)
+const totalScore = computed(() => computeTotalScore(scores.value))
 
 // ---- geometry helpers ----
 /** 第 i 个轴的角度（弧度），从12点方向顺时针 */
@@ -274,7 +263,7 @@ function onPointLeave() {
           font-weight="bold"
           font-size="15"
         >
-          综合评分 {{ (totalScore * 100 / 30).toFixed(2) }}
+          综合评分 {{ totalScore.toFixed(2) }}
         </text>
       </svg>
 

@@ -2,6 +2,7 @@ import type { CompositeRankEntry, CompositeRankGameScore, RankDatum } from '@tap
 import type { CompositeRankConfig, CompositeRankDeps, CompositeRankEngine, CompositeRankState, GameApi } from './types'
 import fs from 'node:fs'
 import path from 'node:path'
+import { computeScore, computeTotalScore } from '@tapsss/shared'
 
 // ---- 游戏 API 定义（与 RadarChart.vue 顺序一致） ----
 const GAME_APIS: GameApi[] = [
@@ -9,31 +10,22 @@ const GAME_APIS: GameApi[] = [
   { key: 'schulte', label: '舒尔特', path: '/Minesweeper/rank/schulte/list', params: { row: 5, column: 5, type: 0, blind: false } },
   { key: 'puzzle', label: '华容道', path: '/Minesweeper/rank/puzzle/list', params: { blind: false } },
   { key: 'tzfe', label: '2048', path: '/Minesweeper/rank/tzfe/list', params: { row: 4, colum: 4, type: 0 } },
-  { key: 'nono', label: '数织', path: '/Minesweeper/rank/nono/list', params: { level: 5 } },
   { key: 'sudoku', label: '数独', path: '/Minesweeper/rank/sudoku/list', params: {} },
+  { key: 'nono', label: '数织', path: '/Minesweeper/rank/nono/list', params: { level: 5 } },
 ]
 
 const GAME_LABELS: Record<string, string> = Object.fromEntries(
   GAME_APIS.map(g => [g.key, g.label]),
 )
 
-// ---- 评分算法（来自 RadarChart.vue） ----
-function computeScore(rank: number): number {
-  let r = rank
-  if (r === 0) {
-    r = 3000
-  }
-  if (r < 1) {
-    r = 1
-  }
-  if (r <= 10) {
-    return 5 - (r - 1) / 36
-  }
-  return Math.max(0, 5 - 0.25 * (Math.log10(r)) ** 2)
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100
+// 权重向量 w = (5, 3.5, 4.5, 3, 1, 3)^T（按游戏 key 匹配）
+const GAME_WEIGHTS: Record<string, number> = {
+  timing: 5,
+  schulte: 3.5,
+  puzzle: 4.5,
+  tzfe: 3,
+  sudoku: 1,
+  nono: 3,
 }
 
 /**
@@ -157,24 +149,30 @@ export function createCompositeRankEngine(
 
       for (const user of userMap.values()) {
         const games: Record<string, CompositeRankGameScore> = {}
-        let totalScore = 0
+        const scores: number[] = []
+        const weights: number[] = []
 
         for (const api of GAME_APIS) {
           const rank = user.games[api.key]?.rank || 0
-          const score = round2(computeScore(rank))
+          const score = computeScore(rank)
+          const weight = GAME_WEIGHTS[api.key] || 1
           games[api.key] = { rank, score }
-          totalScore += score
+          scores.push(score)
+          weights.push(weight)
         }
+
+        // s_final = 10 × √(s_w)
+        const finalScore = computeTotalScore(scores)
 
         entries.push({
           uid: user.uid,
           nickName: user.nickName,
           avatar: user.avatar,
           games: Object.fromEntries(
-            Object.entries(games).map(([k, v]) => [k, { rank: v.rank, score: round2(v.score) }]),
+            Object.entries(games).map(([k, v]) => [k, { rank: v.rank, score: v.score }]),
           ),
-          totalScore: round2(totalScore),
-          compositePercent: round2(totalScore * 100 / 30),
+          totalScore: finalScore,
+          compositePercent: finalScore,
         })
       }
 
