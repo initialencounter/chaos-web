@@ -399,25 +399,6 @@ if (compositeRankEngine) {
       res.status(500).json({ code: 500, data: null, msg: String(err) })
     }
   })
-
-  // 手动刷新综合排行榜（带防抖，避免并发轮询）
-  let compositeRankPolling = false
-  app.post('/api/rank/composite/refresh', async (req, res) => {
-    if (compositeRankPolling) {
-      return res.json({ code: 200, data: { success: true, skipped: true }, msg: '轮询进行中，跳过重复请求' })
-    }
-    try {
-      compositeRankPolling = true
-      await compositeRankEngine!.poll()
-      res.json({ code: 200, data: { success: true }, msg: null })
-    }
-    catch (err) {
-      res.status(500).json({ code: 500, data: null, msg: String(err) })
-    }
-    finally {
-      compositeRankPolling = false
-    }
-  })
 }
 
 app.get('/health', (req, res) => {

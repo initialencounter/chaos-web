@@ -12,7 +12,6 @@ withDefaults(defineProps<{
 
 const router = useRouter()
 const loading = ref(false)
-const refreshing = ref(false)
 const error = ref('')
 const lastUpdated = ref(0)
 const entries = ref<CompositeRankEntry[]>([])
@@ -215,25 +214,6 @@ async function fetchData() {
   }
 }
 
-async function manualRefresh() {
-  refreshing.value = true
-  try {
-    if (isElectron) {
-      await (window as any).electronAPI.proxyRequest('/api/rank/composite/refresh')
-    }
-    else {
-      await fetch('/api/rank/composite/refresh', { method: 'POST' })
-    }
-    await fetchData()
-  }
-  catch (e: unknown) {
-    error.value = (e as Error).message || '刷新失败'
-  }
-  finally {
-    refreshing.value = false
-  }
-}
-
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
@@ -283,15 +263,12 @@ onBeforeUnmount(() => {
           ✕
         </button>
         <button class="search-btn" @click="doSearch">
-          🔍
+          搜索
         </button>
       </div>
       <span v-if="searchQuery" class="search-hint">
         找到 {{ matchCount }} 名玩家
       </span>
-      <button class="refresh-btn" :disabled="refreshing" @click="manualRefresh">
-        {{ refreshing ? '刷新中...' : '🔄 手动刷新' }}
-      </button>
     </div>
 
     <!-- 加载/错误 -->
@@ -585,7 +562,7 @@ onBeforeUnmount(() => {
 }
 
 .search-btn {
-  padding: 7px 12px;
+  padding: 5px 10px;
   border: 1px solid #444;
   border-radius: 8px;
   background-color: #333;
