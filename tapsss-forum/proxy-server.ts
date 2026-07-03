@@ -380,25 +380,67 @@ if (tcupEngine) {
 // ======== 综合游戏排行榜 API ========
 
 if (compositeRankEngine) {
-  // 获取综合排行榜
+  // 共享的游戏 key 列表（与 engine 中的 GAME_APIS 一致）
+  const GAME_KEYS = ['timing', 'schulte', 'puzzle', 'tzfe', 'sudoku', 'nono'] as const
+
+  /** 解析通用查询参数 */
+  function parseRankQuery(req: import('express').Request): {
+    page: number
+    pageSize: number
+    search: string
+  } {
+    const page = Math.max(1, Number.parseInt(req.query.page as string, 10) || 1)
+    const pageSize = Math.min(500, Math.max(1, Number.parseInt(req.query.pageSize as string, 10) || 100))
+    const search = (req.query.search as string) || ''
+    return { page, pageSize, search }
+  }
+
+  /** 构建排行榜响应 */
+  function buildRankResponse(
+    result: { entries: any[], total: number, matchCount: number, matchUid: string, page: number, pageSize: number },
+  ) {
+    return {
+      code: 200,
+      data: {
+        entries: result.entries,
+        total: result.total,
+        matchCount: result.matchCount,
+        matchUid: result.matchUid,
+        page: result.page,
+        pageSize: result.pageSize,
+        lastUpdated: compositeRankEngine!.getLastPollTime(),
+        configName: compositeRankEngine!.getConfig().name,
+        gameLabels: compositeRankEngine!.getGameLabels(),
+      },
+      msg: null,
+    }
+  }
+
+  // 获取综合排行榜（按 totalScore 排序）
   app.get('/api/rank/composite', (req, res) => {
     try {
-      const entries = compositeRankEngine!.getLeaderboard()
-      res.json({
-        code: 200,
-        data: {
-          entries,
-          lastUpdated: compositeRankEngine!.getLastPollTime(),
-          configName: compositeRankEngine!.getConfig().name,
-          gameLabels: compositeRankEngine!.getGameLabels(),
-        },
-        msg: null,
-      })
+      const { page, pageSize, search } = parseRankQuery(req)
+      const result = compositeRankEngine!.getLeaderboard({ page, pageSize, search })
+      res.json(buildRankResponse(result))
     }
     catch (err) {
       res.status(500).json({ code: 500, data: null, msg: String(err) })
     }
   })
+
+  // 单项游戏排行榜（按该游戏 score 降序排列）
+  for (const gameKey of GAME_KEYS) {
+    app.get(`/api/rank/${gameKey}`, (req, res) => {
+      try {
+        const { page, pageSize, search } = parseRankQuery(req)
+        const result = compositeRankEngine!.getLeaderboard({ page, pageSize, search, gameKey })
+        res.json(buildRankResponse(result))
+      }
+      catch (err) {
+        res.status(500).json({ code: 500, data: null, msg: String(err) })
+      }
+    })
+  }
 }
 
 app.get('/health', (req, res) => {

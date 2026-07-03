@@ -25,6 +25,35 @@ export interface GameApi {
 }
 
 /**
+ * 排行榜查询参数
+ */
+export interface LeaderboardQuery {
+  /** 页码，从 1 开始 */
+  page?: number
+  /** 每页条数，默认 100 */
+  pageSize?: number
+  /** 搜索关键词（匹配昵称或 UID） */
+  search?: string
+  /** 按哪个游戏排序，不传则按综合评分排序 */
+  gameKey?: string
+}
+
+/**
+ * 排行榜查询结果
+ */
+export interface LeaderboardResult {
+  entries: CompositeRankEntry[]
+  /** 全部条目总数（用于分页） */
+  total: number
+  /** 搜索匹配的条目数（无搜索时为 0） */
+  matchCount: number
+  /** 搜索命中的第一个玩家 UID（前端用于高亮），无搜索时为空 */
+  matchUid: string
+  page: number
+  pageSize: number
+}
+
+/**
  * 引擎内部状态
  */
 export interface CompositeRankState {
@@ -47,7 +76,8 @@ export interface CompositeRankDeps {
  */
 export interface CompositeRankEngine {
   poll: () => Promise<void>
-  getLeaderboard: () => CompositeRankEntry[]
+  /** 查询排行榜（支持分页、搜索、按游戏排序） */
+  getLeaderboard: (query?: LeaderboardQuery) => LeaderboardResult
   getLastPollTime: () => number | null
   getConfig: () => CompositeRankConfig
   getGameLabels: () => Record<string, string>

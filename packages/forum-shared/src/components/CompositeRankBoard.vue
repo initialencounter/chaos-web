@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { CompositeRankEntry, CompositeRankResponse } from '@tapsss/shared'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { resolveAsset } from '../inject'
 
@@ -15,6 +15,7 @@ const loading = ref(false)
 const error = ref('')
 const lastUpdated = ref(0)
 const entries = ref<CompositeRankEntry[]>([])
+const total = ref(0)
 const gameLabels = ref<Record<string, string>>({})
 const gameKeys = computed(() => Object.keys(gameLabels.value))
 
@@ -37,8 +38,8 @@ function getAvatar(url: string | undefined | null): string {
 }
 
 const activeTab = ref<'composite' | string>('composite')
-const searchQuery = ref('')
-const highlightedUid = ref('')
+const searchInput = ref('')
+const searchApplied = ref('')
 
 const tabLabelMap = computed<Record<string, string>>(() => ({
   composite: '综合排行',
@@ -47,48 +48,24 @@ const tabLabelMap = computed<Record<string, string>>(() => ({
 
 const allTabKeys = computed(() => ['composite', ...gameKeys.value])
 
-// ---- 单项游戏排行：按该游戏的分数降序排列 ----
-const sortedEntries = computed(() => {
-  if (activeTab.value === 'composite')
-    return entries.value
-
-  const key = activeTab.value
-  return [...entries.value].sort((a, b) => {
-    const scoreA = a.games[key]?.score ?? -1
-    const scoreB = b.games[key]?.score ?? -1
-    return scoreB - scoreA
-  })
-})
-
 // ---- 分页 ----
 const currentPage = ref(1)
-const itemsPerPage = ref(100)
-const totalPages = computed(() => Math.max(1, Math.ceil(sortedEntries.value.length / itemsPerPage.value)))
+const pageSize = 100
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
 
-const paginatedEntries = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value
-  return sortedEntries.value.slice(start, start + itemsPerPage.value)
-})
+// ---- 搜索相关 ----
+const matchCount = ref(0)
+const highlightedUid = ref('')
 
-// 切换 tab 或搜索时重置页码
-watch([activeTab, searchQuery], () => {
+// 切换 tab 时重置搜索和页码
+watch(activeTab, () => {
   currentPage.value = 1
+  searchInput.value = ''
+  searchApplied.value = ''
+  matchCount.value = 0
+  highlightedUid.value = ''
+  fetchData()
 })
-
-// ---- 搜索匹配（不改变列表，只记录匹配 uid 集合） ----
-const matchedUids = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase()
-  if (!q)
-    return new Set<string>()
-
-  return new Set(
-    entries.value
-      .filter(e => e.nickName.toLowerCase().includes(q) || e.uid.includes(q))
-      .map(e => e.uid),
-  )
-})
-
-const matchCount = computed(() => matchedUids.value.size)
 
 // ---- 工具函数 ----
 function formatDate(ts: number): string {
@@ -125,11 +102,13 @@ function goToUser(uid: string) {
 
 // ---- 分页辅助 ----
 function displayRank(idx: number): number {
-  return (currentPage.value - 1) * itemsPerPage.value + idx + 1
+  return (currentPage.value - 1) * pageSize + idx + 1
 }
 
 function goToPage(page: number) {
   currentPage.value = Math.max(1, Math.min(page, totalPages.value))
+  highlightedUid.value = ''
+  fetchData()
   nextTick(() => {
     const table = document.querySelector('.leaderboard-table')
     if (table) {
@@ -138,51 +117,48 @@ function goToPage(page: number) {
   })
 }
 
-// ---- 搜索跳转 ----
+// ---- 搜索（服务端搜索，定位到匹配玩家所在页） ----
 function doSearch() {
-  const q = searchQuery.value.trim()
-  if (!q) {
-    highlightedUid.value = ''
-    return
-  }
-  // 在当前排序列表中查找第一个匹配项
-  const idx = sortedEntries.value.findIndex(e =>
-    e.nickName.toLowerCase().includes(q.toLowerCase())
-    || e.uid.includes(q),
-  )
-  if (idx === -1) {
-    highlightedUid.value = ''
-    return
-  }
-  // 跳转到匹配项所在页
-  currentPage.value = Math.floor(idx / itemsPerPage.value) + 1
-  highlightedUid.value = sortedEntries.value[idx]!.uid
-
-  nextTick(() => {
-    const row = document.querySelector('.row-highlight')
-    if (row) {
-      row.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-  })
+  searchApplied.value = searchInput.value.trim()
+  currentPage.value = 1 // 服务端会根据搜索重新计算 page
+  fetchData()
 }
 
 function clearSearch() {
-  searchQuery.value = ''
+  searchInput.value = ''
+  searchApplied.value = ''
+  matchCount.value = 0
   highlightedUid.value = ''
+  currentPage.value = 1
+  fetchData()
 }
 
 // ---- API ----
 const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
 
+function buildApiUrl(): string {
+  const tab = activeTab.value
+  const base = tab === 'composite' ? '/api/rank/composite' : `/api/rank/${tab}`
+  const params = new URLSearchParams({
+    page: String(currentPage.value),
+    pageSize: String(pageSize),
+  })
+  if (searchApplied.value) {
+    params.set('search', searchApplied.value)
+  }
+  return `${base}?${params.toString()}`
+}
+
 async function fetchFromServer(): Promise<CompositeRankResponse> {
+  const url = buildApiUrl()
   if (isElectron) {
-    const raw = await (window as any).electronAPI.proxyRequest('/api/rank/composite')
+    const raw = await (window as any).electronAPI.proxyRequest(url)
     if (!raw.success) {
       throw new Error(raw.msg || '获取排行榜失败')
     }
     return { code: raw.code || 200, data: raw.data, msg: null }
   }
-  const res = await fetch('/api/rank/composite')
+  const res = await fetch(url)
   return await res.json()
 }
 
@@ -194,12 +170,23 @@ async function fetchData() {
     const json = await fetchFromServer()
     if (json.code === 200 && json.data) {
       entries.value = json.data.entries
+      total.value = json.data.total
+      matchCount.value = json.data.matchCount || 0
+      highlightedUid.value = json.data.matchUid || ''
+      currentPage.value = json.data.page
       lastUpdated.value = json.data.lastUpdated
       gameLabels.value = json.data.gameLabels
       error.value = ''
-      // 重新搜索（数据更新后保持搜索状态）
-      if (searchQuery.value.trim()) {
-        doSearch()
+
+      // 搜索跳转后滚动到高亮行，然后清除 searchApplied 使翻页正常工作
+      if (highlightedUid.value) {
+        searchApplied.value = ''
+        nextTick(() => {
+          const row = document.querySelector('.row-highlight')
+          if (row) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        })
       }
     }
     else {
@@ -214,20 +201,8 @@ async function fetchData() {
   }
 }
 
-let refreshTimer: ReturnType<typeof setInterval> | null = null
-
 onMounted(() => {
   fetchData()
-  refreshTimer = setInterval(() => {
-    fetchData()
-  }, 60000)
-})
-
-onBeforeUnmount(() => {
-  if (refreshTimer) {
-    clearInterval(refreshTimer)
-    refreshTimer = null
-  }
 })
 </script>
 
@@ -244,7 +219,7 @@ onBeforeUnmount(() => {
     <div class="stats-bar">
       <div class="stat-item">
         <span class="stat-label">上榜玩家</span>
-        <span class="stat-value">{{ entries.length }}</span>
+        <span class="stat-value">{{ total }}</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">最后更新</span>
@@ -253,29 +228,26 @@ onBeforeUnmount(() => {
       <!-- 搜索框 -->
       <div class="search-box">
         <input
-          v-model.trim="searchQuery"
+          v-model.trim="searchInput"
           class="search-input"
           type="text"
           placeholder="搜索玩家昵称或UID"
           @keyup.enter="doSearch"
         >
-        <button v-if="searchQuery" class="search-clear" @click="clearSearch">
+        <button v-if="searchInput" class="search-clear" @click="clearSearch">
           ✕
         </button>
         <button class="search-btn" @click="doSearch">
           搜索
         </button>
       </div>
-      <span v-if="searchQuery" class="search-hint">
+      <span v-if="matchCount > 0" class="search-hint">
         找到 {{ matchCount }} 名玩家
       </span>
     </div>
 
     <!-- 加载/错误 -->
-    <div v-if="loading" class="status-msg">
-      加载中...
-    </div>
-    <div v-else-if="error" class="status-msg error">
+    <div v-if="error" class="status-msg error">
       {{ error }}
     </div>
     <div v-else-if="entries.length === 0" class="status-msg">
@@ -319,14 +291,13 @@ onBeforeUnmount(() => {
         </thead>
         <tbody>
           <tr
-            v-for="(entry, idx) in paginatedEntries"
+            v-for="(entry, idx) in entries"
             :key="entry.uid"
             :class="[
               getRankClass(displayRank(idx)),
               {
                 'is-self': entry.uid === currentUid,
                 'row-highlight': entry.uid === highlightedUid,
-                'row-dimmed': searchQuery && !matchedUids.has(entry.uid),
               },
             ]"
           >
@@ -351,9 +322,9 @@ onBeforeUnmount(() => {
               <span class="game-rank-sub">#{{ entry.games[key]?.rank || '-' }}</span>
             </td>
           </tr>
-          <tr v-if="matchCount === 0 && searchQuery">
+          <tr v-if="entries.length === 0 && searchInput && matchCount === 0">
             <td :colspan="gameKeys.length + 3" class="empty-row">
-              未找到匹配 "{{ searchQuery }}" 的玩家
+              未找到匹配 "{{ searchInput }}" 的玩家
             </td>
           </tr>
         </tbody>
@@ -379,14 +350,13 @@ onBeforeUnmount(() => {
         </thead>
         <tbody>
           <tr
-            v-for="(entry, idx) in paginatedEntries"
+            v-for="(entry, idx) in entries"
             :key="entry.uid"
             :class="[
               getRankClass(displayRank(idx)),
               {
                 'is-self': entry.uid === currentUid,
                 'row-highlight': entry.uid === highlightedUid,
-                'row-dimmed': searchQuery && !matchedUids.has(entry.uid),
               },
             ]"
           >
@@ -410,9 +380,9 @@ onBeforeUnmount(() => {
               <strong>{{ entry.games[activeTab]?.score?.toFixed(2) ?? '-' }}</strong>
             </td>
           </tr>
-          <tr v-if="matchCount === 0 && searchQuery">
+          <tr v-if="entries.length === 0 && searchInput && matchCount === 0">
             <td :colspan="4" class="empty-row">
-              未找到匹配 "{{ searchQuery }}" 的玩家
+              未找到匹配 "{{ searchInput }}" 的玩家
             </td>
           </tr>
         </tbody>
@@ -435,7 +405,7 @@ onBeforeUnmount(() => {
           上一页
         </button>
         <span class="page-info">
-          第 {{ currentPage }} / {{ totalPages }} 页（共 {{ sortedEntries.length }} 条）
+          第 {{ currentPage }} / {{ totalPages }} 页（共 {{ total }} 条）
         </span>
         <button
           class="page-btn"

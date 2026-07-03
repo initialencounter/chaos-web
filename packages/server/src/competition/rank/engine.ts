@@ -1,5 +1,5 @@
 import type { CompositeRankEntry, CompositeRankGameScore, RankDatum } from '@tapsss/shared'
-import type { CompositeRankConfig, CompositeRankDeps, CompositeRankEngine, CompositeRankState, GameApi } from './types'
+import type { CompositeRankConfig, CompositeRankDeps, CompositeRankEngine, CompositeRankState, GameApi, LeaderboardQuery, LeaderboardResult } from './types'
 import fs from 'node:fs'
 import path from 'node:path'
 import { computeScore, computeTotalScore } from '@tapsss/shared'
@@ -192,8 +192,58 @@ export function createCompositeRankEngine(
     }
   }
 
-  function getLeaderboard(): CompositeRankEntry[] {
-    return state.entries
+  function getLeaderboard(query: LeaderboardQuery = {}): LeaderboardResult {
+    const {
+      search = '',
+      gameKey,
+      pageSize = 100,
+    } = query
+
+    // 构建排序后的列表
+    let sorted: CompositeRankEntry[]
+    if (gameKey) {
+      // 按指定游戏的 score 降序，无该游戏的排末尾
+      sorted = [...state.entries].sort((a, b) => {
+        const sa = a.games[gameKey]?.score ?? -1
+        const sb = b.games[gameKey]?.score ?? -1
+        return sb - sa
+      })
+    }
+    else {
+      // state.entries 已经是 totalScore 降序
+      sorted = state.entries
+    }
+
+    const fullTotal = sorted.length
+    let matchCount = 0
+    let matchUid = ''
+    let targetPage = query.page || 1
+
+    // 搜索：定位到第一个匹配玩家所在的页
+    if (search) {
+      const q = search.toLowerCase()
+      const matchIndexes: number[] = []
+
+      for (let i = 0; i < sorted.length; i++) {
+        const e = sorted[i]!
+        if (e.nickName.toLowerCase().includes(q) || e.uid.includes(q)) {
+          matchIndexes.push(i)
+        }
+      }
+
+      matchCount = matchIndexes.length
+
+      if (matchCount > 0) {
+        const firstMatchIdx = matchIndexes[0]!
+        targetPage = Math.floor(firstMatchIdx / pageSize) + 1
+        matchUid = sorted[firstMatchIdx]!.uid
+      }
+    }
+
+    const start = (targetPage - 1) * pageSize
+    const entries = sorted.slice(start, start + pageSize)
+
+    return { entries, total: fullTotal, matchCount, matchUid, page: targetPage, pageSize }
   }
 
   function getLastPollTime(): number | null {

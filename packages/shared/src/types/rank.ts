@@ -58,9 +58,19 @@ export interface CompositeRankResponse {
   code: number
   data: {
     entries: CompositeRankEntry[]
-    lastUpdated: number
+    total: number
+    /** 搜索匹配的条目数（无搜索时为 0） */
+    matchCount: number
+    /** 搜索命中的第一个玩家 UID（前端用于高亮），无搜索时为空字符串 */
+    matchUid: string
+    page: number
+    pageSize: number
+    lastUpdated: number | null
     configName: string
     gameLabels: Record<string, string>
   }
   msg: string | null
 }
+
+/** 单项游戏排行榜响应（与 CompositeRankResponse 结构一致，但 entries 按该游戏分数排序） */
+export type SingleGameRankResponse = CompositeRankResponse
