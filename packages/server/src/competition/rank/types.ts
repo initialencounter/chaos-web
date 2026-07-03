@@ -8,8 +8,8 @@ export interface CompositeRankConfig {
   enabled: boolean
   /** 排行榜名称 */
   name: string
-  /** 轮询间隔 (毫秒) */
-  pollIntervalMs: number
+  /** 每天更新时间 (小时, 0-23), 0 表示零点 */
+  updateHour: number
   /** 每页拉取数量 */
   pageSize: number
 }

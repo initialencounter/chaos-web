@@ -6,8 +6,8 @@ enabled: true
 # 排行榜名称
 name: 综合游戏排行榜
 
-# 轮询间隔 (毫秒)
-pollIntervalMs: 86400000 # 一天
+# 每天更新时间 (小时, 0-23), 0 表示零点 (24:00)
+updateHour: 0
 
 # 每页拉取数量
 pageSize: 500

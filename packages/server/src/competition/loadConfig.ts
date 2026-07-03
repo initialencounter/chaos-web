@@ -136,7 +136,7 @@ export function loadTranscendenceCupConfig(configDir: string): TcupConfig {
 interface CompositeRankRawConfig {
   enabled: boolean
   name: string
-  pollIntervalMs: number
+  updateHour: number
   pageSize: number
 }
 
@@ -145,7 +145,7 @@ function loadCompRankConfig(filePath: string): CompositeRankConfig {
   return {
     enabled: raw.enabled !== false,
     name: raw.name,
-    pollIntervalMs: raw.pollIntervalMs,
+    updateHour: raw.updateHour ?? 0,
     pageSize: raw.pageSize,
   }
 }

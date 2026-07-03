@@ -29,10 +29,34 @@ const GAME_WEIGHTS: Record<string, number> = {
 }
 
 /**
+ * 判断两个时间戳是否在同一天
+ */
+function isSameDay(t1: number, t2: number): boolean {
+  const d1 = new Date(t1)
+  const d2 = new Date(t2)
+  return d1.getFullYear() === d2.getFullYear()
+    && d1.getMonth() === d2.getMonth()
+    && d1.getDate() === d2.getDate()
+}
+
+/**
+ * 计算下一个更新时间（每天 updateHour 点整）
+ */
+function getNextUpdateTime(updateHour: number): number {
+  const now = new Date()
+  const target = new Date(now)
+  target.setHours(updateHour, 0, 0, 0)
+  if (target.getTime() <= now.getTime()) {
+    target.setDate(target.getDate() + 1)
+  }
+  return target.getTime()
+}
+
+/**
  * 创建综合排行榜引擎
- * - 每 pollIntervalMs 毫秒拉取一次各游戏排名
+ * - 每天 updateHour 点定时拉取一次各游戏排名
  * - 按 uid 合并，计算综合评分
- * - 持久化到磁盘，重启后恢复
+ * - 持久化到磁盘，重启后恢复（根据 JSON 中的 lastPollTime 判断当天是否已更新）
  */
 export function createCompositeRankEngine(
   config: CompositeRankConfig,
@@ -47,7 +71,7 @@ export function createCompositeRankEngine(
     lastPollTime: null,
   }
 
-  let pollTimer: ReturnType<typeof setInterval> | null = null
+  let nextUpdateTimer: ReturnType<typeof setTimeout> | null = null
 
   function saveToDisk(): void {
     try {
@@ -258,20 +282,64 @@ export function createCompositeRankEngine(
     return { ...GAME_LABELS }
   }
 
-  function startAutoPoll(): void {
-    if (pollTimer)
+  /**
+   * 执行一次更新，如果当天已更新过则跳过
+   */
+  async function scheduledUpdate(): Promise<void> {
+    const now = Date.now()
+
+    // 根据 JSON 中的 lastPollTime 判断当天是否已更新
+    if (state.lastPollTime && isSameDay(state.lastPollTime, now)) {
+      logger.log(`[CompositeRank] 今天已更新过 (${new Date(state.lastPollTime).toISOString()})，跳过`)
+      scheduleNext()
       return
-    pollTimer = setInterval(() => {
-      poll().catch(err => logger.error('[CompositeRank] 定时轮询出错:', err))
-    }, config.pollIntervalMs)
-    logger.log(`[CompositeRank] 自动轮询已启动，间隔 ${config.pollIntervalMs / 1000}s`)
+    }
+
+    await poll()
+    scheduleNext()
+  }
+
+  /**
+   * 计算并安排在下一个 updateHour 触发更新
+   */
+  function scheduleNext(): void {
+    if (nextUpdateTimer) {
+      clearTimeout(nextUpdateTimer)
+    }
+    const nextTime = getNextUpdateTime(config.updateHour)
+    const delayMs = nextTime - Date.now()
+    nextUpdateTimer = setTimeout(() => {
+      nextUpdateTimer = null
+      scheduledUpdate().catch(err => logger.error('[CompositeRank] 定时更新出错:', err))
+    }, delayMs)
+    logger.log(`[CompositeRank] 下次更新时间: ${new Date(nextTime).toLocaleString()} (${Math.round(delayMs / 1000 / 60)} 分钟后)`)
+  }
+
+  function startAutoPoll(): void {
+    if (nextUpdateTimer)
+      return
+
+    // 加载磁盘状态后，根据 lastPollTime 判断是否需要立即更新
+    if (state.lastPollTime) {
+      const now = Date.now()
+      if (isSameDay(state.lastPollTime, now)) {
+        // 今天已更新过，只安排下一次
+        logger.log(`[CompositeRank] 今天已更新过，跳过启动更新，直接安排下次定时`)
+        scheduleNext()
+        return
+      }
+    }
+
+    // 今天还没更新过，但重启不触发更新，直接安排到下一个零点
+    logger.log(`[CompositeRank] 重启不触发更新，安排到下一个零点`)
+    scheduleNext()
   }
 
   function stopAutoPoll(): void {
-    if (pollTimer) {
-      clearInterval(pollTimer)
-      pollTimer = null
-      logger.log('[CompositeRank] 自动轮询已停止')
+    if (nextUpdateTimer) {
+      clearTimeout(nextUpdateTimer)
+      nextUpdateTimer = null
+      logger.log('[CompositeRank] 定时更新已停止')
     }
   }
 
