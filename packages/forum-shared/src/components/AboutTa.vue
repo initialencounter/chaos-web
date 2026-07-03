@@ -99,7 +99,7 @@ const radarRanks = computed<number[]>(() => [
   minesweeperData.value?.totalTimeRank?.rank ?? 3000,
   schulteData.value?.rank ?? 3000,
   puzzleData.value?.infoTotal?.rank ?? 3000,
-  tzfeData.value?.rankTime ?? tzfeData.value?.rankScore ?? 3000,
+  tzfeData.value?.rankScore ?? 3000,
   sudokuData.value?.rank ?? 3000,
   nonoData.value?.totalTimeRank?.rank ?? 3000,
 ])
