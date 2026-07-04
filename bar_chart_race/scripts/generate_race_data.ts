@@ -54,6 +54,7 @@ const GAMES: GameSpec[] = [
       { key: '3bvs', field: 'bvs', aggregate: 'max', sortOrder: 'desc', decimals: 3, levels: ['2', '3'] },
     ],
     blacklist: [''],
+    recordBlacklist: [],
   },
   {
     dir: 'nono',
@@ -62,6 +63,7 @@ const GAMES: GameSpec[] = [
       { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
     ],
     blacklist: [],
+    recordBlacklist: [],
   },
   {
     dir: 'puzzle',
@@ -71,6 +73,7 @@ const GAMES: GameSpec[] = [
       { key: 'steps', field: 'step', aggregate: 'min', sortOrder: 'asc', decimals: 0 },
     ],
     blacklist: ['99592', '118343', '114757', '113518'],
+    recordBlacklist: [336157],
   },
   {
     dir: 'schulte',
@@ -79,6 +82,7 @@ const GAMES: GameSpec[] = [
       { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
     ],
     blacklist: [],
+    recordBlacklist: [],
   },
 ]
 
@@ -213,6 +217,7 @@ function generateRaceData(spec: GameSpec, metric: MetricSpec, urlToLocal: Map<st
   // Step 1: 收集所有日期的所有记录
   // dateMap: dateStr → uid → level → aggregatedValue
   const dateMap = new Map<string, Map<string, Map<string, number>>>()
+  const recordBlacklistSet = new Set(spec.recordBlacklist ?? [])
 
   let loaded = 0
   for (const file of files) {
@@ -230,6 +235,10 @@ function generateRaceData(spec: GameSpec, metric: MetricSpec, urlToLocal: Map<st
         continue
 
       for (const rec of records) {
+        // 跳过黑名单录像 ID
+        if (recordBlacklistSet.has((rec as any).id))
+          continue
+
         const val = (rec as any)[metric.field]
         if (val == null)
           continue
