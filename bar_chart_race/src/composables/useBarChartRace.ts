@@ -744,14 +744,36 @@ export function useBarChartRace(
 
       let encoderError: Error | null = null
 
+      // Firefox may not include decoderConfig in the encoder output metadata.
+      // Capture it from the first chunk that provides it so we can attach it
+      // to subsequent chunks and prevent "decoderConfig is null" at finalize.
+      let videoDecoderConfig: VideoDecoderConfig | null = null
+
       const muxer = new Muxer({
         target: new ArrayBufferTarget(),
         video: { codec: selectedCodec.muxerCodec, width: videoW, height: videoH },
         fastStart: 'in-memory',
+        firstTimestampBehavior: 'offset',
       })
 
       const encoder = new VideoEncoder({
-        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+        output: (chunk, meta) => {
+          try {
+            if (!videoDecoderConfig && meta?.decoderConfig) {
+              videoDecoderConfig = meta.decoderConfig
+            }
+            // Ensure every chunk carries the decoderConfig so mp4-muxer
+            // can extract codec description and color space info.
+            const safeMeta: EncodedVideoChunkMetadata = meta?.decoderConfig
+              ? meta
+              : { ...(meta ?? {}), decoderConfig: videoDecoderConfig ?? undefined }
+            muxer.addVideoChunk(chunk, safeMeta)
+          }
+          catch (e) {
+            encoderError = new Error(`Muxer error: ${(e as Error).message}`)
+            console.error('Muxer addVideoChunk error:', e)
+          }
+        },
         error: (e) => {
           encoderError = new Error(`[${selectedCodec!.codec}] ${e.message}`)
           console.error('VideoEncoder error:', e)
@@ -778,7 +800,9 @@ export function useBarChartRace(
           timestamp: i * frameDurationUs,
           duration: frameDurationUs,
         })
-        encoder.encode(videoFrame)
+        // Force keyframe on the first frame so the encoder emits decoderConfig
+        // as early as possible (helps Firefox which may delay it otherwise).
+        encoder.encode(videoFrame, { keyFrame: i === 0 })
         videoFrame.close()
 
         exportProgress.value = ((i + 1) / videoFrameCount) * 100
