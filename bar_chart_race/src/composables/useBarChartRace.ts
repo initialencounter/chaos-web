@@ -749,30 +749,13 @@ export function useBarChartRace(
       // to subsequent chunks and prevent "decoderConfig is null" at finalize.
       let videoDecoderConfig: VideoDecoderConfig | null = null
 
-      const muxer = new Muxer({
-        target: new ArrayBufferTarget(),
-        video: { codec: selectedCodec.muxerCodec, width: videoW, height: videoH },
-        fastStart: 'in-memory',
-        firstTimestampBehavior: 'offset',
-      })
+      // The encoder may output frames out of order (B-frame reordering), so we
+      // collect everything first, sort by timestamp, then feed to the muxer.
+      const encodedChunks: Array<{ chunk: EncodedVideoChunk, meta?: EncodedVideoChunkMetadata }> = []
 
       const encoder = new VideoEncoder({
         output: (chunk, meta) => {
-          try {
-            if (!videoDecoderConfig && meta?.decoderConfig) {
-              videoDecoderConfig = meta.decoderConfig
-            }
-            // Ensure every chunk carries the decoderConfig so mp4-muxer
-            // can extract codec description and color space info.
-            const safeMeta: EncodedVideoChunkMetadata = meta?.decoderConfig
-              ? meta
-              : { ...(meta ?? {}), decoderConfig: videoDecoderConfig ?? undefined }
-            muxer.addVideoChunk(chunk, safeMeta)
-          }
-          catch (e) {
-            encoderError = new Error(`Muxer error: ${(e as Error).message}`)
-            console.error('Muxer addVideoChunk error:', e)
-          }
+          encodedChunks.push({ chunk, meta })
         },
         error: (e) => {
           encoderError = new Error(`[${selectedCodec!.codec}] ${e.message}`)
@@ -782,18 +765,23 @@ export function useBarChartRace(
 
       encoder.configure(selectedCodec.config)
 
+      // ---- 首帧用 snap 初始化，后续帧用 lerp 平滑过渡（与直播模式一致）----
+      needsSnap.value = true
+      currentXMin = 0
+      currentXMax = 0
+      for (const key of Object.keys(visualState))
+        delete visualState[key]
+      render(0, { canvas: offscreen, ctx: offCtx, scale: exportScale })
+
       for (let i = 0; i < videoFrameCount; i++) {
         if (encoderError)
           throw encoderError
 
         const progress = Math.min(i * progressPerFrame, progressMax)
 
-        needsSnap.value = true
-        currentXMin = 0
-        currentXMax = 0
-        for (const key of Object.keys(visualState))
-          delete visualState[key]
-
+        // 模拟直播模式的帧间过渡：lerp visualState → 更新 targets → 渲染
+        // currentXMin/currentXMax 也会在 updateVisualTargets 中通过 lerp 平滑
+        tickVisualState()
         render(progress, { canvas: offscreen, ctx: offCtx, scale: exportScale })
 
         const videoFrame = new VideoFrame(offscreen, {
@@ -813,6 +801,29 @@ export function useBarChartRace(
       }
 
       await encoder.flush()
+
+      // Sort encoded chunks by timestamp — the encoder may reorder frames.
+      encodedChunks.sort((a, b) => a.chunk.timestamp - b.chunk.timestamp)
+
+      const muxer = new Muxer({
+        target: new ArrayBufferTarget(),
+        video: { codec: selectedCodec.muxerCodec, width: videoW, height: videoH },
+        fastStart: 'in-memory',
+        firstTimestampBehavior: 'offset',
+      })
+
+      for (const { chunk, meta } of encodedChunks) {
+        if (!videoDecoderConfig && meta?.decoderConfig) {
+          videoDecoderConfig = meta.decoderConfig
+        }
+        // Ensure every chunk carries the decoderConfig so mp4-muxer
+        // can extract codec description and color space info.
+        const safeMeta: EncodedVideoChunkMetadata = meta?.decoderConfig
+          ? meta
+          : { ...(meta ?? {}), decoderConfig: videoDecoderConfig ?? undefined }
+        muxer.addVideoChunk(chunk, safeMeta)
+      }
+
       muxer.finalize()
 
       const speedLabel = speedValue === 1 ? '' : `-${speedValue}x`
