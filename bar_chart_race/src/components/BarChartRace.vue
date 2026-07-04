@@ -1,12 +1,26 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useBarChartRace } from '@/composables/useBarChartRace'
+import type { RaceGameConfig } from '@/composables/useBarChartRace'
+import { computed, ref } from 'vue'
+import { GAME_CONFIGS, GAME_LABELS, METRIC_LABELS, useBarChartRace } from '@/composables/useBarChartRace'
 
 // ---------------------------------------------------------------------------
 // Refs for DOM elements handed to the composable
 // ---------------------------------------------------------------------------
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const canvasWrapRef = ref<HTMLElement | null>(null)
+
+// ---------------------------------------------------------------------------
+// Game & metric selection
+// ---------------------------------------------------------------------------
+const selectedGame = ref<string>('minesweeper')
+const selectedMetric = ref<string>('time')
+
+function getConfig(): RaceGameConfig {
+  return GAME_CONFIGS[selectedGame.value]?.[selectedMetric.value]
+    ?? GAME_CONFIGS.minesweeper.time
+}
+
+const configRef = ref<RaceGameConfig>(getConfig())
 
 const {
   playing,
@@ -18,19 +32,47 @@ const {
   frameLabel,
   infoPlayers,
   progressPercent,
+  config,
   togglePlay,
   setSpeed,
   seekTo,
   exportVideo,
-} = useBarChartRace(canvasRef, canvasWrapRef)
+  switchGame,
+} = useBarChartRace(canvasRef, canvasWrapRef, configRef)
+
+// Available metrics for the selected game
+const availableMetrics = computed(() => {
+  const gameConfigs = GAME_CONFIGS[selectedGame.value]
+  if (!gameConfigs)
+    return []
+  return Object.keys(gameConfigs)
+})
+
+function onGameChange(e: Event) {
+  const target = e.target as HTMLSelectElement
+  selectedGame.value = target.value
+  const metrics = availableMetrics.value
+  if (!metrics.includes(selectedMetric.value)) {
+    selectedMetric.value = metrics[0] ?? 'time'
+  }
+  const cfg = getConfig()
+  configRef.value = cfg
+  switchGame(cfg)
+}
+
+function onMetricChange(e: Event) {
+  const target = e.target as HTMLSelectElement
+  selectedMetric.value = target.value
+  const cfg = getConfig()
+  configRef.value = cfg
+  switchGame(cfg)
+}
 
 // ---------------------------------------------------------------------------
 // Derived
 // ---------------------------------------------------------------------------
 function playIcon() {
-  if (playing.value)
-    return '⏸' // ⏸
-  return '▶' // ▶
+  return playing.value ? '⏸' : '▶'
 }
 
 const speedOptions = [0.5, 1, 2, 4]
@@ -43,8 +85,27 @@ function onProgressInput(e: Event) {
 
 <template>
   <div class="bar-chart-race">
-    <!-- Header -->
-    <div class="header" />
+    <!-- Header with selectors -->
+    <div class="header">
+      <div class="selectors">
+        <div class="selector-group">
+          <label class="selector-label">游戏</label>
+          <select :value="selectedGame" class="selector" @change="onGameChange">
+            <option v-for="(label, key) in GAME_LABELS" :key="key" :value="key">
+              {{ label }}
+            </option>
+          </select>
+        </div>
+        <div class="selector-group">
+          <label class="selector-label">排名</label>
+          <select :value="selectedMetric" class="selector" @change="onMetricChange">
+            <option v-for="m in availableMetrics" :key="m" :value="m">
+              {{ METRIC_LABELS[m] ?? m }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
 
     <!-- Canvas -->
     <div ref="canvasWrapRef" class="canvas-wrap">
@@ -97,7 +158,7 @@ function onProgressInput(e: Event) {
 
     <!-- Footer -->
     <div class="footer-note">
-      高级+中级+初级 最佳时间之和 | 时间越短排名越高 | 数据每日更新
+      {{ config?.subtitle ?? '' }} | 数据每日更新
     </div>
   </div>
 </template>
@@ -111,7 +172,7 @@ function onProgressInput(e: Event) {
   gap: 16px;
 }
 
-/* ---- Header ---- */
+/* ---- Header with selectors ---- */
 .header {
   display: flex;
   align-items: center;
@@ -120,14 +181,43 @@ function onProgressInput(e: Event) {
   gap: 12px;
 }
 
-.date-badge {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #e94560;
-  background: rgba(233, 69, 96, 0.12);
-  padding: 4px 16px;
-  border-radius: 20px;
+.selectors {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.selector-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.selector-label {
+  font-size: 0.85rem;
+  color: rgba(234, 234, 234, 0.5);
   white-space: nowrap;
+}
+
+.selector {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: #16213e;
+  color: #eaeaea;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.selector:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.selector:focus {
+  border-color: #e94560;
 }
 
 /* ---- Canvas ---- */
@@ -337,10 +427,6 @@ button.active {
     gap: 10px;
   }
 
-  .date-badge {
-    font-size: 0.9rem;
-  }
-
   .controls {
     gap: 8px;
   }
@@ -348,6 +434,11 @@ button.active {
   button {
     padding: 6px 10px;
     font-size: 0.8rem;
+  }
+
+  .selectors {
+    flex-direction: column;
+    gap: 8px;
   }
 }
 </style>

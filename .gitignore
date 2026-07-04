@@ -7,6 +7,6 @@ dist-ssr
 release
 api_docs
 legacy
-scripts
+/scripts
 unpack
 /screenshots

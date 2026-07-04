@@ -2,7 +2,6 @@ import { computed, onMounted, onUnmounted, reactive, ref, shallowRef } from 'vue
 import {
   easeInOutQuad,
   fmtDate,
-  fmtTime,
   lerp,
   roundRect,
   uidToColor,
@@ -29,6 +28,17 @@ export interface RaceData {
   players: PlayerData[]
 }
 
+export interface RaceGameConfig {
+  game: string
+  metric: string
+  dataFile: string
+  titleLabel: string
+  subtitle: string
+  sortOrder: 'asc' | 'desc'
+  valueFormatter: (n: number) => string
+  footerNote: string
+}
+
 interface InterpolatedPlayer {
   uid: string
   name: string
@@ -45,7 +55,97 @@ interface VisualState {
 }
 
 // ---------------------------------------------------------------------------
-// Constants (tunable but kept as constants for this composable)
+// Predefined game configs
+// ---------------------------------------------------------------------------
+
+export const GAME_CONFIGS: Record<string, Record<string, RaceGameConfig>> = {
+  minesweeper: {
+    'time': {
+      game: 'minesweeper',
+      metric: 'time',
+      dataFile: 'race_data_minesweeper_time.json',
+      titleLabel: '扫雷总时间排行',
+      subtitle: '高级+中级+初级 最佳时间之和 | 时间越短排名越高',
+      sortOrder: 'asc',
+      valueFormatter: (n: number) => `${n.toFixed(1)}s`,
+      footerNote: '高级+中级+初级 最佳时间之和 | 时间越短排名越高 | 数据每日更新',
+    },
+    '3bvs': {
+      game: 'minesweeper',
+      metric: '3bvs',
+      dataFile: 'race_data_minesweeper_3bvs.json',
+      titleLabel: '扫雷总3BVS排行',
+      subtitle: '高级+中级+初级 最佳3BVS之和 | 3BVS越高排名越高',
+      sortOrder: 'desc',
+      valueFormatter: (n: number) => n.toFixed(3),
+      footerNote: '高级+中级+初级 最佳3BVS之和 | 3BVS越高排名越高 | 数据每日更新',
+    },
+  },
+  nono: {
+    time: {
+      game: 'nono',
+      metric: 'time',
+      dataFile: 'race_data_nono_time.json',
+      titleLabel: '数织总时间排行',
+      subtitle: '专家+高级+中级+初级 最佳时间之和 | 时间越短排名越高',
+      sortOrder: 'asc',
+      valueFormatter: (n: number) => `${n.toFixed(1)}s`,
+      footerNote: '专家+高级+中级+初级 最佳时间之和 | 时间越短排名越高 | 数据每日更新',
+    },
+  },
+  puzzle: {
+    time: {
+      game: 'puzzle',
+      metric: 'time',
+      dataFile: 'race_data_puzzle_time.json',
+      titleLabel: '数字华容道总时间排行',
+      subtitle: '5×5+4×4+3×3 最佳时间之和 | 时间越短排名越高',
+      sortOrder: 'asc',
+      valueFormatter: (n: number) => `${n.toFixed(1)}s`,
+      footerNote: '5×5+4×4+3×3 最佳时间之和 | 时间越短排名越高 | 数据每日更新',
+    },
+    steps: {
+      game: 'puzzle',
+      metric: 'steps',
+      dataFile: 'race_data_puzzle_steps.json',
+      titleLabel: '数字华容道总步数排行',
+      subtitle: '5×5+4×4+3×3 最佳步数之和 | 步数越少排名越高',
+      sortOrder: 'asc',
+      valueFormatter: (n: number) => `${Math.round(n)} 步`,
+      footerNote: '5×5+4×4+3×3 最佳步数之和 | 步数越少排名越高 | 数据每日更新',
+    },
+  },
+  schulte: {
+    time: {
+      game: 'schulte',
+      metric: 'time',
+      dataFile: 'race_data_schulte_time.json',
+      titleLabel: '舒尔特方格总时间排行',
+      subtitle: '5×5+4×4+3×3 最佳时间之和 | 时间越短排名越高',
+      sortOrder: 'asc',
+      valueFormatter: (n: number) => `${n.toFixed(1)}s`,
+      footerNote: '5×5+4×4+3×3 最佳时间之和 | 时间越短排名越高 | 数据每日更新',
+    },
+  },
+}
+
+// 游戏显示名映射
+export const GAME_LABELS: Record<string, string> = {
+  minesweeper: '扫雷',
+  nono: '数织',
+  puzzle: '数字华容道',
+  schulte: '舒尔特方格',
+}
+
+// 指标显示名映射
+export const METRIC_LABELS: Record<string, string> = {
+  'time': '时间',
+  '3bvs': '3BVS',
+  'steps': '步数',
+}
+
+// ---------------------------------------------------------------------------
+// Constants (tunable)
 // ---------------------------------------------------------------------------
 
 export const TOP_N = 50
@@ -72,6 +172,7 @@ const GOLD_COLOR = '#FFC107'
 export function useBarChartRace(
   canvasRef: Readonly<ReturnType<typeof ref<HTMLCanvasElement | null>>>,
   canvasWrapRef: Readonly<ReturnType<typeof ref<HTMLElement | null>>>,
+  config: ReturnType<typeof ref<RaceGameConfig>>,
 ) {
   // ---- Reactive state ----
   const data = shallowRef<RaceData | null>(null)
@@ -120,6 +221,23 @@ export function useBarChartRace(
     if (totalFrames.value <= 1)
       return 0
     return (animationProgress.value / (totalFrames.value - 1)) * 100
+  })
+
+  // ---- Dynamic title based on date range ----
+  const chartTitle = computed(() => {
+    const d = data.value
+    const cfg = config.value
+    if (!cfg)
+      return ''
+    if (!d)
+      return cfg.titleLabel
+    const [start, end] = d.meta.dateRange
+    const startYear = start ? start.slice(0, 4) : ''
+    const endYear = end ? end.slice(0, 4) : ''
+    if (startYear && endYear) {
+      return `联萌 ${startYear} - ${endYear} ${cfg.titleLabel}`
+    }
+    return `联萌 ${cfg.titleLabel}`
   })
 
   // ---- Layout helpers (depend on canvas size) ----
@@ -174,7 +292,9 @@ export function useBarChartRace(
 
   // ---- Data loading ----
   async function loadData(): Promise<RaceData> {
-    const resp = await fetch('race_data.json')
+    if (!config.value)
+      throw new Error('Config is not initialized')
+    const resp = await fetch(config.value.dataFile)
     if (!resp.ok)
       throw new Error(`HTTP ${resp.status}`)
     return resp.json()
@@ -184,7 +304,6 @@ export function useBarChartRace(
     return new Promise((resolve) => {
       const result: Record<string, HTMLImageElement | null> = {}
 
-      // Load default avatar first, then overlay real avatars on success
       const defaultImg = new Image()
       defaultImg.onload = () => {
         for (const p of players) {
@@ -207,7 +326,6 @@ export function useBarChartRace(
               resolve(result)
           }
           img.onerror = () => {
-            // Keep default avatar on failure
             pending--
             if (pending === 0)
               resolve(result)
@@ -216,10 +334,9 @@ export function useBarChartRace(
         }
       }
       defaultImg.onerror = () => {
-        // Default avatar also failed — fall back to no-avatar for everyone
         resolve(result)
       }
-      defaultImg.src = 'web/Z7.png'
+      defaultImg.src = 'Z7.png'
     })
   }
 
@@ -231,6 +348,7 @@ export function useBarChartRace(
     const effectiveProgress = progress / INTERP_STEPS
     const dateIdx = Math.floor(effectiveProgress)
     const t = effectiveProgress - dateIdx
+    const sortOrder = config.value?.sortOrder ?? 'asc'
 
     if (dateIdx >= dates.length - 1) {
       return players
@@ -239,7 +357,7 @@ export function useBarChartRace(
           return v !== null ? { uid: p.uid, name: p.name, avatar: p.avatar, value: v } : null
         })
         .filter((x): x is InterpolatedPlayer => x !== null)
-        .sort((a, b) => a.value - b.value)
+        .sort((a, b) => sortOrder === 'asc' ? a.value - b.value : b.value - a.value)
     }
 
     const tEased = easeInOutQuad(t)
@@ -259,7 +377,7 @@ export function useBarChartRace(
         return null
       })
       .filter((x): x is InterpolatedPlayer => x !== null)
-      .sort((a, b) => a.value - b.value)
+      .sort((a, b) => sortOrder === 'asc' ? a.value - b.value : b.value - a.value)
   }
 
   // ---- Update visual targets ----
@@ -269,11 +387,7 @@ export function useBarChartRace(
     const totalH = TOP_N * rowH
     const currentUids = new Set<string>()
 
-    // While the leaderboard is still filling up (fewer than TOP_N players),
-    // pin to a precomputed fixed scale so bars don't jump around as new
-    // players enter. Once full, lerp the scale for smooth transitions.
     if (sorted.length < TOP_N && (fixedXMin !== 0 || fixedXMax !== 0)) {
-      // Board not full yet — pin to fixed scale
       currentXMin = fixedXMin
       currentXMax = fixedXMax
     }
@@ -319,7 +433,6 @@ export function useBarChartRace(
       }
     }
 
-    // Mark players leaving the chart
     for (const uid of Object.keys(visualState)) {
       if (!currentUids.has(uid)) {
         const vs = visualState[uid]!
@@ -361,7 +474,6 @@ export function useBarChartRace(
       if (visualState[uid]!._leaving)
         delete visualState[uid]
     }
-    // Reset scale so it re-initializes from the next frame's visible range
     currentXMin = 0
     currentXMax = 0
   }
@@ -374,7 +486,8 @@ export function useBarChartRace(
     const canvas = target?.canvas ?? canvasRef.value
     const ctx = target?.ctx ?? getCanvasCtx()
     const d = data.value
-    if (!ctx || !d || !canvas)
+    const cfg = config.value
+    if (!ctx || !d || !canvas || !cfg)
       return
 
     const { w, h, padTop, padLeft, padRight, chartW } = getLayout(canvas ?? undefined, target?.scale)
@@ -385,7 +498,7 @@ export function useBarChartRace(
     ctx.fillStyle = BG_COLOR
     ctx.fillRect(0, 0, w, h)
 
-    // Title area — positioned within top padding, everything adapts to padTop
+    // Title area
     const titleRight = w - padRight
     const titleFontSize = Math.round(padTop * 0.33)
     const subFontSize = Math.round(padTop * 0.17)
@@ -393,17 +506,27 @@ export function useBarChartRace(
     const titleLineH = Math.round(padTop * 0.38)
     const titleBaseY = Math.round(padTop * 0.55)
 
-    // Title — 右上角
+    // Title — use dynamic chartTitle
     ctx.fillStyle = TEXT_COLOR
     ctx.font = `700 ${titleFontSize}px "Microsoft YaHei", "PingFang SC", sans-serif`
     ctx.textAlign = 'right'
-    ctx.fillText('联萌 2018 - 2026 扫雷总时间排行', titleRight, titleBaseY)
+
+    // Truncate title if too wide
+    const maxTitleWidth = w - padLeft - 10
+    let displayTitle = chartTitle.value
+    if (ctx.measureText(displayTitle).width > maxTitleWidth) {
+      while (displayTitle.length > 2 && ctx.measureText(`${displayTitle}…`).width > maxTitleWidth) {
+        displayTitle = displayTitle.slice(0, -1)
+      }
+      displayTitle += '…'
+    }
+    ctx.fillText(displayTitle, titleRight, titleBaseY)
 
     // Subtitle
     ctx.fillStyle = MUTED_COLOR
     ctx.font = `${subFontSize}px "Microsoft YaHei", "PingFang SC", sans-serif`
     ctx.textAlign = 'right'
-    ctx.fillText('高级+中级+初级 最佳时间之和 | 时间越短排名越高', titleRight, titleBaseY + titleLineH)
+    ctx.fillText(cfg.subtitle, titleRight, titleBaseY + titleLineH)
 
     const effectiveProgress = progress / INTERP_STEPS
     const dateIdx = Math.min(Math.floor(effectiveProgress), d.dates.length - 1)
@@ -418,7 +541,6 @@ export function useBarChartRace(
     if (sorted.length === 0)
       return
 
-    // Update target positions
     updateVisualTargets(sorted)
 
     if (needsSnap.value) {
@@ -426,13 +548,11 @@ export function useBarChartRace(
       needsSnap.value = false
     }
 
-    // Build uid→rank lookup
     const rankMap: Record<string, number> = {}
     sorted.forEach((p, i) => {
       rankMap[p.uid] = i + 1
     })
 
-    // Sort entries bottom-to-top so upper bars overlap lower bars
     const totalH = TOP_N * BAR_HEIGHT + (TOP_N - 1) * BAR_GAP
     const entries = Object.entries(visualState)
       .filter(([, vs]) => !vs._leaving || vs.vy < padTop + totalH + 40)
@@ -451,7 +571,6 @@ export function useBarChartRace(
       const barW = Math.max(vs.vw, 3)
       const barH = BAR_HEIGHT
 
-      // Opacity: fade in from bottom, fade out to bottom
       let opacity = 1
       if (vs.vy > padTop + totalH) {
         opacity = Math.max(0, 1 - (vs.vy - padTop - totalH) / 30)
@@ -511,14 +630,14 @@ export function useBarChartRace(
       ctx.textBaseline = 'middle'
       ctx.fillText(displayName, nameX, barY + BAR_HEIGHT / 2)
 
-      // Time value
+      // Value display — use dynamic formatter
       if (player) {
         const timeX = barX + barW + 3
         ctx.fillStyle = TEXT_COLOR
         ctx.globalAlpha = 0.8 * opacity
         ctx.font = `${TIME_FONT_SIZE}px "Microsoft YaHei", sans-serif`
         ctx.textBaseline = 'middle'
-        ctx.fillText(fmtTime(player.value), timeX, barY + BAR_HEIGHT / 2)
+        ctx.fillText(cfg.valueFormatter(player.value), timeX, barY + BAR_HEIGHT / 2)
       }
 
       ctx.globalAlpha = 1
@@ -532,27 +651,24 @@ export function useBarChartRace(
 
   async function exportVideo() {
     const mainCanvas = canvasRef.value
-    if (!mainCanvas || !data.value || exporting.value)
+    const cfg = config.value
+    if (!mainCanvas || !data.value || exporting.value || !cfg)
       return
 
     exporting.value = true
     exportProgress.value = 0
 
-    // Pause playback during export
     const wasPlaying = playing.value
     playing.value = false
 
     try {
-      // Logical layout from main canvas (CSS pixels)
       const logicalLayout = getLayout()
 
-      // Scale up to target 2K width (2560px) for high-resolution export
       const EXPORT_TARGET_WIDTH = 2560
       const exportScale = Math.max(1, Math.ceil(EXPORT_TARGET_WIDTH / logicalLayout.w))
       const videoW = makeEven(Math.floor(logicalLayout.w * exportScale))
       const videoH = makeEven(Math.floor(logicalLayout.h * exportScale))
 
-      // Offscreen canvas at scaled resolution
       const offscreen = new OffscreenCanvas(videoW, videoH)
       const offCtx = offscreen.getContext('2d')!
       if (!offCtx)
@@ -560,14 +676,11 @@ export function useBarChartRace(
       offCtx.setTransform(1, 0, 0, 1, 0, 0)
       offCtx.scale(exportScale, exportScale)
 
-      // Dynamic import of mp4-muxer
       const { Muxer, ArrayBufferTarget } = await import('mp4-muxer')
 
       const fps = 60
       const frameDurationUs = Math.round(1_000_000 / fps)
 
-      // Match real-time playback: live advance per frame = speed * INTERP_STEPS * dt
-      // where dt ≈ 1/60s at 60fps display. So progressPerFrame = speed * INTERP_STEPS / fps.
       const speedValue = speed.value
       const progressPerFrame = (speedValue * INTERP_STEPS) / fps
       const progressMax = totalFrames.value - 1
@@ -575,10 +688,8 @@ export function useBarChartRace(
         ? Math.ceil(progressMax / progressPerFrame) + 1
         : totalFrames.value
 
-      // Bitrate scales with resolution; ~10 Mbps for 2K
       const bitrate = Math.round(10_000_000 * (videoW * videoH) / (2560 * 1800))
 
-      // Try codecs in order: H.264 Main → H.264 Baseline → H.264 High → VP9
       const codecCandidates: Array<{
         codec: string
         muxerCodec: 'avc' | 'vp9'
@@ -637,23 +748,19 @@ export function useBarChartRace(
       encoder.configure(selectedCodec.config)
 
       for (let i = 0; i < videoFrameCount; i++) {
-        // Abort if encoder errored asynchronously
         if (encoderError)
           throw encoderError
 
         const progress = Math.min(i * progressPerFrame, progressMax)
 
-        // Reset state for snap-mode rendering (each frame independent)
         needsSnap.value = true
         currentXMin = 0
         currentXMax = 0
         for (const key of Object.keys(visualState))
           delete visualState[key]
 
-        // Render to offscreen canvas at export scale
         render(progress, { canvas: offscreen, ctx: offCtx, scale: exportScale })
 
-        // Create VideoFrame and encode
         const videoFrame = new VideoFrame(offscreen, {
           timestamp: i * frameDurationUs,
           duration: frameDurationUs,
@@ -663,7 +770,6 @@ export function useBarChartRace(
 
         exportProgress.value = ((i + 1) / videoFrameCount) * 100
 
-        // Yield to browser every 10 frames to keep UI responsive
         if (i % 10 === 0) {
           await new Promise(r => setTimeout(r, 0))
         }
@@ -672,14 +778,13 @@ export function useBarChartRace(
       await encoder.flush()
       muxer.finalize()
 
-      // Trigger download — filename includes speed for clarity
       const speedLabel = speedValue === 1 ? '' : `-${speedValue}x`
       const buffer = (muxer.target as unknown as { buffer: ArrayBuffer }).buffer
       const blob = new Blob([buffer], { type: 'video/mp4' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `bar-chart-race${speedLabel}.mp4`
+      a.download = `bar-chart-race-${cfg.game}-${cfg.metric}${speedLabel}.mp4`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -691,7 +796,6 @@ export function useBarChartRace(
       error.value = `导出失败: ${message}`
     }
     finally {
-      // Restore playback state
       if (wasPlaying)
         playing.value = true
       exporting.value = false
@@ -711,7 +815,6 @@ export function useBarChartRace(
       const nextProgress = animationProgress.value + advance
 
       if (nextProgress >= totalFrames.value - 1) {
-        // Playback finished
         animationProgress.value = totalFrames.value - 1
         playing.value = false
         tickVisualState()
@@ -745,7 +848,6 @@ export function useBarChartRace(
   function togglePlay() {
     if (animationProgress.value >= totalFrames.value - 1) {
       animationProgress.value = 0
-      // Clear visual state on restart
       for (const key of Object.keys(visualState)) delete visualState[key]
       needsSnap.value = true
     }
@@ -761,7 +863,6 @@ export function useBarChartRace(
   function seekTo(value: number) {
     animationProgress.value = (value / 100) * (totalFrames.value - 1)
     needsSnap.value = true
-    // Reset visual state on seek
     for (const key of Object.keys(visualState)) delete visualState[key]
     render(animationProgress.value)
   }
@@ -819,9 +920,7 @@ export function useBarChartRace(
       const raceData = await loadData()
       data.value = raceData
 
-      // Precompute the bar scale from the fully-populated top 50 across all
-      // dates. Used as a fixed scale while the board is still filling up so
-      // bars stay stable instead of jumping as new players enter.
+      // Precompute the bar scale
       {
         let fMin = Infinity
         let fMax = -Infinity
@@ -853,10 +952,8 @@ export function useBarChartRace(
 
       resizeCanvas()
 
-      // Load avatars
       avatars.value = await preloadAvatars(raceData.players)
 
-      // Initial render at final frame
       animationProgress.value = totalFrames.value - 1
       needsSnap.value = true
       render(animationProgress.value)
@@ -869,6 +966,25 @@ export function useBarChartRace(
       loading.value = false
       console.error('Load failed:', err)
     }
+  }
+
+  // Switch game config and reload
+  async function switchGame(cfg: RaceGameConfig) {
+    // Reset all state
+    playing.value = false
+    lastRAF = null
+    config.value = cfg
+    data.value = null
+    avatars.value = {}
+    animationProgress.value = 0
+    totalFrames.value = 0
+    for (const key of Object.keys(visualState)) delete visualState[key]
+    currentXMin = 0
+    currentXMax = 0
+    fixedXMin = 0
+    fixedXMax = 0
+    needsSnap.value = true
+    await init()
   }
 
   // Register lifecycle
@@ -889,8 +1005,6 @@ export function useBarChartRace(
     render(animationProgress.value)
   }
 
-  // Watch speed changes to update external DOM if needed (handled by template binding)
-
   return {
     // State (readonly from outside)
     playing,
@@ -900,11 +1014,13 @@ export function useBarChartRace(
     loading,
     error,
     data,
+    config,
     // Computed
     dateBadge,
     frameLabel,
     infoPlayers,
     progressPercent,
+    chartTitle,
     // Export
     exporting,
     exportProgress,
@@ -914,5 +1030,6 @@ export function useBarChartRace(
     setSpeed,
     seekTo,
     resizeCanvas,
+    switchGame,
   }
 }

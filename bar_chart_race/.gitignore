@@ -1,5 +1,9 @@
 minesweeper/data
 minesweeper/avatars
 minesweeper/fetch_data.ts
+puzzle/data
+nono/data
+schulte/data
+/public
 web
 .venv
