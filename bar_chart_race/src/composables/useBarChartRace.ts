@@ -92,6 +92,16 @@ export const GAME_CONFIGS: Record<string, Record<string, RaceGameConfig>> = {
       valueFormatter: (n: number) => `${n.toFixed(1)}s`,
       footerNote: '专家+高级+中级+初级 最佳时间之和 | 时间越短排名越高 | 数据每日更新',
     },
+    time_no_expert: {
+      game: 'nono',
+      metric: 'time_no_expert',
+      dataFile: 'race_data_nono_time_no_expert.json',
+      titleLabel: '数织总时间排行(初级~高级)',
+      subtitle: '高级+中级+初级 最佳时间之和 | 时间越短排名越高',
+      sortOrder: 'asc',
+      valueFormatter: (n: number) => `${n.toFixed(1)}s`,
+      footerNote: '高级+中级+初级 最佳时间之和 | 时间越短排名越高 | 数据每日更新',
+    },
   },
   puzzle: {
     time: {
@@ -142,6 +152,7 @@ export const METRIC_LABELS: Record<string, string> = {
   'time': '时间',
   '3bvs': '3BVS',
   'steps': '步数',
+  'time_no_expert': '时间(初级~高级)',
 }
 
 // ---------------------------------------------------------------------------
@@ -761,7 +772,7 @@ export function useBarChartRace(
         for (const key of Object.keys(visualState))
           delete visualState[key]
 
-        render(progress, { canvas: offscreen, ctx: offCtx, scale: exportScale, skipAvatars: true })
+        render(progress, { canvas: offscreen, ctx: offCtx, scale: exportScale })
 
         const videoFrame = new VideoFrame(offscreen, {
           timestamp: i * frameDurationUs,

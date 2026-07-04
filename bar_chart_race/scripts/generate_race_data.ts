@@ -7,7 +7,8 @@
  * 支持的游戏和指标:
  *   扫雷 time  — sum of min(time) per level (1+2+3)
  *   扫雷 3bvs — sum of max(bvs) per level (2+3)
- *   Nono time  — sum of min(time) per level (1+2+3+4)
+ *   Nono time            — sum of min(time) per level (1+2+3+4)
+ *   Nono time_no_expert  — sum of min(time) per level (1+2+3, 无专家)
  *   Puzzle time  — sum of min(time) per level (3+4+5)
  *   Puzzle steps — sum of min(step) per level (3+4+5)
  *   Schulte time — sum of min(time) per level (5x5 only)
@@ -61,6 +62,7 @@ const GAMES: GameSpec[] = [
     levels: ['1', '2', '3', '4'],
     metrics: [
       { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
+      { key: 'time_no_expert', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1, levels: ['1', '2', '3'] },
     ],
     blacklist: [],
     recordBlacklist: [],
@@ -227,7 +229,6 @@ function generateRaceData(spec: GameSpec, metric: MetricSpec, urlToLocal: Map<st
     if (!raw.records || typeof raw.records !== 'object')
       continue
     const uid = raw.uid
-
     for (const [level, records] of Object.entries(raw.records)) {
       if (!levels.includes(level))
         continue
@@ -238,7 +239,6 @@ function generateRaceData(spec: GameSpec, metric: MetricSpec, urlToLocal: Map<st
         // 跳过黑名单录像 ID
         if (recordBlacklistSet.has((rec as any).id))
           continue
-
         const val = (rec as any)[metric.field]
         if (val == null)
           continue
