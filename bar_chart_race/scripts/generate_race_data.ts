@@ -10,7 +10,7 @@
  *   Nono time  — sum of min(time) per level (1+2+3+4)
  *   Puzzle time  — sum of min(time) per level (3+4+5)
  *   Puzzle steps — sum of min(step) per level (3+4+5)
- *   Schulte time — sum of min(time) per level (3+4+5)
+ *   Schulte time — sum of min(time) per level (5x5 only)
  */
 
 import { createHash } from 'node:crypto'
@@ -30,6 +30,8 @@ interface GameSpec {
   metrics: MetricSpec[]
   /** 黑名单 UID，不进入该项目排行榜 */
   blacklist?: string[]
+  /** 黑名单录像 ID，不统计这些录像 */
+  recordBlacklist?: number[]
 }
 
 interface MetricSpec {
@@ -72,7 +74,7 @@ const GAMES: GameSpec[] = [
   },
   {
     dir: 'schulte',
-    levels: ['3', '4', '5'],
+    levels: ['5'],
     metrics: [
       { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
     ],
