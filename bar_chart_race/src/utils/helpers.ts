@@ -39,7 +39,7 @@ export function fmtDate(dateStr: string): string {
 
 /** 在 Canvas 2D 上绘制圆角矩形路径 */
 export function roundRect(
-  ctx: CanvasRenderingContext2D,
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   x: number,
   y: number,
   w: number,

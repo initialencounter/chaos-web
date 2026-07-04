@@ -90,6 +90,8 @@ export function useBarChartRace(
   let fixedXMin = 0
   let fixedXMax = 0
   let lastRAF: number | null = null
+  const exporting = ref(false)
+  const exportProgress = ref(0)
 
   // ---- Computed ----
   const dateBadge = computed(() => {
@@ -121,19 +123,21 @@ export function useBarChartRace(
   })
 
   // ---- Layout helpers (depend on canvas size) ----
-  function getCanvasCtx() {
-    const canvas = canvasRef.value
+  function getCanvasCtx(c?: HTMLCanvasElement | OffscreenCanvas) {
+    const canvas = c ?? canvasRef.value
     if (!canvas)
       return null
-    return canvas.getContext('2d')
+    return canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null
   }
 
-  function getLayout() {
-    const canvas = canvasRef.value
+  function getLayout(c?: HTMLCanvasElement | OffscreenCanvas) {
+    const canvas = c ?? canvasRef.value
     if (!canvas)
       return { w: 0, h: 0, padTop: 0, padBottom: 0, padLeft: 0, padRight: 0, chartW: 0 }
-    const w = canvas.width / dpr.value
-    const h = canvas.height / dpr.value
+    const isMain = canvas === canvasRef.value
+    const scale = isMain ? dpr.value : 1
+    const w = canvas.width / scale
+    const h = canvas.height / scale
     const padTop = 66
     const padBottom = 28
     const padLeft = 42
@@ -363,13 +367,17 @@ export function useBarChartRace(
   }
 
   // ---- Render ----
-  function render(progress: number) {
-    const ctx = getCanvasCtx()
+  function render(
+    progress: number,
+    target?: { canvas: HTMLCanvasElement | OffscreenCanvas, ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D },
+  ) {
+    const canvas = target?.canvas ?? canvasRef.value
+    const ctx = target?.ctx ?? getCanvasCtx()
     const d = data.value
-    if (!ctx || !d)
+    if (!ctx || !d || !canvas)
       return
 
-    const { w, h, padTop, padLeft, padRight, chartW } = getLayout()
+    const { w, h, padTop, padLeft, padRight, chartW } = getLayout(canvas ?? undefined)
 
     ctx.clearRect(0, 0, w, h)
 
@@ -514,6 +522,160 @@ export function useBarChartRace(
       }
 
       ctx.globalAlpha = 1
+    }
+  }
+
+  // ---- Video export ----
+  function makeEven(n: number) {
+    return n % 2 === 0 ? n : n + 1
+  }
+
+  async function exportVideo() {
+    const mainCanvas = canvasRef.value
+    if (!mainCanvas || !data.value || exporting.value)
+      return
+
+    exporting.value = true
+    exportProgress.value = 0
+
+    // Pause playback during export
+    const wasPlaying = playing.value
+    playing.value = false
+
+    try {
+      const layout = getLayout()
+      const videoW = makeEven(Math.floor(layout.w))
+      const videoH = makeEven(Math.floor(layout.h))
+
+      // Offscreen canvas at 1x resolution (no DPR scaling)
+      const offscreen = new OffscreenCanvas(videoW, videoH)
+      const offCtx = offscreen.getContext('2d')!
+      if (!offCtx)
+        throw new Error('OffscreenCanvas 2D context not available')
+
+      // Dynamic import of mp4-muxer
+      const { Muxer, ArrayBufferTarget } = await import('mp4-muxer')
+
+      const fps = 60
+      const frameDurationUs = Math.round(1_000_000 / fps)
+
+      // Try codecs in order: H.264 Main → H.264 Baseline → H.264 High → VP9
+      const codecCandidates: Array<{
+        codec: string
+        muxerCodec: 'avc' | 'vp9'
+        config: VideoEncoderConfig
+      }> = [
+        {
+          codec: 'H.264 Main',
+          muxerCodec: 'avc',
+          config: { codec: 'avc1.4d001f', width: videoW, height: videoH, bitrate: 8_000_000, framerate: fps },
+        },
+        {
+          codec: 'H.264 Baseline',
+          muxerCodec: 'avc',
+          config: { codec: 'avc1.42001f', width: videoW, height: videoH, bitrate: 8_000_000, framerate: fps },
+        },
+        {
+          codec: 'H.264 High',
+          muxerCodec: 'avc',
+          config: { codec: 'avc1.64001f', width: videoW, height: videoH, bitrate: 8_000_000, framerate: fps },
+        },
+        {
+          codec: 'VP9',
+          muxerCodec: 'vp9',
+          config: { codec: 'vp09.00.10.08', width: videoW, height: videoH, bitrate: 8_000_000, framerate: fps },
+        },
+      ]
+
+      let selectedCodec: (typeof codecCandidates)[number] | null = null
+      for (const candidate of codecCandidates) {
+        const { supported } = await VideoEncoder.isConfigSupported(candidate.config)
+        if (supported) {
+          selectedCodec = candidate
+          break
+        }
+      }
+
+      if (!selectedCodec)
+        throw new Error('当前浏览器不支持任何可用视频编码 (H.264 / VP9)')
+
+      let encoderError: Error | null = null
+
+      const muxer = new Muxer({
+        target: new ArrayBufferTarget(),
+        video: { codec: selectedCodec.muxerCodec, width: videoW, height: videoH },
+        fastStart: 'in-memory',
+      })
+
+      const encoder = new VideoEncoder({
+        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+        error: (e) => {
+          encoderError = new Error(`[${selectedCodec!.codec}] ${e.message}`)
+          console.error('VideoEncoder error:', e)
+        },
+      })
+
+      encoder.configure(selectedCodec.config)
+
+      const frameCount = totalFrames.value
+
+      for (let i = 0; i < frameCount; i++) {
+        // Abort if encoder errored asynchronously
+        if (encoderError)
+          throw encoderError
+
+        // Reset state for snap-mode rendering (each frame independent)
+        needsSnap.value = true
+        currentXMin = 0
+        currentXMax = 0
+        for (const key of Object.keys(visualState))
+          delete visualState[key]
+
+        // Render to offscreen canvas
+        render(i, { canvas: offscreen, ctx: offCtx })
+
+        // Create VideoFrame and encode
+        const videoFrame = new VideoFrame(offscreen, {
+          timestamp: i * frameDurationUs,
+          duration: frameDurationUs,
+        })
+        encoder.encode(videoFrame)
+        videoFrame.close()
+
+        exportProgress.value = ((i + 1) / frameCount) * 100
+
+        // Yield to browser every 10 frames to keep UI responsive
+        if (i % 10 === 0) {
+          await new Promise(r => setTimeout(r, 0))
+        }
+      }
+
+      await encoder.flush()
+      muxer.finalize()
+
+      // Trigger download
+      const buffer = (muxer.target as unknown as { buffer: ArrayBuffer }).buffer
+      const blob = new Blob([buffer], { type: 'video/mp4' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'bar-chart-race.mp4'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    }
+    catch (err: unknown) {
+      console.error('Export failed:', err)
+      const message = err instanceof Error ? err.message : String(err)
+      error.value = `导出失败: ${message}`
+    }
+    finally {
+      // Restore playback state
+      if (wasPlaying)
+        playing.value = true
+      exporting.value = false
+      exportProgress.value = 0
     }
   }
 
@@ -723,6 +885,10 @@ export function useBarChartRace(
     frameLabel,
     infoPlayers,
     progressPercent,
+    // Export
+    exporting,
+    exportProgress,
+    exportVideo,
     // Methods
     togglePlay,
     setSpeed,

@@ -13,12 +13,15 @@ const {
   speed,
   loading,
   error,
+  exporting,
+  exportProgress,
   frameLabel,
   infoPlayers,
   progressPercent,
   togglePlay,
   setSpeed,
   seekTo,
+  exportVideo,
 } = useBarChartRace(canvasRef, canvasWrapRef)
 
 // ---------------------------------------------------------------------------
@@ -86,6 +89,10 @@ function onProgressInput(e: Event) {
       </div>
 
       <span class="info-text">{{ infoPlayers }}</span>
+
+      <button class="btn-export" :disabled="exporting" @click="exportVideo">
+        {{ exporting ? `导出中 ${Math.round(exportProgress)}%` : '⬇ MP4' }}
+      </button>
     </div>
 
     <!-- Footer -->
@@ -306,6 +313,15 @@ button.active {
 .info-text {
   font-size: 0.8rem;
   color: rgba(234, 234, 234, 0.35);
+}
+
+.btn-export {
+  margin-left: auto;
+}
+
+.btn-export:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* ---- Footer ---- */
