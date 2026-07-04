@@ -124,6 +124,16 @@ export const GAME_CONFIGS: Record<string, Record<string, RaceGameConfig>> = {
       valueFormatter: (n: number) => `${Math.round(n)} 步`,
       footerNote: '5×5+4×4 最佳步数之和 | 步数越少排名越高 | 数据每日更新',
     },
+    steps_all: {
+      game: 'puzzle',
+      metric: 'steps_all',
+      dataFile: 'race_data_puzzle_steps_all.json',
+      titleLabel: '数字华容道总步数排行(全难度)',
+      subtitle: '10×10+9×9+8×8+7×7+6×6+5×5+4×4+3×3 最佳步数之和 | 步数越少排名越高',
+      sortOrder: 'asc',
+      valueFormatter: (n: number) => `${Math.round(n)} 步`,
+      footerNote: '3×3~10×10 最佳步数之和 | 步数越少排名越高 | 数据每日更新',
+    },
   },
   schulte: {
     time: {
@@ -172,6 +182,7 @@ export const METRIC_LABELS: Record<string, string> = {
   'time': '时间',
   '3bvs': '3BVS',
   'steps': '步数',
+  'steps_all': '步数(全难度)',
   'time_no_expert': '时间(初级~高级)',
   'time_6_8': '时间(6×6~8×8)',
   'time_9_10': '时间(9×9~10×10)',

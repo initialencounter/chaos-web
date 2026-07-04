@@ -10,7 +10,8 @@
  *   Nono time            — sum of min(time) per level (1+2+3+4)
  *   Nono time_no_expert  — sum of min(time) per level (1+2+3, 无专家)
  *   Puzzle time  — sum of min(time) per level (3+4+5)
- *   Puzzle steps — sum of min(step) per level (4+5)
+ *   Puzzle steps     — sum of min(step) per level (4+5)
+ *   Puzzle steps_all — sum of min(step) per level (3+4+5+6+7+8+9+10)
  *   Schulte time        — sum of min(time) per level (3+4+5)
  *   Schulte time_6_8    — sum of min(time) per level (6+7+8)
  *   Schulte time_9_10   — sum of min(time) per level (9+10)
@@ -75,6 +76,7 @@ const GAMES: GameSpec[] = [
     metrics: [
       { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 3 },
       { key: 'steps', field: 'step', aggregate: 'min', sortOrder: 'asc', decimals: 0, levels: ['4', '5'] },
+      { key: 'steps_all', field: 'step', aggregate: 'min', sortOrder: 'asc', decimals: 0, levels: ['3', '4', '5', '6', '7', '8', '9', '10'] },
     ],
     blacklist: ['99592', '118343', '114757', '113518'],
     recordBlacklist: [336157],
