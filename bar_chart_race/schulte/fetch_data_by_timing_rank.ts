@@ -4,10 +4,11 @@
  * 用法: npx tsx bar_chart_race/schulte/fetch_data_by_timing_rank.ts
  *
  * API: POST /Minesweeper/schulte/record/list
- * 参数: targetUid, level (3=3x3, 4=4x4, 5=5x5), type=0, blind=false, page, count
+ * 参数: targetUid, level (3~10), type=0, blind=false, page, count
  *
  * 与 minesweeper/fetch_data_by_timing_rank.ts 共享 fetchApi 等加密/请求工具，
- * 使用 Promise.allSettled 并行请求 3 个 level 以加速获取。
+ * 使用 Promise.allSettled 并行请求多个 level 以加速获取。
+ * 支持断点续抓：已存在的玩家数据文件会被读取，只抓取缺失的 level 并合并。
  */
 
 import type { Datum } from './types.js'
@@ -24,7 +25,7 @@ import {
 const TOP_N = 1000
 const COUNT_PER_PAGE = 20
 const API_PATH = '/Minesweeper/schulte/record/list'
-const LEVELS = [3, 4, 5] // 3x3, 4x4, 5x5
+const LEVELS = [3, 4, 5, 6, 7, 8, 9, 10] // 3x3 ~ 10x10
 
 // ======== 路径 ========
 const DATA_DIR = path.join(import.meta.dirname, 'data')
@@ -159,51 +160,70 @@ async function main() {
   const progress = loadProgress()
   console.log(`已抓取: ${progress.fetchedUids.length} 名玩家, 上次索引: ${progress.lastIndex}`)
 
-  const fetchedSet = new Set(progress.fetchedUids)
   let successCount = 0
   let skipCount = 0
 
-  const startIndex = progress.lastIndex + 1
+  let startIndex = progress.lastIndex + 1
+
+  // 如果上次进度已到末尾，从头开始重新检查缺失的 level
+  if (startIndex >= entries.length) {
+    console.log('进度已到末尾，重置索引以检查缺失的 level...')
+    startIndex = 0
+  }
 
   for (let i = startIndex; i < entries.length; i++) {
     const entry = entries[i]
     const { uid, nickName, avatar, schulteScore } = entry
 
-    // 跳过已抓取的（通过 progress 记录）
-    if (fetchedSet.has(uid)) {
-      skipCount++
-      continue
-    }
-
-    // 已有数据则跳过
+    // 加载已有数据，确定需要抓取的 level
     const dataFile = path.join(DATA_DIR, `${uid}.json`)
-    if (fs.existsSync(dataFile)) {
-      console.log(`  ⏭ 数据已存在，跳过`)
-      skipCount++
-      progress.fetchedUids.push(uid)
-      progress.lastIndex = i
-      progress.totalPlayers = entries.length
-      saveProgress(progress)
-      fetchedSet.add(uid)
-      continue
-    }
-
-    console.log(`\n[${i + 1}/${entries.length}] 玩家: ${nickName} (uid=${uid}, schulteScore=${schulteScore.toFixed(2)})`)
-
-    const playerData: SchultePlayerData = {
+    let playerData: SchultePlayerData = {
       uid,
       nickName,
       avatar,
       records: {},
     }
+    let existingLevels: Set<number>
 
-    // 并行请求所有 level
+    if (fs.existsSync(dataFile)) {
+      const existing = JSON.parse(fs.readFileSync(dataFile, 'utf-8')) as SchultePlayerData
+      existingLevels = new Set(
+        Object.keys(existing.records).map(Number).filter(l => existing.records[l].length > 0),
+      )
+      // 合并已更新的 nickName/avatar
+      playerData = {
+        uid: existing.uid,
+        nickName: existing.nickName || nickName,
+        avatar: existing.avatar || avatar,
+        records: { ...existing.records },
+      }
+    }
+    else {
+      existingLevels = new Set()
+    }
+
+    const levelsToFetch = LEVELS.filter(l => !existingLevels.has(l))
+
+    if (levelsToFetch.length === 0) {
+      console.log(`  ⏭ 所有 level 已获取，跳过`)
+      skipCount++
+      progress.fetchedUids.push(uid)
+      progress.lastIndex = i
+      progress.totalPlayers = entries.length
+      saveProgress(progress)
+      continue
+    }
+
+    console.log(`\n[${i + 1}/${entries.length}] 玩家: ${nickName} (uid=${uid}, schulteScore=${schulteScore.toFixed(2)})`)
+    console.log(`  已有 level: ${[...existingLevels].join(', ') || '(无)'}, 待抓取: ${levelsToFetch.join(', ')}`)
+
+    // 并行请求缺失的 level
     const results = await Promise.allSettled(
-      LEVELS.map(level => fetchAllRecords(uid, level)),
+      levelsToFetch.map(level => fetchAllRecords(uid, level)),
     )
 
-    for (let j = 0; j < LEVELS.length; j++) {
-      const level = LEVELS[j]
+    for (let j = 0; j < levelsToFetch.length; j++) {
+      const level = levelsToFetch[j]
       const result = results[j]
       if (result.status === 'fulfilled') {
         playerData.records[level] = result.value
@@ -223,7 +243,6 @@ async function main() {
     progress.lastIndex = i
     progress.totalPlayers = entries.length
     saveProgress(progress)
-    fetchedSet.add(uid)
     successCount++
 
     await sleep(REQUEST_DELAY_MS)
