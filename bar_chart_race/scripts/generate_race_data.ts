@@ -51,7 +51,7 @@ const GAMES: GameSpec[] = [
     dir: 'minesweeper',
     levels: ['1', '2', '3'],
     metrics: [
-      { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
+      { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 3 },
       { key: '3bvs', field: 'bvs', aggregate: 'max', sortOrder: 'desc', decimals: 3, levels: ['2', '3'] },
     ],
     blacklist: [''],
@@ -61,8 +61,8 @@ const GAMES: GameSpec[] = [
     dir: 'nono',
     levels: ['1', '2', '3', '4'],
     metrics: [
-      { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
-      { key: 'time_no_expert', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1, levels: ['1', '2', '3'] },
+      { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 3 },
+      { key: 'time_no_expert', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 3, levels: ['1', '2', '3'] },
     ],
     blacklist: [],
     recordBlacklist: [],
@@ -71,7 +71,7 @@ const GAMES: GameSpec[] = [
     dir: 'puzzle',
     levels: ['3', '4', '5'],
     metrics: [
-      { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
+      { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 3 },
       { key: 'steps', field: 'step', aggregate: 'min', sortOrder: 'asc', decimals: 0 },
     ],
     blacklist: ['99592', '118343', '114757', '113518'],
@@ -81,7 +81,7 @@ const GAMES: GameSpec[] = [
     dir: 'schulte',
     levels: ['5'],
     metrics: [
-      { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
+      { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 3 },
     ],
     blacklist: ['133149', '132252', '134943'],
     recordBlacklist: [],
@@ -256,8 +256,7 @@ function generateRaceData(spec: GameSpec, metric: MetricSpec, urlToLocal: Map<st
 
         const current = levelMap.get(level)
         if (current == null || (metric.aggregate === 'min' ? val < current : val > current)) {
-          const converted = metric.msToSec ? val / 1000 : val
-          levelMap.set(level, converted)
+          levelMap.set(level, val)
         }
       }
     }
@@ -341,7 +340,9 @@ function generateRaceData(spec: GameSpec, metric: MetricSpec, urlToLocal: Map<st
         for (const l of levels) {
           sum += cumulativeBest.get(l)!
         }
-        values.push(fmtValue(sum, metric.decimals!))
+        // 先求和再转换单位：所有毫秒加起来，再转秒，保留精度
+        const finalValue = metric.msToSec ? sum / 1000 : sum
+        values.push(fmtValue(finalValue, metric.decimals!))
       }
       else {
         values.push(null)
