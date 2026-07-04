@@ -185,7 +185,7 @@ function ensureAvatars(): Map<string, string> {
     else {
       missing++
       // 无缓存时保留远程 URL
-      urlToLocal.set(url, url)
+      urlToLocal.set(url, 'Z7.png') // 默认头像
     }
   }
 
