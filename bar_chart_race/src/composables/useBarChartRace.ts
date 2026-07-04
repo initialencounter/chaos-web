@@ -119,10 +119,10 @@ export const GAME_CONFIGS: Record<string, Record<string, RaceGameConfig>> = {
       metric: 'steps',
       dataFile: 'race_data_puzzle_steps.json',
       titleLabel: '数字华容道总步数排行',
-      subtitle: '5×5+4×4+3×3 最佳步数之和 | 步数越少排名越高',
+      subtitle: '5×5+4×4 最佳步数之和 | 步数越少排名越高',
       sortOrder: 'asc',
       valueFormatter: (n: number) => `${Math.round(n)} 步`,
-      footerNote: '5×5+4×4+3×3 最佳步数之和 | 步数越少排名越高 | 数据每日更新',
+      footerNote: '5×5+4×4 最佳步数之和 | 步数越少排名越高 | 数据每日更新',
     },
   },
   schulte: {
