@@ -2,6 +2,7 @@ packages:
   - .
   - 'packages/*'
   - tapsss-forum
+  - bar_chart_race
 
 allowBuilds:
   electron: true

@@ -15,11 +15,16 @@ export default lightwing(
       'api_docs',
       'scripts',
       'deploy.md',
+      'legacy',
+      'bar_chart_race/minesweeper/data',
+      'bar_chart_race/minesweeper/avatars',
+      'bar_chart_race/web',
     ],
   },
   {
     rules: {
       'node/prefer-global/process': 'off',
+      'no-console': 'off',
     },
   },
   {
