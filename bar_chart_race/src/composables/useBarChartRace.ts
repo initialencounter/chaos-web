@@ -130,12 +130,12 @@ export function useBarChartRace(
     return canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null
   }
 
-  function getLayout(c?: HTMLCanvasElement | OffscreenCanvas) {
+  function getLayout(c?: HTMLCanvasElement | OffscreenCanvas, logicalScale?: number) {
     const canvas = c ?? canvasRef.value
     if (!canvas)
       return { w: 0, h: 0, padTop: 0, padBottom: 0, padLeft: 0, padRight: 0, chartW: 0 }
     const isMain = canvas === canvasRef.value
-    const scale = isMain ? dpr.value : 1
+    const scale = logicalScale ?? (isMain ? dpr.value : 1)
     const w = canvas.width / scale
     const h = canvas.height / scale
     const padTop = 66
@@ -369,7 +369,7 @@ export function useBarChartRace(
   // ---- Render ----
   function render(
     progress: number,
-    target?: { canvas: HTMLCanvasElement | OffscreenCanvas, ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D },
+    target?: { canvas: HTMLCanvasElement | OffscreenCanvas, ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, scale?: number },
   ) {
     const canvas = target?.canvas ?? canvasRef.value
     const ctx = target?.ctx ?? getCanvasCtx()
@@ -377,7 +377,7 @@ export function useBarChartRace(
     if (!ctx || !d || !canvas)
       return
 
-    const { w, h, padTop, padLeft, padRight, chartW } = getLayout(canvas ?? undefined)
+    const { w, h, padTop, padLeft, padRight, chartW } = getLayout(canvas ?? undefined, target?.scale)
 
     ctx.clearRect(0, 0, w, h)
 
@@ -397,7 +397,7 @@ export function useBarChartRace(
     ctx.fillStyle = TEXT_COLOR
     ctx.font = `700 ${titleFontSize}px "Microsoft YaHei", "PingFang SC", sans-serif`
     ctx.textAlign = 'right'
-    ctx.fillText('扫雷三模式总时间排行榜', titleRight, titleBaseY)
+    ctx.fillText('联萌 2018 - 2026 扫雷总时间排行', titleRight, titleBaseY)
 
     // Subtitle
     ctx.fillStyle = MUTED_COLOR
@@ -543,15 +543,22 @@ export function useBarChartRace(
     playing.value = false
 
     try {
-      const layout = getLayout()
-      const videoW = makeEven(Math.floor(layout.w))
-      const videoH = makeEven(Math.floor(layout.h))
+      // Logical layout from main canvas (CSS pixels)
+      const logicalLayout = getLayout()
 
-      // Offscreen canvas at 1x resolution (no DPR scaling)
+      // Scale up to target 2K width (2560px) for high-resolution export
+      const EXPORT_TARGET_WIDTH = 2560
+      const exportScale = Math.max(1, Math.ceil(EXPORT_TARGET_WIDTH / logicalLayout.w))
+      const videoW = makeEven(Math.floor(logicalLayout.w * exportScale))
+      const videoH = makeEven(Math.floor(logicalLayout.h * exportScale))
+
+      // Offscreen canvas at scaled resolution
       const offscreen = new OffscreenCanvas(videoW, videoH)
       const offCtx = offscreen.getContext('2d')!
       if (!offCtx)
         throw new Error('OffscreenCanvas 2D context not available')
+      offCtx.setTransform(1, 0, 0, 1, 0, 0)
+      offCtx.scale(exportScale, exportScale)
 
       // Dynamic import of mp4-muxer
       const { Muxer, ArrayBufferTarget } = await import('mp4-muxer')
@@ -568,6 +575,9 @@ export function useBarChartRace(
         ? Math.ceil(progressMax / progressPerFrame) + 1
         : totalFrames.value
 
+      // Bitrate scales with resolution; ~10 Mbps for 2K
+      const bitrate = Math.round(10_000_000 * (videoW * videoH) / (2560 * 1800))
+
       // Try codecs in order: H.264 Main → H.264 Baseline → H.264 High → VP9
       const codecCandidates: Array<{
         codec: string
@@ -577,22 +587,22 @@ export function useBarChartRace(
         {
           codec: 'H.264 Main',
           muxerCodec: 'avc',
-          config: { codec: 'avc1.4d001f', width: videoW, height: videoH, bitrate: 8_000_000, framerate: fps },
+          config: { codec: 'avc1.4d001f', width: videoW, height: videoH, bitrate, framerate: fps },
         },
         {
           codec: 'H.264 Baseline',
           muxerCodec: 'avc',
-          config: { codec: 'avc1.42001f', width: videoW, height: videoH, bitrate: 8_000_000, framerate: fps },
+          config: { codec: 'avc1.42001f', width: videoW, height: videoH, bitrate, framerate: fps },
         },
         {
           codec: 'H.264 High',
           muxerCodec: 'avc',
-          config: { codec: 'avc1.64001f', width: videoW, height: videoH, bitrate: 8_000_000, framerate: fps },
+          config: { codec: 'avc1.64001f', width: videoW, height: videoH, bitrate, framerate: fps },
         },
         {
           codec: 'VP9',
           muxerCodec: 'vp9',
-          config: { codec: 'vp09.00.10.08', width: videoW, height: videoH, bitrate: 8_000_000, framerate: fps },
+          config: { codec: 'vp09.00.10.08', width: videoW, height: videoH, bitrate, framerate: fps },
         },
       ]
 
@@ -640,8 +650,8 @@ export function useBarChartRace(
         for (const key of Object.keys(visualState))
           delete visualState[key]
 
-        // Render to offscreen canvas
-        render(progress, { canvas: offscreen, ctx: offCtx })
+        // Render to offscreen canvas at export scale
+        render(progress, { canvas: offscreen, ctx: offCtx, scale: exportScale })
 
         // Create VideoFrame and encode
         const videoFrame = new VideoFrame(offscreen, {
