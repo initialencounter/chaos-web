@@ -177,29 +177,45 @@ export function useBarChartRace(
   }
 
   function preloadAvatars(players: PlayerData[]): Promise<Record<string, HTMLImageElement | null>> {
-    const toLoad = players.filter(p => p.avatar)
-    if (toLoad.length === 0)
-      return Promise.resolve({})
-
     return new Promise((resolve) => {
       const result: Record<string, HTMLImageElement | null> = {}
-      let pending = toLoad.length
-      for (const p of toLoad) {
-        const img = new Image()
-        img.onload = () => {
-          result[p.uid] = img
-          pending--
-          if (pending === 0)
-            resolve(result)
+
+      // Load default avatar first, then overlay real avatars on success
+      const defaultImg = new Image()
+      defaultImg.onload = () => {
+        for (const p of players) {
+          result[p.uid] = defaultImg
         }
-        img.onerror = () => {
-          result[p.uid] = null
-          pending--
-          if (pending === 0)
-            resolve(result)
+
+        const toLoad = players.filter(p => p.avatar)
+        if (toLoad.length === 0) {
+          resolve(result)
+          return
         }
-        img.src = p.avatar!
+
+        let pending = toLoad.length
+        for (const p of toLoad) {
+          const img = new Image()
+          img.onload = () => {
+            result[p.uid] = img
+            pending--
+            if (pending === 0)
+              resolve(result)
+          }
+          img.onerror = () => {
+            // Keep default avatar on failure
+            pending--
+            if (pending === 0)
+              resolve(result)
+          }
+          img.src = p.avatar!
+        }
       }
+      defaultImg.onerror = () => {
+        // Default avatar also failed — fall back to no-avatar for everyone
+        resolve(result)
+      }
+      defaultImg.src = 'web/Z7.png'
     })
   }
 
