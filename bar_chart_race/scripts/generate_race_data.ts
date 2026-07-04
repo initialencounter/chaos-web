@@ -6,7 +6,7 @@
  * 按日汇总每个玩家的最佳成绩，生成累积最优曲线。
  * 支持的游戏和指标:
  *   扫雷 time  — sum of min(time) per level (1+2+3)
- *   扫雷 3bvs — sum of max(bvs) per level (1+2+3)
+ *   扫雷 3bvs — sum of max(bvs) per level (2+3)
  *   Nono time  — sum of min(time) per level (1+2+3+4)
  *   Puzzle time  — sum of min(time) per level (3+4+5)
  *   Puzzle steps — sum of min(step) per level (3+4+5)
@@ -39,6 +39,8 @@ interface MetricSpec {
   sortOrder: 'asc' | 'desc' // asc=越小越好
   msToSec?: boolean // 毫秒转秒
   decimals?: number // 小数位数
+  /** 覆盖 GameSpec.levels，不指定则使用游戏默认 levels */
+  levels?: string[]
 }
 
 const GAMES: GameSpec[] = [
@@ -47,7 +49,7 @@ const GAMES: GameSpec[] = [
     levels: ['1', '2', '3'],
     metrics: [
       { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
-      { key: '3bvs', field: 'bvs', aggregate: 'max', sortOrder: 'desc', decimals: 3 },
+      { key: '3bvs', field: 'bvs', aggregate: 'max', sortOrder: 'desc', decimals: 3, levels: ['2', '3'] },
     ],
     blacklist: [''],
   },
@@ -201,6 +203,8 @@ function generateRaceData(spec: GameSpec, metric: MetricSpec, urlToLocal: Map<st
     throw new Error(`数据目录不存在: ${dataDir}`)
   }
 
+  const levels = metric.levels ?? spec.levels
+
   const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'))
   console.log(`  [${spec.dir}/${metric.key}] 读取 ${files.length} 个玩家数据文件...`)
 
@@ -218,7 +222,7 @@ function generateRaceData(spec: GameSpec, metric: MetricSpec, urlToLocal: Map<st
     const uid = raw.uid
 
     for (const [level, records] of Object.entries(raw.records)) {
-      if (!spec.levels.includes(level))
+      if (!levels.includes(level))
         continue
       if (!Array.isArray(records))
         continue
@@ -321,9 +325,9 @@ function generateRaceData(spec: GameSpec, metric: MetricSpec, urlToLocal: Map<st
       }
 
       // 检查是否所有 level 都有数据
-      if (spec.levels.every(l => cumulativeBest.has(l))) {
+      if (levels.every(l => cumulativeBest.has(l))) {
         let sum = 0
-        for (const l of spec.levels) {
+        for (const l of levels) {
           sum += cumulativeBest.get(l)!
         }
         values.push(fmtValue(sum, metric.decimals!))
