@@ -60,7 +60,6 @@ const BAR_RADIUS = 2
 const LERP_SPEED = 0.32
 
 const BG_COLOR = '#1A1A2E'
-const SURFACE_COLOR = '#16213E'
 const TEXT_COLOR = '#EAEAEA'
 const ACCENT_COLOR = '#E94560'
 const MUTED_COLOR = 'rgba(234,234,234,0.35)'
@@ -158,7 +157,7 @@ export function useBarChartRace(
     const height = totalBarsHeight + paddingTop + paddingBottom
 
     canvas.width = wrapWidth * dpr.value
-    canvas.height = height * dpr.value
+    canvas.height = height * dpr.value - 45
     canvas.style.width = `${wrapWidth}px`
     canvas.style.height = `${height}px`
 
@@ -362,31 +361,33 @@ export function useBarChartRace(
     ctx.fillStyle = BG_COLOR
     ctx.fillRect(0, 0, w, h)
 
-    // Chart area background
-    ctx.fillStyle = SURFACE_COLOR
-    const chartBgH = TOP_N * BAR_HEIGHT + (TOP_N - 1) * BAR_GAP + 14
-    roundRect(ctx, padLeft - 10, padTop - 6, chartW + padRight - padLeft + 10, chartBgH, 8)
-    ctx.fill()
+    // Title area — positioned within top padding, everything adapts to padTop
+    const titleRight = w - padRight
+    const titleFontSize = Math.round(padTop * 0.33)
+    const subFontSize = Math.round(padTop * 0.17)
+    const dateFontSize = Math.round(padTop * 0.24)
+    const titleLineH = Math.round(padTop * 0.38)
+    const titleBaseY = Math.round(padTop * 0.55)
 
-    const TitleY = 122
     // Title — 右上角
     ctx.fillStyle = TEXT_COLOR
-    ctx.font = `700 ${Math.round(h * 0.028)}px "Microsoft YaHei", "PingFang SC", sans-serif`
+    ctx.font = `700 ${titleFontSize}px "Microsoft YaHei", "PingFang SC", sans-serif`
     ctx.textAlign = 'right'
-    ctx.fillText('扫雷三模式总时间排行榜', w - 80, TitleY)
-    ctx.textAlign = 'left'
+    ctx.fillText('扫雷三模式总时间排行榜', titleRight, titleBaseY)
 
     // Subtitle
     ctx.fillStyle = MUTED_COLOR
-    ctx.font = `${Math.round(h * 0.013)}px "Microsoft YaHei", "PingFang SC", sans-serif`
-    ctx.fillText('高级+中级+初级 最佳时间之和 | 时间越短排名越高', w - 373, TitleY + 25)
+    ctx.font = `${subFontSize}px "Microsoft YaHei", "PingFang SC", sans-serif`
+    ctx.textAlign = 'right'
+    ctx.fillText('高级+中级+初级 最佳时间之和 | 时间越短排名越高', titleRight, titleBaseY + titleLineH)
 
     const effectiveProgress = progress / INTERP_STEPS
     const dateIdx = Math.min(Math.floor(effectiveProgress), d.dates.length - 1)
     const dateStr = d.dates[dateIdx] ?? ''
     ctx.fillStyle = ACCENT_COLOR
-    ctx.font = `700 ${Math.round(h * 0.019)}px "Microsoft YaHei", "PingFang SC", sans-serif`
-    ctx.fillText(fmtDate(dateStr), w - 221, TitleY + 55)
+    ctx.font = `700 ${dateFontSize}px "Microsoft YaHei", "PingFang SC", sans-serif`
+    ctx.textAlign = 'right'
+    ctx.fillText(fmtDate(dateStr), titleRight, titleBaseY + titleLineH * 2)
 
     // Sorted players
     const sorted = getInterpolatedValues(progress).slice(0, TOP_N)
@@ -422,7 +423,7 @@ export function useBarChartRace(
       const rank = rankMap[uid] ?? '--'
       const isTop1 = rank === 1
 
-      const barY = vs.vy
+      const barY = vs.vy - 40
       const barW = Math.max(vs.vw, 3)
       const barH = BAR_HEIGHT
 
