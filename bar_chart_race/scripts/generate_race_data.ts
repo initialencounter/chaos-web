@@ -83,7 +83,7 @@ const GAMES: GameSpec[] = [
     metrics: [
       { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
     ],
-    blacklist: [],
+    blacklist: ['133149', '132252', '134943'],
     recordBlacklist: [],
   },
 ]
