@@ -136,6 +136,26 @@ export const GAME_CONFIGS: Record<string, Record<string, RaceGameConfig>> = {
       valueFormatter: (n: number) => `${n.toFixed(3)}s`,
       footerNote: '5×5+4×4+3×3 最佳时间之和 | 时间越短排名越高 | 数据每日更新',
     },
+    time_6_8: {
+      game: 'schulte',
+      metric: 'time_6_8',
+      dataFile: 'race_data_schulte_time_6_8.json',
+      titleLabel: '舒尔特方格总时间排行(中级)',
+      subtitle: '8×8+7×7+6×6 最佳时间之和 | 时间越短排名越高',
+      sortOrder: 'asc',
+      valueFormatter: (n: number) => `${n.toFixed(3)}s`,
+      footerNote: '8×8+7×7+6×6 最佳时间之和 | 时间越短排名越高 | 数据每日更新',
+    },
+    time_9_10: {
+      game: 'schulte',
+      metric: 'time_9_10',
+      dataFile: 'race_data_schulte_time_9_10.json',
+      titleLabel: '舒尔特方格总时间排行(高级)',
+      subtitle: '10×10+9×9 最佳时间之和 | 时间越短排名越高',
+      sortOrder: 'asc',
+      valueFormatter: (n: number) => `${n.toFixed(3)}s`,
+      footerNote: '10×10+9×9 最佳时间之和 | 时间越短排名越高 | 数据每日更新',
+    },
   },
 }
 
@@ -153,6 +173,8 @@ export const METRIC_LABELS: Record<string, string> = {
   '3bvs': '3BVS',
   'steps': '步数',
   'time_no_expert': '时间(初级~高级)',
+  'time_6_8': '时间(6×6~8×8)',
+  'time_9_10': '时间(9×9~10×10)',
 }
 
 // ---------------------------------------------------------------------------
