@@ -481,7 +481,7 @@ export function useBarChartRace(
   // ---- Render ----
   function render(
     progress: number,
-    target?: { canvas: HTMLCanvasElement | OffscreenCanvas, ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, scale?: number },
+    target?: { canvas: HTMLCanvasElement | OffscreenCanvas, ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, scale?: number, skipAvatars?: boolean },
   ) {
     const canvas = target?.canvas ?? canvasRef.value
     const ctx = target?.ctx ?? getCanvasCtx()
@@ -591,18 +591,20 @@ export function useBarChartRace(
 
       ctx.globalAlpha = opacity
 
-      // Avatar
-      const avatarImg = avatarImgs[uid]
-      const avatarX = barX + 2
-      const avatarY = barY + (BAR_HEIGHT - AVATAR_SIZE) / 2
-      if (avatarImg && AVATAR_SIZE >= 10) {
-        ctx.save()
-        ctx.beginPath()
-        ctx.arc(avatarX + AVATAR_SIZE / 2, avatarY + AVATAR_SIZE / 2, AVATAR_SIZE / 2, 0, Math.PI * 2)
-        ctx.closePath()
-        ctx.clip()
-        ctx.drawImage(avatarImg, avatarX, avatarY, AVATAR_SIZE, AVATAR_SIZE)
-        ctx.restore()
+      // Avatar — skip during export to avoid tainted canvas from cross-origin images
+      if (!target?.skipAvatars) {
+        const avatarImg = avatarImgs[uid]
+        const avatarX = barX + 2
+        const avatarY = barY + (BAR_HEIGHT - AVATAR_SIZE) / 2
+        if (avatarImg && AVATAR_SIZE >= 10) {
+          ctx.save()
+          ctx.beginPath()
+          ctx.arc(avatarX + AVATAR_SIZE / 2, avatarY + AVATAR_SIZE / 2, AVATAR_SIZE / 2, 0, Math.PI * 2)
+          ctx.closePath()
+          ctx.clip()
+          ctx.drawImage(avatarImg, avatarX, avatarY, AVATAR_SIZE, AVATAR_SIZE)
+          ctx.restore()
+        }
       }
 
       // Rank number
@@ -759,7 +761,7 @@ export function useBarChartRace(
         for (const key of Object.keys(visualState))
           delete visualState[key]
 
-        render(progress, { canvas: offscreen, ctx: offCtx, scale: exportScale })
+        render(progress, { canvas: offscreen, ctx: offCtx, scale: exportScale, skipAvatars: true })
 
         const videoFrame = new VideoFrame(offscreen, {
           timestamp: i * frameDurationUs,
@@ -952,13 +954,17 @@ export function useBarChartRace(
 
       resizeCanvas()
 
-      avatars.value = await preloadAvatars(raceData.players)
-
+      // 立即渲染首帧（不等待头像加载）
       animationProgress.value = totalFrames.value - 1
       needsSnap.value = true
       render(animationProgress.value)
-
       loading.value = false
+
+      // 后台异步加载头像，加载完成后自动更新渲染
+      preloadAvatars(raceData.players).then((av) => {
+        avatars.value = av
+        render(animationProgress.value)
+      })
     }
     catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)

@@ -75,7 +75,7 @@ function playIcon() {
   return playing.value ? '⏸' : '▶'
 }
 
-const speedOptions = [0.5, 1, 2, 4]
+const speedOptions = [8, 16, 32, 48, 64, 128]
 
 function onProgressInput(e: Event) {
   const target = e.target as HTMLInputElement
