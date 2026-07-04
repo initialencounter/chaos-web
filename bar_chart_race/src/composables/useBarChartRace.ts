@@ -559,6 +559,15 @@ export function useBarChartRace(
       const fps = 60
       const frameDurationUs = Math.round(1_000_000 / fps)
 
+      // Match real-time playback: live advance per frame = speed * INTERP_STEPS * dt
+      // where dt ≈ 1/60s at 60fps display. So progressPerFrame = speed * INTERP_STEPS / fps.
+      const speedValue = speed.value
+      const progressPerFrame = (speedValue * INTERP_STEPS) / fps
+      const progressMax = totalFrames.value - 1
+      const videoFrameCount = progressPerFrame > 0
+        ? Math.ceil(progressMax / progressPerFrame) + 1
+        : totalFrames.value
+
       // Try codecs in order: H.264 Main → H.264 Baseline → H.264 High → VP9
       const codecCandidates: Array<{
         codec: string
@@ -617,12 +626,12 @@ export function useBarChartRace(
 
       encoder.configure(selectedCodec.config)
 
-      const frameCount = totalFrames.value
-
-      for (let i = 0; i < frameCount; i++) {
+      for (let i = 0; i < videoFrameCount; i++) {
         // Abort if encoder errored asynchronously
         if (encoderError)
           throw encoderError
+
+        const progress = Math.min(i * progressPerFrame, progressMax)
 
         // Reset state for snap-mode rendering (each frame independent)
         needsSnap.value = true
@@ -632,7 +641,7 @@ export function useBarChartRace(
           delete visualState[key]
 
         // Render to offscreen canvas
-        render(i, { canvas: offscreen, ctx: offCtx })
+        render(progress, { canvas: offscreen, ctx: offCtx })
 
         // Create VideoFrame and encode
         const videoFrame = new VideoFrame(offscreen, {
@@ -642,7 +651,7 @@ export function useBarChartRace(
         encoder.encode(videoFrame)
         videoFrame.close()
 
-        exportProgress.value = ((i + 1) / frameCount) * 100
+        exportProgress.value = ((i + 1) / videoFrameCount) * 100
 
         // Yield to browser every 10 frames to keep UI responsive
         if (i % 10 === 0) {
@@ -653,13 +662,14 @@ export function useBarChartRace(
       await encoder.flush()
       muxer.finalize()
 
-      // Trigger download
+      // Trigger download — filename includes speed for clarity
+      const speedLabel = speedValue === 1 ? '' : `-${speedValue}x`
       const buffer = (muxer.target as unknown as { buffer: ArrayBuffer }).buffer
       const blob = new Blob([buffer], { type: 'video/mp4' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'bar-chart-race.mp4'
+      a.download = `bar-chart-race${speedLabel}.mp4`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
