@@ -28,6 +28,8 @@ interface GameSpec {
   dir: string
   levels: string[]
   metrics: MetricSpec[]
+  /** 黑名单 UID，不进入该项目排行榜 */
+  blacklist?: string[]
 }
 
 interface MetricSpec {
@@ -47,6 +49,7 @@ const GAMES: GameSpec[] = [
       { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
       { key: '3bvs', field: 'bvs', aggregate: 'max', sortOrder: 'desc', decimals: 3 },
     ],
+    blacklist: [''],
   },
   {
     dir: 'nono',
@@ -54,6 +57,7 @@ const GAMES: GameSpec[] = [
     metrics: [
       { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
     ],
+    blacklist: [],
   },
   {
     dir: 'puzzle',
@@ -62,6 +66,7 @@ const GAMES: GameSpec[] = [
       { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
       { key: 'steps', field: 'step', aggregate: 'min', sortOrder: 'asc', decimals: 0 },
     ],
+    blacklist: ['99592', '118343', '114757', '113518'],
   },
   {
     dir: 'schulte',
@@ -69,6 +74,7 @@ const GAMES: GameSpec[] = [
     metrics: [
       { key: 'time', field: 'time', aggregate: 'min', sortOrder: 'asc', msToSec: true, decimals: 1 },
     ],
+    blacklist: [],
   },
 ]
 
@@ -259,6 +265,21 @@ function generateRaceData(spec: GameSpec, metric: MetricSpec, urlToLocal: Map<st
   for (const [, uidMap] of dateMap) {
     for (const uid of uidMap.keys()) {
       allUids.add(uid)
+    }
+  }
+
+  // Step 3.5: 过滤项目黑名单
+  if (spec.blacklist && spec.blacklist.length > 0) {
+    const blacklistSet = new Set(spec.blacklist)
+    let blacklistedCount = 0
+    for (const uid of allUids) {
+      if (blacklistSet.has(uid)) {
+        allUids.delete(uid)
+        blacklistedCount++
+      }
+    }
+    if (blacklistedCount > 0) {
+      console.log(`    已排除 ${blacklistedCount} 个黑名单玩家`)
     }
   }
 
