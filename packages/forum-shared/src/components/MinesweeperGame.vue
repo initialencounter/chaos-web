@@ -8,6 +8,7 @@ import {
   onUnmounted,
   ref,
   shallowRef,
+  watch,
 } from 'vue'
 import { useForumApi } from '../inject'
 
@@ -112,7 +113,38 @@ function playSound(buffer: AudioBuffer | null) {
 // ==================== Canvas 渲染 ====================
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const ctx = shallowRef<CanvasRenderingContext2D | null>(null)
-const cellSize = 20
+const baseCellSize = 20
+const zoom = ref(1.0)
+const cellSize = computed(() => Math.max(8, Math.round(baseCellSize * zoom.value)))
+const ZOOM_MIN = 0.25
+const ZOOM_MAX = 3.0
+const ZOOM_STEP = 0.25
+
+function zoomIn() {
+  zoom.value = Math.min(ZOOM_MAX, zoom.value + ZOOM_STEP)
+}
+
+function zoomOut() {
+  zoom.value = Math.max(ZOOM_MIN, zoom.value - ZOOM_STEP)
+}
+
+function resetZoom() {
+  zoom.value = 1.0
+}
+
+function onCanvasWheel(e: WheelEvent) {
+  e.preventDefault()
+  const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP
+  zoom.value = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom.value + delta))
+}
+
+// 缩放变化时重建画布
+watch(zoom, () => {
+  nextTick(() => {
+    initCanvas()
+    render()
+  })
+})
 
 // 皮肤图片（复用与 MinesweeperPlayer 相同的资源路径）
 const skinUrls = [
@@ -151,9 +183,10 @@ function initCanvas() {
   const canvas = canvasRef.value
   if (!canvas)
     return
-  ctx.value = canvas.getContext('2d')
-  canvas.width = config.value.cols * cellSize
-  canvas.height = config.value.rows * cellSize
+  ctx.value = canvas.getContext('2d')!
+  ctx.value.imageSmoothingEnabled = false
+  canvas.width = config.value.cols * cellSize.value
+  canvas.height = config.value.rows * cellSize.value
 }
 
 function render() {
@@ -189,7 +222,7 @@ function render() {
 
       const img = loadedImages[imgIndex]
       if (img) {
-        g.drawImage(img, c * cellSize, r * cellSize, cellSize, cellSize)
+        g.drawImage(img, c * cellSize.value, r * cellSize.value, cellSize.value, cellSize.value)
       }
       else {
         // Fallback colors
@@ -201,9 +234,9 @@ function render() {
               : imgIndex === 9
                 ? '#ff0000'
                 : '#888888'
-        g.fillRect(c * cellSize, r * cellSize, cellSize, cellSize)
+        g.fillRect(c * cellSize.value, r * cellSize.value, cellSize.value, cellSize.value)
         g.strokeStyle = '#999'
-        g.strokeRect(c * cellSize, r * cellSize, cellSize, cellSize)
+        g.strokeRect(c * cellSize.value, r * cellSize.value, cellSize.value, cellSize.value)
       }
     }
   }
@@ -795,8 +828,8 @@ function onCanvasMouseDown(e: MouseEvent) {
   const rect = canvas.getBoundingClientRect()
   const x = e.clientX - rect.left
   const y = e.clientY - rect.top
-  const col = Math.floor(x / cellSize)
-  const row = Math.floor(y / cellSize)
+  const col = Math.floor(x / cellSize.value)
+  const row = Math.floor(y / cellSize.value)
 
   if (row < 0 || row >= config.value.rows || col < 0 || col >= config.value.cols)
     return
@@ -821,8 +854,8 @@ function onCanvasDoubleClick(e: MouseEvent) {
   const rect = canvas.getBoundingClientRect()
   const x = e.clientX - rect.left
   const y = e.clientY - rect.top
-  const col = Math.floor(x / cellSize)
-  const row = Math.floor(y / cellSize)
+  const col = Math.floor(x / cellSize.value)
+  const row = Math.floor(y / cellSize.value)
 
   if (row < 0 || row >= config.value.rows || col < 0 || col >= config.value.cols)
     return
@@ -903,13 +936,26 @@ onUnmounted(() => {
       </div>
 
       <!-- 游戏棋盘 -->
-      <div class="canvas-wrapper">
+      <div class="canvas-wrapper" @wheel="onCanvasWheel">
         <canvas
           ref="canvasRef"
           @mousedown="onCanvasMouseDown"
           @dblclick="onCanvasDoubleClick"
           @contextmenu="onCanvasContextMenu"
         />
+      </div>
+
+      <!-- 缩放控件 -->
+      <div class="zoom-bar">
+        <button class="zoom-btn" title="缩小" @click="zoomOut">
+          −
+        </button>
+        <button class="zoom-reset" title="重置缩放" @click="resetZoom">
+          {{ Math.round(zoom * 100) }}%
+        </button>
+        <button class="zoom-btn" title="放大" @click="zoomIn">
+          +
+        </button>
       </div>
     </div>
 
@@ -1136,6 +1182,49 @@ onUnmounted(() => {
 canvas {
   image-rendering: pixelated;
   cursor: pointer;
+}
+
+/* ========== 缩放控件 ========== */
+.zoom-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.zoom-btn,
+.zoom-reset {
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zoom-btn {
+  width: 32px;
+  height: 32px;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.zoom-reset {
+  padding: 4px 14px;
+  min-width: 60px;
+  font-size: 0.85rem;
+}
+
+.zoom-btn:hover,
+.zoom-reset:hover {
+  background: #3a3a3a;
+  border-color: #fa7299;
+  color: #fff;
 }
 
 /* ========== 成绩面板 ========== */
