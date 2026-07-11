@@ -1172,8 +1172,7 @@ onUnmounted(() => {
 /* ========== 棋盘 ========== */
 .canvas-wrapper {
   overflow: auto;
-  display: flex;
-  justify-content: center;
+  display: grid;
   background: #b6ccd2;
   padding: 15px;
   border-radius: 6px;
@@ -1182,6 +1181,7 @@ onUnmounted(() => {
 canvas {
   image-rendering: pixelated;
   cursor: pointer;
+  justify-self: safe center;
 }
 
 /* ========== 缩放控件 ========== */
