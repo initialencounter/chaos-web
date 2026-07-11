@@ -496,8 +496,14 @@ function handleCellClick(row: number, col: number) {
   if (gameStatus.value !== 'playing')
     return
 
-  // 不能点击已翻开的（chord 操作通过双击处理）或已标记的
-  if (cell.isOpen || cell.isFlagged)
+  // 点击已翻开的数字格 → Chord 操作
+  if (cell.isOpen) {
+    tryChord(row, col)
+    return
+  }
+
+  // 已标记的不能翻开
+  if (cell.isFlagged)
     return
 
   // 打开格子
@@ -525,8 +531,11 @@ function handleCellRightClick(row: number, col: number) {
     return
 
   const cell = cells.value[row]![col]!
-  if (cell.isOpen)
+  // 右键点击已翻开的数字格 → Chord 操作
+  if (cell.isOpen) {
+    tryChord(row, col)
     return
+  }
 
   recordAction(1, row, col)
 
@@ -537,27 +546,24 @@ function handleCellRightClick(row: number, col: number) {
   render()
 }
 
-// 双击/Chord 操作：如果数字格周围旗帜数等于数字，自动翻开周围非旗帜格
-function handleCellDoubleClick(row: number, col: number) {
-  if (gameStatus.value !== 'playing')
-    return
-
+// Chord 操作：数字格周围旗帜数等于数字时，自动翻开周围非旗帜格
+function tryChord(row: number, col: number): boolean {
   const cell = cells.value[row]![col]!
-  if (!cell.isOpen || cell.isMine)
-    return
-  if (cell.adjacentMines === 0)
-    return
+  // 必须是已翻开的数字格（非雷、非0格）
+  if (!cell.isOpen || cell.isMine || cell.adjacentMines === 0)
+    return false
 
   // 计算周围旗帜数
   let flagsAround = 0
   const toReveal: [number, number][] = []
+  const { rows, cols } = config.value
   for (let dr = -1; dr <= 1; dr++) {
     for (let dc = -1; dc <= 1; dc++) {
       if (dr === 0 && dc === 0)
         continue
       const nr = row + dr
       const nc = col + dc
-      if (nr < 0 || nr >= config.value.rows || nc < 0 || nc >= config.value.cols)
+      if (nr < 0 || nr >= rows || nc < 0 || nc >= cols)
         continue
       const neighbor = cells.value[nr]![nc]!
       if (neighbor.isFlagged) {
@@ -570,9 +576,9 @@ function handleCellDoubleClick(row: number, col: number) {
   }
 
   if (flagsAround !== cell.adjacentMines)
-    return
+    return false
 
-  // 记录 chord 操作（action=0 作用在已翻开数字格上，重放时解析为 chord）
+  // 记录 chord 操作
   recordAction(0, row, col)
 
   // 翻开周围格子
@@ -597,14 +603,13 @@ function handleCellDoubleClick(row: number, col: number) {
     gameStatus.value = 'lost'
     stopTimer()
     revealAllMines()
-    playSound(openBuffer)
-    render()
-    return
   }
 
   playSound(openBuffer)
   render()
-  checkWin()
+  if (!hitMine)
+    checkWin()
+  return true
 }
 
 function revealAllMines() {
@@ -868,8 +873,7 @@ function onCanvasMouseDown(e: MouseEvent) {
     return
 
   if (e.button === 0) {
-    // 左键：检测是否双击
-    // 双击通过原生 dblclick 事件处理
+    // 左键
     handleCellClick(row, col)
   }
   else if (e.button === 2) {
@@ -893,7 +897,7 @@ function onCanvasDoubleClick(e: MouseEvent) {
   if (row < 0 || row >= config.value.rows || col < 0 || col >= config.value.cols)
     return
 
-  handleCellDoubleClick(row, col)
+  tryChord(row, col)
 }
 
 function onCanvasContextMenu(e: MouseEvent) {
