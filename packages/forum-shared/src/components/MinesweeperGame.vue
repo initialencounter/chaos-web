@@ -199,10 +199,16 @@ function render() {
   if (!board.length)
     return
 
-  g.clearRect(0, 0, canvas.width, canvas.height)
+  const cw = canvas.width
+  const ch = canvas.height
+  g.clearRect(0, 0, cw, ch)
 
-  for (let r = 0; r < config.value.rows; r++) {
-    for (let c = 0; c < config.value.cols; c++) {
+  const cs = cellSize.value
+  const rows = config.value.rows
+  const cols = config.value.cols
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       const cell = board[r]![c]!
       let imgIndex: number
       if (cell.isOpen) {
@@ -222,7 +228,7 @@ function render() {
 
       const img = loadedImages[imgIndex]
       if (img) {
-        g.drawImage(img, c * cellSize.value, r * cellSize.value, cellSize.value, cellSize.value)
+        g.drawImage(img, c * cs, r * cs, cs, cs)
       }
       else {
         // Fallback colors
@@ -234,9 +240,9 @@ function render() {
               : imgIndex === 9
                 ? '#ff0000'
                 : '#888888'
-        g.fillRect(c * cellSize.value, r * cellSize.value, cellSize.value, cellSize.value)
+        g.fillRect(c * cs, r * cs, cs, cs)
         g.strokeStyle = '#999'
-        g.strokeRect(c * cellSize.value, r * cellSize.value, cellSize.value, cellSize.value)
+        g.strokeRect(c * cs, r * cs, cs, cs)
       }
     }
   }
@@ -324,31 +330,54 @@ function generateMap(safeRow: number, safeCol: number) {
   cells.value = board
 }
 
-// ==================== 递归翻开 ====================
-function revealCell(r: number, c: number) {
+// ==================== 迭代翻开（栈实现，避免递归开销） ====================
+function revealCell(r: number, c: number): number {
   const board = cells.value
   const { rows, cols } = config.value
 
-  if (r < 0 || r >= rows || c < 0 || c >= cols)
-    return
+  const firstCell = board[r]![c]!
+  if (firstCell.isOpen || firstCell.isFlagged)
+    return 0
+  if (firstCell.isMine) {
+    firstCell.isOpen = true
+    return 1
+  }
 
-  const cell = board[r]![c]!
-  if (cell.isOpen || cell.isFlagged)
-    return
+  // 迭代 DFS：用栈代替递归，一次性处理所有连通翻开
+  const stack: [number, number][] = [[r, c]]
+  let opened = 0
 
-  cell.isOpen = true
-  openedCount.value++
+  while (stack.length > 0) {
+    const [cr, cc] = stack.pop()!
+    const cell = board[cr]![cc]!
+    if (cell.isOpen || cell.isFlagged)
+      continue
 
-  // 如果是空格，递归翻开周围
-  if (!cell.isMine && cell.adjacentMines === 0) {
-    for (let dr = -1; dr <= 1; dr++) {
-      for (let dc = -1; dc <= 1; dc++) {
-        if (dr === 0 && dc === 0)
+    cell.isOpen = true
+    opened++
+
+    // 空格：将周围未翻开格子入栈
+    if (cell.adjacentMines === 0) {
+      for (let dr = -1; dr <= 1; dr++) {
+        const nr = cr + dr
+        if (nr < 0 || nr >= rows)
           continue
-        revealCell(r + dr, c + dc)
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0)
+            continue
+          const nc = cc + dc
+          if (nc < 0 || nc >= cols)
+            continue
+          const neighbor = board[nr]![nc]!
+          if (!neighbor.isOpen && !neighbor.isFlagged) {
+            stack.push([nr, nc])
+          }
+        }
       }
     }
   }
+
+  return opened
 }
 
 // ==================== 记录操作 ====================
@@ -473,7 +502,8 @@ function handleCellClick(row: number, col: number) {
 
   // 打开格子
   recordAction(0, row, col)
-  revealCell(row, col)
+  const opened = revealCell(row, col)
+  openedCount.value += opened
 
   if (cell.isMine) {
     // 踩雷，游戏结束
@@ -547,18 +577,21 @@ function handleCellDoubleClick(row: number, col: number) {
 
   // 翻开周围格子
   let hitMine = false
+  let opened = 0
   for (const [nr, nc] of toReveal) {
     const neighbor = cells.value[nr]![nc]!
     if (neighbor.isFlagged)
       continue
     if (neighbor.isMine) {
       neighbor.isOpen = true
+      opened++
       hitMine = true
     }
     else {
-      revealCell(nr, nc)
+      opened += revealCell(nr, nc)
     }
   }
+  openedCount.value += opened
 
   if (hitMine) {
     gameStatus.value = 'lost'
