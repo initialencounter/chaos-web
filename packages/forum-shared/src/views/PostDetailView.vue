@@ -23,7 +23,7 @@ import iconLike from '../../../../icons/ic_post_good.png'
 import iconLikeActive from '../../../../icons/ic_post_good_active.webp'
 
 import UserAvatar from '../components/UserAvatar.vue'
-import { resolveAsset } from '../inject'
+import { resolveAsset, useForumApi } from '../inject'
 import { usePostStore } from '../stores/post'
 
 defineOptions({ name: 'PostDetailView' })
@@ -56,6 +56,26 @@ const togglingPostLike = ref(false)
 const showCommentInput = ref(false)
 const commentInputRef = ref<HTMLTextAreaElement | null>(null)
 const commentsRef = ref<HTMLElement | null>(null)
+
+// 右键/长按上下文菜单
+const contextMenu = ref<{
+  show: boolean
+  x: number
+  y: number
+  commentId: number
+  commentUid: string
+  commentText: string
+  showDelete: boolean
+}>({
+  show: false,
+  x: 0,
+  y: 0,
+  commentId: 0,
+  commentUid: '',
+  commentText: '',
+  showDelete: false,
+})
+let longPressTimer: ReturnType<typeof setTimeout> | null = null
 
 function scrollToComments() {
   commentsRef.value?.scrollIntoView({ behavior: 'smooth' })
@@ -287,6 +307,82 @@ async function handleDeleteComment(commentId: number) {
   catch (e) {
     console.error('删除评论失败:', e)
   }
+}
+
+function openContextMenu(event: MouseEvent, commentId: number) {
+  const comment = comments.value.find(c => c.id === commentId)
+  if (!comment)
+    return
+  const showDelete = !!(props.currentUid && comment.uid === props.currentUid)
+  contextMenu.value = {
+    show: true,
+    x: event.clientX,
+    y: event.clientY,
+    commentId,
+    commentUid: comment.uid,
+    commentText: comment.comment,
+    showDelete,
+  }
+}
+
+function closeContextMenu() {
+  contextMenu.value = {
+    show: false,
+    x: 0,
+    y: 0,
+    commentId: 0,
+    commentUid: '',
+    commentText: '',
+    showDelete: false,
+  }
+}
+
+function startLongPress(event: PointerEvent, commentId: number) {
+  cancelLongPress()
+  longPressTimer = setTimeout(() => {
+    openContextMenu(event, commentId)
+  }, 500)
+}
+
+function cancelLongPress() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
+function handleContextDelete() {
+  handleDeleteComment(contextMenu.value.commentId)
+  closeContextMenu()
+}
+
+async function handleContextCopy() {
+  try {
+    await navigator.clipboard.writeText(contextMenu.value.commentText)
+  }
+  catch {
+    // fallback for older browsers
+    const textarea = document.createElement('textarea')
+    textarea.value = contextMenu.value.commentText
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+  }
+  closeContextMenu()
+}
+
+async function handleContextBlock() {
+  const api = useForumApi()
+  try {
+    await api.relationSet(Number(contextMenu.value.commentUid), 2)
+  }
+  catch (e) {
+    console.error('屏蔽用户失败:', e)
+  }
+  closeContextMenu()
 }
 
 function openReplies(commentId: number) {
@@ -565,6 +661,12 @@ onUnmounted(() => {
             v-for="comment in comments"
             :key="comment.id"
             class="comment-item"
+            :class="{ 'context-menu-target': contextMenu.show && contextMenu.commentId === comment.id }"
+            @contextmenu.prevent="(e: MouseEvent) => openContextMenu(e, comment.id)"
+            @pointerdown="(e: PointerEvent) => startLongPress(e, comment.id)"
+            @pointerup="cancelLongPress"
+            @pointermove="cancelLongPress"
+            @pointerleave="cancelLongPress"
           >
             <div class="comment-header">
               <UserAvatar
@@ -589,13 +691,6 @@ onUnmounted(() => {
                   <img v-if="comment.hasGood" :src="iconLikeActive" alt="like" class="comment-action-icon">
                   <img v-else :src="iconLike" alt="like" class="comment-action-icon">
                   <span class="count-text">{{ comment.goodCount }}</span>
-                </button>
-                <button
-                  v-if="currentUid && comment.uid === currentUid"
-                  class="comment-delete-btn"
-                  @click="handleDeleteComment(comment.id)"
-                >
-                  删除
                 </button>
               </div>
             </div>
@@ -634,6 +729,32 @@ onUnmounted(() => {
               </div>
             </div>
           </div>
+
+          <!-- 右键/长按上下文菜单 -->
+          <Teleport to="body">
+            <div
+              v-if="contextMenu.show"
+              class="context-menu-overlay"
+              @click="closeContextMenu"
+              @contextmenu.prevent="closeContextMenu"
+            >
+              <div
+                class="context-menu"
+                :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
+                @click.stop
+              >
+                <div class="context-menu-item" @click="handleContextCopy">
+                  复制评论
+                </div>
+                <div class="context-menu-item" @click="handleContextBlock">
+                  屏蔽用户
+                </div>
+                <div v-if="contextMenu.showDelete" class="context-menu-item delete" @click="handleContextDelete">
+                  删除评论
+                </div>
+              </div>
+            </div>
+          </Teleport>
 
           <div class="load-more-comments">
             <button
@@ -1566,5 +1687,56 @@ onUnmounted(() => {
 
 :deep(.replay-link:hover) {
   text-decoration: underline;
+}
+
+/* 右键/长按上下文菜单 */
+.context-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+.context-menu {
+  position: absolute;
+  min-width: 120px;
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  padding: 4px 0;
+  overflow: hidden;
+  animation: contextMenuFadeIn 0.15s ease-out;
+}
+
+@keyframes contextMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.context-menu-item {
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  color: #e0e0e0;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+}
+
+.context-menu-item:hover {
+  background: #333;
+}
+
+.context-menu-item.delete {
+  color: #ff6b6b;
+}
+
+.context-menu-item.delete:hover {
+  background: #3a2020;
 }
 </style>
