@@ -410,23 +410,20 @@ function openReplay(recordId?: number) {
 }
 
 function goBack() {
-  if (window.history.state && window.history.state.back) {
-    router.back()
-  }
-  else {
-    router.push({ name: 'forum-home' })
-  }
+  router.back()
 }
 
 const showDeleteConfirm = ref(false)
+const deleting = ref(false)
 
 function handleDeletePost() {
   showDeleteConfirm.value = true
 }
 
 async function confirmDeletePost() {
-  if (!post.value)
+  if (!post.value || deleting.value)
     return
+  deleting.value = true
   const api = useForumApi()
   try {
     const res = await api.postDelete(post.value.id)
@@ -441,6 +438,9 @@ async function confirmDeletePost() {
   }
   catch {
     ElMessage.error('删除失败，请重试')
+  }
+  finally {
+    deleting.value = false
   }
 }
 
@@ -538,11 +538,11 @@ onUnmounted(() => {
               确定要删除这个帖子吗？此操作不可撤销。
             </p>
             <div class="confirm-actions">
-              <button class="confirm-btn cancel" @click="showDeleteConfirm = false">
+              <button class="confirm-btn cancel" :disabled="deleting" @click="showDeleteConfirm = false">
                 取消
               </button>
-              <button class="confirm-btn danger" @click="confirmDeletePost">
-                确定删除
+              <button class="confirm-btn danger" :disabled="deleting" @click="confirmDeletePost">
+                {{ deleting ? "删除中..." : "确定删除" }}
               </button>
             </div>
           </div>
@@ -1106,6 +1106,11 @@ onUnmounted(() => {
 }
 .confirm-btn.danger:hover {
   background: #b71c1c;
+}
+
+.confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .loading {

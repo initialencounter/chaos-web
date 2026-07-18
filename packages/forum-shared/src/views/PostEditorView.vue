@@ -66,6 +66,7 @@ function clearDraft() {
 }
 
 let draftTimer: ReturnType<typeof setTimeout> | null = null
+let messageTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleDraft() {
   if (draftTimer)
     clearTimeout(draftTimer)
@@ -81,6 +82,8 @@ watch([title, text, topics, anonymous], () => {
 onBeforeUnmount(() => {
   if (draftTimer)
     clearTimeout(draftTimer)
+  if (messageTimer)
+    clearTimeout(messageTimer)
 })
 
 // ========== 板块下拉 ==========
@@ -167,10 +170,13 @@ function insertAtCursor(textToInsert: string) {
 
 // ========== 消息提示 ==========
 function showMessage(msg: string, type: 'success' | 'error') {
+  if (messageTimer)
+    clearTimeout(messageTimer)
   message.value = msg
   messageType.value = type
-  setTimeout(() => {
+  messageTimer = setTimeout(() => {
     message.value = ''
+    messageTimer = null
   }, 3000)
 }
 
@@ -219,12 +225,7 @@ function goBack() {
   if (title.value || text.value) {
     saveDraft()
   }
-  if (window.history.state && window.history.state.back) {
-    router.back()
-  }
-  else {
-    router.push({ name: 'forum-home' })
-  }
+  router.back()
 }
 
 // ========== Tab 控制 ==========
@@ -286,7 +287,6 @@ onBeforeUnmount(() => {
         class="title-input"
         placeholder="请输入标题..."
         maxlength="100"
-        @input="scheduleDraft"
       >
 
       <!-- 板块选择 + 匿名 -->
@@ -354,7 +354,6 @@ onBeforeUnmount(() => {
           v-model="text"
           class="text-editor"
           placeholder="请输入内容... 支持 Markdown 语法&#10;Ctrl+Enter 快速发布"
-          @input="scheduleDraft"
         />
         <div
           v-show="showPreview"

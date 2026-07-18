@@ -9,9 +9,9 @@ import {
   encryptAESECB,
   executeRequest,
   LOGIN_CONFIG,
+  OSS_ACCESS_KEY_ID,
   randomBase64String,
 } from '@tapsss/server'
-import { OSS_ACCESS_KEY_ID } from '@tapsss/server/src/secrets'
 import { app, BrowserWindow, globalShortcut, ipcMain, net, session } from 'electron'
 import { WebSocket } from 'ws'
 
