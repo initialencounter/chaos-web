@@ -133,6 +133,8 @@ function resetZoom() {
 }
 
 function onCanvasWheel(e: WheelEvent) {
+  if (!e.ctrlKey)
+    return
   e.preventDefault()
   const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP
   zoom.value = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom.value + delta))
@@ -962,7 +964,7 @@ onUnmounted(() => {
       <!-- 状态栏 -->
       <div class="status-bar">
         <div class="mine-counter">
-          💣 {{ remainingMines }}
+          雷 {{ remainingMines }}
         </div>
         <button class="face-btn" @click="resetGame">
           {{ faceEmoji }}
@@ -1108,7 +1110,7 @@ onUnmounted(() => {
   border-radius: 12px;
   padding: 20px;
   color: #fff;
-  max-width: 900px;
+  width: 100%;
   margin: 0 auto;
   user-select: none;
 }

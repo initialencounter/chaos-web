@@ -16,7 +16,7 @@ import MinesweeperGame from '@tapsss/forum-shared/components/MinesweeperGame.vue
 
 <style scoped>
 .minesweeper-game-page {
-  max-width: 960px;
+  width: 100%;
   margin: 0 auto;
   padding: 16px;
 }
