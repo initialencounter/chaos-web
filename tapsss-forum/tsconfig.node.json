@@ -12,6 +12,8 @@
     "moduleResolution": "bundler",
 
     "paths": {
+      "@tapsss/shared": ["../packages/shared/src"],
+      "@tapsss/shared/*": ["../packages/shared/src/*"],
       "@tapsss/server": ["../packages/server/src"],
       "@tapsss/server/*": ["../packages/server/src/*"]
     },
@@ -24,6 +26,7 @@
   "include": [
     "secrets.ts",
     "proxy-server.ts",
+    "coin.ts",
     "vite.config.*",
     "vitest.config.*",
     "cypress.config.*",
