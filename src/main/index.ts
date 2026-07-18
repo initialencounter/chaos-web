@@ -11,12 +11,16 @@ import {
   LOGIN_CONFIG,
   randomBase64String,
 } from '@tapsss/server'
+import { OSS_ACCESS_KEY_ID } from '@tapsss/server/src/secrets'
 import { app, BrowserWindow, globalShortcut, ipcMain, net, session } from 'electron'
 import { WebSocket } from 'ws'
 
 const VITE_DEV_SERVER_URL = process.env.DS_RENDERER_URL
 const TARGET_HOST = 'minesweeper.natapp1.cc'
 export const TARGET_BASE_URL = `http://${TARGET_HOST}`
+export const OSS_BUCKET = 'minesweeper'
+export const OSS_ENDPOINT = 'oss-cn-hongkong.aliyuncs.com'
+export const OSS_HOST = `${OSS_BUCKET}.${OSS_ENDPOINT}`
 
 let mainWindow: BrowserWindow | null = null
 let chaosWs: WebSocket | null = null
@@ -352,6 +356,41 @@ function setupIPC(): void {
       const res = await fetch(`${PROXY_BASE_URL}${path}`)
       const json = await res.json()
       return { success: true, code: (json as any).code, msg: (json as any).msg, data: (json as any).data }
+    }
+    catch (e: any) {
+      return { success: false, msg: e.message }
+    }
+  })
+
+  // OSS 直传 — 主进程绕过 CORS
+  ipcMain.handle('oss:upload', async (_event, fileBuffer: ArrayBuffer, filename: string, contentType: string) => {
+    try {
+      // 1. 获取 OSS 签名
+      const dateStr = new Date().toUTCString()
+      const canonical = `PUT\n\n${contentType}\n${dateStr}\n/${OSS_BUCKET}/${filename}`
+      const signResp: any = await executeRequest('/Minesweeper/oss/sign', 'POST', { sign: canonical })
+      if (signResp.code !== 200) {
+        return { success: false, msg: signResp.msg || 'OSS 签名失败' }
+      }
+      const sig = signResp.data
+
+      // 2. 上传到 OSS（主进程 net.fetch 不受 CORS 限制）
+      const url = `https://${OSS_HOST}/${filename}`
+      const resp = await net.fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `OSS ${OSS_ACCESS_KEY_ID}:${sig}`,
+          'Date': dateStr,
+          'Content-Type': contentType,
+        },
+        body: Buffer.from(fileBuffer),
+      })
+
+      if (resp.status !== 200) {
+        return { success: false, msg: `OSS 上传失败: ${resp.status}` }
+      }
+
+      return { success: true, url }
     }
     catch (e: any) {
       return { success: false, msg: e.message }

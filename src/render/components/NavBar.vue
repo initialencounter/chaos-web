@@ -29,6 +29,12 @@ function goToHome() {
           首页
         </router-link>
         <router-link
+          :to="{ name: 'post-new' }"
+          class="nav-link"
+        >
+          发布
+        </router-link>
+        <router-link
           :to="{ name: 'message' }"
           class="nav-link"
           :class="{ active: route.path === '/forum/message' }"

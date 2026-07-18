@@ -88,6 +88,18 @@ export function createForumApi(fetchFn: FetchFn) {
       return fetchFn<PostResponse>('/post/comment/delete', { commentId })
     },
 
+    postAdd(anonymous: boolean, title: string, text: string, topics: string): Promise<PostResponse> {
+      return fetchFn<PostResponse>('/post/add', { anonymous, title, text, topics })
+    },
+
+    postDelete(postId: number): Promise<PostResponse> {
+      return fetchFn<PostResponse>('/post/delete', { postId })
+    },
+
+    ossSign(canonical: string): Promise<{ code: number, data: string, msg: string }> {
+      return fetchFn<{ code: number, data: string, msg: string }>('/oss/sign', { sign: canonical })
+    },
+
     // ========== 用户 ==========
     userHome(targetUid?: number, targetName?: string): Promise<UserHomeResponse> {
       return fetchFn<UserHomeResponse>('/user/home', { targetUid, targetName })

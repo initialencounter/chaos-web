@@ -43,4 +43,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Image cache
   cacheImage: (url: string) => ipcRenderer.invoke('cache:image', url),
+
+  // OSS upload — 通过主进程绕过 CORS
+  ossUpload: (buffer: ArrayBuffer, filename: string, contentType: string) =>
+    ipcRenderer.invoke('oss:upload', buffer, filename, contentType),
 })

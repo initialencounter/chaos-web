@@ -16,6 +16,7 @@ import {
   TIMING_LEVELS_MAP,
   TIMING_LEVELS_TEXT_COLOR,
 } from '@tapsss/shared/utils'
+import { ElMessage } from 'element-plus'
 import MarkdownIt from 'markdown-it'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -417,6 +418,32 @@ function goBack() {
   }
 }
 
+const showDeleteConfirm = ref(false)
+
+function handleDeletePost() {
+  showDeleteConfirm.value = true
+}
+
+async function confirmDeletePost() {
+  if (!post.value)
+    return
+  const api = useForumApi()
+  try {
+    const res = await api.postDelete(post.value.id)
+    if (res.code === 200) {
+      showDeleteConfirm.value = false
+      ElMessage.success('帖子已删除')
+      router.push({ name: 'forum-home' })
+    }
+    else {
+      ElMessage.error(res.msg || '删除失败')
+    }
+  }
+  catch {
+    ElMessage.error('删除失败，请重试')
+  }
+}
+
 function handleContentClick(event: MouseEvent) {
   const target = event.target as HTMLElement
   if (target.classList.contains('mention-link')) {
@@ -486,9 +513,41 @@ onUnmounted(() => {
 
     <div v-else-if="post" class="post-content">
       <!-- 返回按钮 -->
-      <a href="#" class="back-btn" @click.prevent="goBack">
-        ← 返回
-      </a>
+      <div class="post-actions-row">
+        <a href="#" class="back-btn" @click.prevent="goBack">
+          ← 返回
+        </a>
+        <button
+          v-if="currentUid && post.uid === currentUid"
+          class="delete-post-btn"
+          @click="handleDeletePost"
+        >
+          删除帖子
+        </button>
+      </div>
+
+      <!-- 删除确认弹窗 -->
+      <Teleport to="body">
+        <div
+          v-if="showDeleteConfirm"
+          class="confirm-overlay"
+          @click.self="showDeleteConfirm = false"
+        >
+          <div class="confirm-dialog">
+            <p class="confirm-text">
+              确定要删除这个帖子吗？此操作不可撤销。
+            </p>
+            <div class="confirm-actions">
+              <button class="confirm-btn cancel" @click="showDeleteConfirm = false">
+                取消
+              </button>
+              <button class="confirm-btn danger" @click="confirmDeletePost">
+                确定删除
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
 
       <!-- 帖子内容 -->
       <div ref="postHeaderRef" class="post-header">
@@ -942,7 +1001,6 @@ onUnmounted(() => {
 
 .back-btn {
   display: inline-block;
-  margin-bottom: 20px;
   color: #fa7299;
   text-decoration: none;
   font-size: 1rem;
@@ -955,6 +1013,99 @@ onUnmounted(() => {
 .back-btn:hover {
   background-color: #2a2a2a;
   border-color: #fa7299;
+}
+
+.post-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.delete-post-btn {
+  padding: 8px 16px;
+  background: none;
+  color: #ff6b6b;
+  border: 1px solid #5a3a3a;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+.delete-post-btn:hover {
+  background-color: #3a2020;
+  border-color: #ff6b6b;
+  color: #ff4444;
+}
+
+/* 删除确认弹窗 */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  animation: confirmFadeIn 0.15s ease-out;
+}
+
+@keyframes confirmFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.confirm-dialog {
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 12px;
+  padding: 28px 32px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.confirm-text {
+  color: #e0e0e0;
+  font-size: 1rem;
+  margin: 0 0 24px;
+  line-height: 1.6;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.confirm-btn {
+  padding: 8px 24px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: 1px solid #444;
+  transition: all 0.2s;
+}
+
+.confirm-btn.cancel {
+  background: #2a2a2a;
+  color: #e0e0e0;
+}
+.confirm-btn.cancel:hover {
+  background: #333;
+}
+
+.confirm-btn.danger {
+  background: #d32f2f;
+  color: #ffffff;
+  border-color: #d32f2f;
+}
+.confirm-btn.danger:hover {
+  background: #b71c1c;
 }
 
 .loading {

@@ -36,6 +36,7 @@ declare global {
       apiRequest: (path: string, method: string, params: Record<string, any>) => Promise<{ success: boolean, code?: number, msg?: string, data?: any }>
       proxyRequest: (path: string) => Promise<{ success: boolean, code?: number, msg?: string, data?: any }>
       cacheImage: (url: string) => Promise<string>
+      ossUpload: (buffer: ArrayBuffer, filename: string, contentType: string) => Promise<{ success: boolean, url?: string, msg?: string }>
     }
   }
 }

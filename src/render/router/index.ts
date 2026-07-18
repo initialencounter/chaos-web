@@ -63,6 +63,11 @@ const router = createRouter({
       name: 'rank',
       component: () => import('../views/RankView.vue'),
     },
+    {
+      path: '/forum/post/new',
+      name: 'post-new',
+      component: () => import('@tapsss/forum-shared/views/PostEditorView.vue'),
+    },
   ],
   scrollBehavior(_to, _from, savedPosition) {
     if (savedPosition) {
