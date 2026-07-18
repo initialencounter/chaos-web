@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import {
+  replaceEmojiStrings,
+  replaceMentionAndReplayLinks,
+} from '@tapsss/shared/utils'
 import MarkdownIt from 'markdown-it'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -35,10 +39,12 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const dropdownRef = ref<HTMLElement | null>(null)
 
-const md = new MarkdownIt({ breaks: true, linkify: true })
+const md = new MarkdownIt({ breaks: true, linkify: true, html: true })
 
 const selectedTopic = computed(() => TOPICS.find(t => t.value === topics.value))
-const renderedHtml = computed(() => md.render(text.value || ''))
+const renderedHtml = computed(() => {
+  return replaceMentionAndReplayLinks(md.render(replaceEmojiStrings(text.value || '')))
+})
 
 // ========== 草稿 ==========
 function saveDraft() {
